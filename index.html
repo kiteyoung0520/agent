@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>anyGem - Super Agent v82.2 (Large Text Edition)</title>
+    <title>anyGem - Super Agent (Gems Edition)</title>
     
     <link rel="preconnect" href="https://cdn.tailwindcss.com">
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
@@ -28,7 +28,7 @@
         .prose h1 { font-size: 1.6em; }
         .prose h2 { font-size: 1.4em; }
         .prose h3 { font-size: 1.2em; }
-        .prose p, .prose ul, .prose ol { margin-bottom: 1.25rem; line-height: 1.8; } /* 加大行高，閱讀更舒適 */
+        .prose p, .prose ul, .prose ol { margin-bottom: 1.25rem; line-height: 1.8; }
         .prose li { margin-bottom: 0.5rem; }
         .prose img { max-width: 100%; border-radius: 0.75rem; height: auto; margin: 1rem 0; }
 
@@ -102,7 +102,7 @@
             </div>
         </div>
 
-        <div class="p-4 border-t border-[#333] text-xs text-gray-500 text-center font-mono shrink-0">v82.2 Large Text Edition</div>
+        <div class="p-4 border-t border-[#333] text-xs text-gray-500 text-center font-mono shrink-0">v86.4 Stable Edition</div>
     </aside>
 
     <main class="flex-1 flex flex-col relative bg-[#131314] overflow-hidden w-full">
@@ -117,7 +117,7 @@
                 <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center shadow-lg shrink-0"><span class="material-symbols-rounded text-white">smart_toy</span></div>
                 <div class="flex-1">
                     <h2 class="text-2xl sm:text-3xl font-bold text-white mb-2">我是您的 anyGem 代理人</h2>
-                    <p class="text-gray-400 text-base sm:text-lg leading-relaxed">我已準備好協助您。您可以開啟下方的「⚡ 連續對話」與我進行免持的語音交談，只要您講完話停頓一下，我就會自動回覆！</p>
+                    <p class="text-gray-400 text-base sm:text-lg leading-relaxed">您可以透過下方的「💎 角色選單」切換我的人格與專長。我也準備好協助您處理文件與簡報了！</p>
                 </div>
             </div>
         </div>
@@ -148,8 +148,17 @@
                 <div class="bg-[#1e1f22] rounded-2xl border border-[#333] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] focus-within:border-blue-500 transition-all p-1.5 sm:p-2 mx-1 sm:mx-0">
                     <div class="flex items-center flex-wrap gap-3 sm:gap-4 px-2 sm:px-3 mb-1 sm:mb-2 pt-1 border-b border-[#333] pb-1.5 sm:pb-2">
                         
+                        <!-- ✨ Gems 角色選擇器 -->
+                        <div class="relative flex items-center mr-auto sm:mr-2 shrink-0">
+                            <span class="absolute left-2 text-blue-400 material-symbols-rounded text-[14px] pointer-events-none">diamond</span>
+                            <select id="gem-selector" class="pl-7 pr-6 py-1 bg-[#2a2b2f] hover:bg-[#333] text-blue-100 text-xs font-bold tracking-wide rounded-lg border border-[#444] outline-none focus:border-blue-500 transition-all appearance-none cursor-pointer max-w-[140px] sm:max-w-[180px] truncate shadow-sm">
+                                <option value="">🤖 預設全能助理</option>
+                            </select>
+                            <span class="absolute right-1.5 text-gray-400 material-symbols-rounded text-[16px] pointer-events-none">arrow_drop_down</span>
+                        </div>
+
                         <!-- 連網搜尋開關 -->
-                        <label class="relative inline-flex items-center cursor-pointer">
+                        <label class="relative inline-flex items-center cursor-pointer ml-auto sm:ml-0">
                             <input type="checkbox" id="web-search-toggle" class="sr-only peer">
                             <div class="w-8 h-4 bg-gray-600 rounded-full peer peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-full"></div>
                             <span class="ml-2 text-xs font-medium text-gray-400 peer-checked:text-blue-400 flex items-center gap-1">
@@ -167,7 +176,7 @@
                         </label>
 
                         <!-- 語音播報開關 -->
-                        <label class="relative inline-flex items-center cursor-pointer">
+                        <label class="relative inline-flex items-center cursor-pointer hidden sm:flex">
                             <input type="checkbox" id="voice-output-toggle" class="sr-only peer">
                             <div class="w-8 h-4 bg-gray-600 rounded-full peer peer-checked:bg-green-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-full"></div>
                             <span class="ml-2 text-xs font-medium text-gray-400 peer-checked:text-green-400 flex items-center gap-1">
@@ -176,7 +185,7 @@
                         </label>
 
                         <!-- 連續對話模式開關 -->
-                        <label class="relative inline-flex items-center cursor-pointer ml-auto sm:ml-0">
+                        <label class="relative inline-flex items-center cursor-pointer hidden sm:flex">
                             <input type="checkbox" id="continuous-mode-toggle" class="sr-only peer">
                             <div class="w-8 h-4 bg-gray-600 rounded-full peer peer-checked:bg-yellow-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-full"></div>
                             <span class="ml-2 text-xs font-medium text-gray-400 peer-checked:text-yellow-400 flex items-center gap-1">
@@ -210,6 +219,7 @@
     <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden" onclick="toggleSidebar()"></div>
 
     <script>
+        // ⚠️ 請確認此處替換為您最新部署的 Apps Script Web App URL
         const GAS_URL = "https://script.google.com/macros/s/AKfycbyNEz6Kv6WOEEif3Ghjt8fd-IXRt6f6BxV7dg2SXSwTn6dJsP5lgwVuCgslHSdBbD4C/exec";
 
         marked.use({
@@ -217,8 +227,14 @@
                 link(hrefOrToken, title, text) {
                     let linkHref, linkTitle, linkText;
                     if (typeof hrefOrToken === 'object' && hrefOrToken !== null) {
-                        linkHref = hrefOrToken.href; linkTitle = hrefOrToken.title; linkText = hrefOrToken.text;
-                    } else { linkHref = hrefOrToken; linkTitle = title; linkText = text; }
+                        linkHref = hrefOrToken.href;
+                        linkTitle = hrefOrToken.title;
+                        linkText = hrefOrToken.text;
+                    } else {
+                        linkHref = hrefOrToken;
+                        linkTitle = title;
+                        linkText = text;
+                    }
                     const titleAttr = linkTitle ? `title="${linkTitle}"` : '';
                     return `<a href="${linkHref}" ${titleAttr} target="_blank" rel="noopener noreferrer">${linkText}</a>`;
                 }
@@ -230,20 +246,19 @@
         let isWaiting = false, currentRenderCode = "";
         let abortController = null; 
         let silenceTimer = null; 
+        let currentGemsList = []; 
 
         const chatContainer = document.getElementById('chat-container');
         const userInput = document.getElementById('user-input');
         const sendBtn = document.getElementById('send-btn');
         const sendBtnIcon = sendBtn.querySelector('.material-symbols-rounded');
 
-        // ✨ 新增：原生自動變高魔法，監聽 textarea 的輸入事件
+        // 原生自動變高魔法
         userInput.addEventListener('input', function() {
-            this.style.height = 'auto'; // 先重置，以便在刪除文字時能縮小
-            // 設定高度為真實的內容高度，但設定一個 240px 的上限防呆 (與 tailwind 的 max-h-60 匹配)
+            this.style.height = 'auto'; 
             this.style.height = (this.scrollHeight > 240 ? 240 : this.scrollHeight) + 'px';
         });
 
-        // ==== 語音引擎模組 (Web Speech API) ====
         let recognition = null;
         let isRecording = false;
         let finalTranscript = '';
@@ -261,12 +276,11 @@
                 micBtn.classList.add('recording-pulse');
                 micBtn.classList.remove('text-gray-400');
                 finalTranscript = userInput.value; 
-                if (window.speechSynthesis) window.speechSynthesis.cancel(); // 聽我說話時，AI 閉嘴
+                if (window.speechSynthesis) window.speechSynthesis.cancel(); 
             };
 
             recognition.onresult = function(event) {
                 if (!isRecording) return; 
-
                 let interimTranscript = '';
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
                     if (event.results[i].isFinal) {
@@ -276,8 +290,6 @@
                     }
                 }
                 userInput.value = finalTranscript + interimTranscript;
-                
-                // 觸發自適應高度
                 userInput.style.height = 'auto';
                 userInput.style.height = (userInput.scrollHeight > 240 ? 240 : userInput.scrollHeight) + 'px';
 
@@ -291,12 +303,12 @@
                     }, 1500); 
                 }
             };
-
+            
             recognition.onerror = function(event) {
                 console.error('語音辨識錯誤', event.error);
                 stopRecording();
             };
-
+            
             recognition.onend = function() {
                 stopRecording();
             };
@@ -307,18 +319,18 @@
             if (!isRecording) {
                 isRecording = true;
                 finalTranscript = userInput.value;
-                try { recognition.start(); } catch(e) { isRecording = false; } 
+                try { recognition.start(); } catch(e) { isRecording = false; }
             }
         }
-
+        
         function toggleRecording() {
             if (!recognition) {
-                alert('您的瀏覽器不支援語音輸入，請使用 Google Chrome、Edge 或 Safari。');
+                alert('您的瀏覽器不支援語音輸入。');
                 return;
             }
             if (isRecording) { stopRecording(); } else { startRecording(); }
         }
-
+        
         function stopRecording() {
             isRecording = false;
             clearTimeout(silenceTimer);
@@ -328,43 +340,32 @@
             if (recognition) { try { recognition.stop(); } catch(e) {} }
         }
 
-        // --- 語音合成播報 (TTS) - 溫和優化版 ---
         function speakText(text, isAutoPlay = false) {
             if (isAutoPlay && !document.getElementById('voice-output-toggle').checked) return false;
             if (!window.speechSynthesis) return false;
             window.speechSynthesis.cancel(); 
-
-            let cleanText = text.replace(/```[\s\S]*?```/g, ''); 
-            cleanText = cleanText.replace(/https?:\/\/[^\s]+/g, '網址'); 
-            cleanText = cleanText.replace(/[*_#`~|]/g, ''); 
-            cleanText = cleanText.trim();
-            if (!cleanText) return false;
-
-            let utterance = new SpeechSynthesisUtterance(cleanText);
             
+            const bt = String.fromCharCode(96, 96, 96);
+            let cleanText = text.replace(new RegExp(bt + '[\\s\\S]*?' + bt, 'g'), '');
+            cleanText = cleanText.replace(new RegExp('https?:\\/\\/[^\\s]+', 'g'), '網址');
+            cleanText = cleanText.replace(new RegExp('[*_#~|]', 'g'), '').trim();
+            if (!cleanText) return false;
+            
+            let utterance = new SpeechSynthesisUtterance(cleanText);
             const voices = window.speechSynthesis.getVoices();
             let selectedVoice = null;
             
-            if (/[\u4e00-\u9fa5]/.test(cleanText)) {
-                utterance.lang = 'zh-TW';
-                utterance.rate = 0.95; 
-                utterance.pitch = 0.95; 
-                
+            if (new RegExp('[\\u4e00-\\u9fa5]').test(cleanText)) {
+                utterance.lang = 'zh-TW'; utterance.rate = 0.95; utterance.pitch = 0.95; 
                 selectedVoice = voices.find(voice => voice.name.includes('Xiaoxiao') || voice.name.includes('Yating') || (voice.lang === 'zh-TW' && voice.name.includes('Google')));
                 if (!selectedVoice) selectedVoice = voices.find(voice => voice.lang === 'zh-TW');
             } else {
-                utterance.lang = 'en-US';
-                utterance.rate = 0.9; 
-                utterance.pitch = 0.95;
-                
+                utterance.lang = 'en-US'; utterance.rate = 0.9; utterance.pitch = 0.95;
                 selectedVoice = voices.find(voice => voice.name.includes('Samantha') || (voice.lang === 'en-US' && voice.name.includes('Google')));
                 if (!selectedVoice) selectedVoice = voices.find(voice => voice.lang === 'en-US');
             }
-
-            if (selectedVoice) {
-                utterance.voice = selectedVoice;
-            }
             
+            if (selectedVoice) utterance.voice = selectedVoice;
             if (isAutoPlay) {
                 utterance.onend = function() {
                     if (document.getElementById('continuous-mode-toggle').checked && !isWaiting) {
@@ -380,90 +381,171 @@
             speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
         }
 
-        // ==== 各種檔案解析引擎懶加載 ====
         let pdfjsLibLoaded = false;
         async function loadPdfJs() {
             if (pdfjsLibLoaded) return;
             return new Promise((resolve, reject) => {
-                const script = document.createElement('script'); script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
-                script.onload = () => { pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; pdfjsLibLoaded = true; resolve(); };
-                script.onerror = reject; document.head.appendChild(script);
+                const script = document.createElement('script');
+                script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+                script.onload = () => {
+                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                    pdfjsLibLoaded = true;
+                    resolve();
+                };
+                script.onerror = reject;
+                document.head.appendChild(script);
             });
         }
+        
         let mammothLoaded = false;
         async function loadMammoth() {
             if (mammothLoaded) return;
             return new Promise((resolve, reject) => {
-                const script = document.createElement('script'); script.src = "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js";
-                script.onload = () => { mammothLoaded = true; resolve(); }; script.onerror = reject; document.head.appendChild(script);
+                const script = document.createElement('script');
+                script.src = "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js";
+                script.onload = () => { mammothLoaded = true; resolve(); };
+                script.onerror = reject;
+                document.head.appendChild(script);
             });
         }
+        
         let xlsxLoaded = false;
         async function loadXlsx() {
             if (xlsxLoaded) return;
             return new Promise((resolve, reject) => {
-                const script = document.createElement('script'); script.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
-                script.onload = () => { xlsxLoaded = true; resolve(); }; script.onerror = reject; document.head.appendChild(script);
+                const script = document.createElement('script');
+                script.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+                script.onload = () => { xlsxLoaded = true; resolve(); };
+                script.onerror = reject;
+                document.head.appendChild(script);
             });
         }
+        
         let jszipLoaded = false;
         async function loadJszip() {
             if (jszipLoaded) return;
             return new Promise((resolve, reject) => {
-                const script = document.createElement('script'); script.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
-                script.onload = () => { jszipLoaded = true; resolve(); }; script.onerror = reject; document.head.appendChild(script);
+                const script = document.createElement('script');
+                script.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+                script.onload = () => { jszipLoaded = true; resolve(); };
+                script.onerror = reject;
+                document.head.appendChild(script);
             });
         }
 
-        const sidebarDom = document.getElementById('sidebar'); const resizerDom = document.getElementById('sidebar-resizer'); let isResizing = false;
-        resizerDom.addEventListener('mousedown', (e) => { isResizing = true; document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none'; });
-        document.addEventListener('mousemove', (e) => {
-            if (!isResizing) return; if (window.innerWidth < 768) { isResizing = false; return; }
-            let newWidth = e.clientX; if (newWidth < 200) newWidth = 200; if (newWidth > window.innerWidth * 0.5) newWidth = window.innerWidth * 0.5; sidebarDom.style.width = newWidth + 'px';
+        const sidebarDom = document.getElementById('sidebar');
+        const resizerDom = document.getElementById('sidebar-resizer');
+        let isResizing = false;
+        
+        resizerDom.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
         });
-        document.addEventListener('mouseup', () => { if (isResizing) { isResizing = false; document.body.style.cursor = ''; document.body.style.userSelect = ''; } });
-        window.addEventListener('resize', () => { if (window.innerWidth < 768) { sidebarDom.style.width = ''; } });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            if (window.innerWidth < 768) { isResizing = false; return; }
+            let newWidth = e.clientX;
+            if (newWidth < 200) newWidth = 200;
+            if (newWidth > window.innerWidth * 0.5) newWidth = window.innerWidth * 0.5;
+            sidebarDom.style.width = newWidth + 'px';
+        });
+        
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            }
+        });
+        
+        window.addEventListener('resize', () => {
+            if (window.innerWidth < 768) { sidebarDom.style.width = ''; }
+        });
 
         function toggleBookmarks() {
-            const list = document.getElementById('bookmark-list'); const chevron = document.getElementById('bookmark-chevron');
-            list.classList.toggle('hidden'); chevron.style.transform = list.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+            const list = document.getElementById('bookmark-list');
+            const chevron = document.getElementById('bookmark-chevron');
+            list.classList.toggle('hidden');
+            chevron.style.transform = list.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
         }
-
+        
         function toggleSendButton(waiting) {
             isWaiting = waiting;
             if (waiting) {
-                sendBtnIcon.innerText = 'stop'; sendBtn.classList.remove('bg-white', 'text-black', 'hover:bg-gray-200'); sendBtn.classList.add('bg-red-500', 'text-white', 'hover:bg-red-600'); sendBtn.onclick = stopGeneration;
+                sendBtnIcon.innerText = 'stop';
+                sendBtn.classList.remove('bg-white', 'text-black', 'hover:bg-gray-200');
+                sendBtn.classList.add('bg-red-500', 'text-white', 'hover:bg-red-600');
+                sendBtn.onclick = stopGeneration;
             } else {
-                sendBtnIcon.innerText = 'send'; sendBtn.classList.remove('bg-red-500', 'text-white', 'hover:bg-red-600'); sendBtn.classList.add('bg-white', 'text-black', 'hover:bg-gray-200'); sendBtn.onclick = sendMessage;
+                sendBtnIcon.innerText = 'send';
+                sendBtn.classList.remove('bg-red-500', 'text-white', 'hover:bg-red-600');
+                sendBtn.classList.add('bg-white', 'text-black', 'hover:bg-gray-200');
+                sendBtn.onclick = sendMessage;
             }
         }
+        
         sendBtn.onclick = sendMessage;
-
-        function stopGeneration() { if (abortController) { abortController.abort(); abortController = null; } }
+        
+        function stopGeneration() {
+            if (abortController) {
+                abortController.abort();
+                abortController = null;
+            }
+        }
 
         userInput.addEventListener('paste', function(e) {
             const pasteText = (e.clipboardData || window.clipboardData).getData('text');
-            const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i; const ytMatch = pasteText.match(ytRegex);
+            const ytRegex = new RegExp('(?:youtube\\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=)|youtu\\.be/)([^"&?/\\s]{11})', 'i');
+            const ytMatch = pasteText.match(ytRegex);
+            
             if (ytMatch && ytMatch[1]) {
-                e.preventDefault(); currentYouTubeId = ytMatch[1]; document.getElementById('yt-thumbnail').src = `https://img.youtube.com/vi/${currentYouTubeId}/mqdefault.jpg`;
-                document.getElementById('youtube-preview').classList.remove('hidden'); document.getElementById('image-preview').classList.add('hidden'); document.getElementById('doc-preview').classList.add('hidden'); document.getElementById('upload-preview-container').classList.remove('hidden'); document.getElementById('web-search-toggle').checked = true; return;
+                e.preventDefault();
+                currentYouTubeId = ytMatch[1];
+                document.getElementById('yt-thumbnail').src = `https://img.youtube.com/vi/${currentYouTubeId}/mqdefault.jpg`;
+                document.getElementById('youtube-preview').classList.remove('hidden');
+                document.getElementById('image-preview').classList.add('hidden');
+                document.getElementById('doc-preview').classList.add('hidden');
+                document.getElementById('upload-preview-container').classList.remove('hidden');
+                document.getElementById('web-search-toggle').checked = true;
+                return;
             }
+            
             if (e.clipboardData && e.clipboardData.items) {
                 const items = e.clipboardData.items;
                 for (let i = 0; i < items.length; i++) {
                     if (items[i].type.indexOf('image') !== -1) {
-                        e.preventDefault(); const file = items[i].getAsFile(); const reader = new FileReader();
-                        reader.onload = (event) => { currentImageData = event.target.result; currentMimeType = file.type; document.getElementById('image-preview').src = currentImageData; document.getElementById('image-preview').classList.remove('hidden'); document.getElementById('doc-preview').classList.add('hidden'); document.getElementById('youtube-preview').classList.add('hidden'); document.getElementById('upload-preview-container').classList.remove('hidden'); };
-                        reader.readAsDataURL(file); return; 
+                        e.preventDefault();
+                        const file = items[i].getAsFile();
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            currentImageData = event.target.result;
+                            currentMimeType = file.type;
+                            document.getElementById('image-preview').src = currentImageData;
+                            document.getElementById('image-preview').classList.remove('hidden');
+                            document.getElementById('doc-preview').classList.add('hidden');
+                            document.getElementById('youtube-preview').classList.add('hidden');
+                            document.getElementById('upload-preview-container').classList.remove('hidden');
+                        };
+                        reader.readAsDataURL(file);
+                        return;
                     }
                 }
             }
+            
             if (pasteText && pasteText.startsWith('data:image/')) {
-                e.preventDefault(); currentImageData = pasteText; const mimeMatch = pasteText.match(/data:(.*?);/); currentMimeType = mimeMatch ? mimeMatch[1] : 'image/png';
-                document.getElementById('image-preview').src = currentImageData; document.getElementById('image-preview').classList.remove('hidden'); document.getElementById('doc-preview').classList.add('hidden'); document.getElementById('youtube-preview').classList.add('hidden'); document.getElementById('upload-preview-container').classList.remove('hidden');
+                e.preventDefault();
+                currentImageData = pasteText;
+                const mimeMatch = pasteText.match(new RegExp('data:(.*?);'));
+                currentMimeType = mimeMatch ? mimeMatch[1] : 'image/png';
+                document.getElementById('image-preview').src = currentImageData;
+                document.getElementById('image-preview').classList.remove('hidden');
+                document.getElementById('doc-preview').classList.add('hidden');
+                document.getElementById('youtube-preview').classList.add('hidden');
+                document.getElementById('upload-preview-container').classList.remove('hidden');
             }
             
-            // 讓貼上文字時，也能順利觸發自動變高
             setTimeout(() => {
                 userInput.style.height = 'auto';
                 userInput.style.height = (userInput.scrollHeight > 240 ? 240 : userInput.scrollHeight) + 'px';
@@ -471,26 +553,43 @@
         });
 
         userInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) { if (window.innerWidth < 768) return; e.preventDefault(); if (isWaiting) stopGeneration(); else sendMessage(); }
+            if (e.key === 'Enter' && !e.shiftKey) {
+                if (window.innerWidth < 768) return;
+                e.preventDefault();
+                if (isWaiting) stopGeneration();
+                else sendMessage();
+            }
         });
 
         async function sendMessage() {
-            clearTimeout(silenceTimer); 
+            clearTimeout(silenceTimer);
             stopRecording(); 
-
             const text = userInput.value.trim();
             if (!text && !currentImageData && !currentDocumentText && !currentYouTubeId) return;
             if (isWaiting) return;
-
             if (window.speechSynthesis) window.speechSynthesis.cancel(); 
 
             const isWebSearchEnabled = document.getElementById('web-search-toggle').checked;
             const isAutoImageEnabled = document.getElementById('auto-image-toggle').checked;
             
+            let activeGemPrompt = null;
+            let activeGemModel = null;
+            const gemSelector = document.getElementById('gem-selector');
+            if (gemSelector.value !== "") {
+                activeGemPrompt = currentGemsList[parseInt(gemSelector.value)].prompt;
+                activeGemModel = currentGemsList[parseInt(gemSelector.value)].model;
+            }
+
             let displayMsg = text;
             if (currentDocumentName) displayMsg = `📎 [文件: ${currentDocumentName}]\n${text}`;
             if (currentYouTubeId) displayMsg = `📺 [YouTube 影片]\n${text}`;
             
+            if (activeGemPrompt && !currentDocumentName && !currentYouTubeId) {
+                const gemName = currentGemsList[parseInt(gemSelector.value)].name;
+                const modelTag = activeGemModel ? ` (${activeGemModel})` : '';
+                displayMsg = `【使用角色：${gemName}${modelTag}】\n${text}`;
+            }
+
             appendMessage('user', displayMsg, currentImageData);
             
             let payloadText = text || "請分析此內容";
@@ -500,124 +599,289 @@
                 payloadText = `【指定 YouTube 影片】：https://www.youtube.com/watch?v=${currentYouTubeId}\n\n指令：${payloadText}`;
             }
 
-            userInput.value = ''; 
-            // ✨ 新增：發送後高度重置為單行
+            userInput.value = '';
             userInput.style.height = 'auto';
             finalTranscript = ''; 
-
-            const imgBase64 = currentImageData ? currentImageData.split(',')[1] : null; const mime = currentMimeType; const finalYoutubeId = currentYouTubeId; 
-            clearUpload(); toggleSendButton(true); const loadingId = appendLoading(); abortController = new AbortController(); 
+            const imgBase64 = currentImageData ? currentImageData.split(',')[1] : null;
+            const mime = currentMimeType;
+            const finalYoutubeId = currentYouTubeId; 
+            
+            clearUpload();
+            toggleSendButton(true);
+            const loadingId = appendLoading();
+            abortController = new AbortController(); 
 
             try {
                 const response = await fetch(GAS_URL, {
                     method: 'POST',
-                    body: JSON.stringify({ message: payloadText, session_id: currentSessionId, file_data: imgBase64, mime_type: mime, web_search: isWebSearchEnabled, auto_image: isAutoImageEnabled, youtube_id: finalYoutubeId }),
+                    body: JSON.stringify({
+                        message: payloadText,
+                        session_id: currentSessionId,
+                        file_data: imgBase64,
+                        mime_type: mime,
+                        web_search: isWebSearchEnabled,
+                        auto_image: isAutoImageEnabled,
+                        youtube_id: finalYoutubeId,
+                        gem_prompt: activeGemPrompt,
+                        gem_model: activeGemModel
+                    }),
                     signal: abortController.signal
                 });
-                const data = await response.json(); removeLoading(loadingId);
+                
+                const data = await response.json();
+                removeLoading(loadingId);
                 
                 if (data.status === "error") throw new Error(data.error || "伺服器發生未知錯誤");
+                
                 if (data.reply) {
-                   appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model);
-                   
-                   const willSpeak = speakText(data.reply, true);
-                   
-                   if (!willSpeak && document.getElementById('continuous-mode-toggle').checked) {
-                       setTimeout(startRecording, 500);
-                   }
+                    appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model);
+                    const willSpeak = speakText(data.reply, true);
+                    if (!willSpeak && document.getElementById('continuous-mode-toggle').checked) {
+                        setTimeout(startRecording, 500);
+                    }
                 }
                 loadSessions(); 
             } catch (err) {
                 removeLoading(loadingId);
-                if (err.name === 'AbortError') appendMessage('ai', `🛑 **生成已手動中止。**\n您可以隨時輸入新的指令。`);
-                else appendMessage('ai', `❌ 執行失敗：\n\`\`\`text\n${err.message}\n\`\`\``);
-            } finally { 
-                toggleSendButton(false); abortController = null;
+                if (err.name === 'AbortError') {
+                    appendMessage('ai', `🛑 **生成已手動中止。**\n您可以隨時輸入新的指令。`);
+                } else {
+                    appendMessage('ai', `❌ 執行失敗：\n\`\`\`text\n${err.message}\n\`\`\``);
+                }
+            } finally {
+                toggleSendButton(false);
+                abortController = null;
             }
         }
 
         async function handleFileUpload(event) {
-            const file = event.target.files[0]; if (!file) return;
-            const reader = new FileReader(); const ext = file.name.split('.').pop().toLowerCase();
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            const ext = file.name.split('.').pop().toLowerCase();
             
             if (file.type.startsWith('image/')) {
-                reader.onload = (e) => { currentImageData = e.target.result; currentMimeType = file.type; document.getElementById('image-preview').src = currentImageData; document.getElementById('image-preview').classList.remove('hidden'); document.getElementById('doc-preview').classList.add('hidden'); document.getElementById('youtube-preview').classList.add('hidden'); document.getElementById('upload-preview-container').classList.remove('hidden'); }; reader.readAsDataURL(file);
+                reader.onload = (e) => {
+                    currentImageData = e.target.result;
+                    currentMimeType = file.type;
+                    document.getElementById('image-preview').src = currentImageData;
+                    document.getElementById('image-preview').classList.remove('hidden');
+                    document.getElementById('doc-preview').classList.add('hidden');
+                    document.getElementById('youtube-preview').classList.add('hidden');
+                    document.getElementById('upload-preview-container').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
             } else if (file.type === 'application/pdf' || ext === 'pdf') {
                 const loadingId = appendLoading();
                 try {
                     await loadPdfJs();
-                    reader.onload = async (e) => { try { const pdf = await pdfjsLib.getDocument(new Uint8Array(e.target.result)).promise; let text = ""; for (let i = 1; i <= pdf.numPages; i++) { const page = await pdf.getPage(i); const content = await page.getTextContent(); text += content.items.map(s => s.str).join(' ') + "\n"; } setDocPayload(file.name, text); } catch (err) { alert("PDF 解析失敗"); } finally { removeLoading(loadingId); } }; reader.readAsArrayBuffer(file);
-                } catch (err) { removeLoading(loadingId); alert("載入 PDF 引擎失敗"); }
+                    reader.onload = async (e) => {
+                        try {
+                            const pdf = await pdfjsLib.getDocument(new Uint8Array(e.target.result)).promise;
+                            let text = "";
+                            for (let i = 1; i <= pdf.numPages; i++) {
+                                const page = await pdf.getPage(i);
+                                const content = await page.getTextContent();
+                                text += content.items.map(s => s.str).join(' ') + "\n";
+                            }
+                            setDocPayload(file.name, text);
+                        } catch (err) {
+                            alert("PDF 解析失敗");
+                        } finally {
+                            removeLoading(loadingId);
+                        }
+                    };
+                    reader.readAsArrayBuffer(file);
+                } catch (err) {
+                    removeLoading(loadingId);
+                    alert("載入 PDF 引擎失敗");
+                }
             } else if (ext === 'docx') {
                 const loadingId = appendLoading();
                 try {
                     await loadMammoth();
-                    reader.onload = async (e) => { try { const result = await mammoth.extractRawText({ arrayBuffer: e.target.result }); setDocPayload(file.name, result.value); } catch(err) { alert("Word 解析失敗"); } finally { removeLoading(loadingId); } }; reader.readAsArrayBuffer(file);
-                } catch (err) { removeLoading(loadingId); alert("載入 Word 引擎失敗"); }
+                    reader.onload = async (e) => {
+                        try {
+                            const result = await mammoth.extractRawText({ arrayBuffer: e.target.result });
+                            setDocPayload(file.name, result.value);
+                        } catch(err) {
+                            alert("Word 解析失敗");
+                        } finally {
+                            removeLoading(loadingId);
+                        }
+                    };
+                    reader.readAsArrayBuffer(file);
+                } catch (err) {
+                    removeLoading(loadingId);
+                    alert("載入 Word 引擎失敗");
+                }
             } else if (ext === 'xlsx' || ext === 'csv') {
                 const loadingId = appendLoading();
                 try {
                     await loadXlsx();
-                    reader.onload = (e) => { try { const workbook = XLSX.read(e.target.result, { type: 'array' }); let text = ""; workbook.SheetNames.forEach(sheetName => { text += `\n--- 表單: ${sheetName} ---\n`; let csvData = XLSX.utils.sheet_to_csv(workbook.Sheets[sheetName]); const CHAR_LIMIT = 500000; if (csvData.length > CHAR_LIMIT) { text += csvData.substring(0, CHAR_LIMIT) + "\n\n...[⚠️ 檔案極大，已自動截斷最後部分]..."; } else { text += csvData; } }); setDocPayload(file.name, text); } catch(err) { alert("Excel 解析失敗"); } finally { removeLoading(loadingId); } }; reader.readAsArrayBuffer(file);
-                } catch (err) { removeLoading(loadingId); alert("載入 Excel 引擎失敗"); }
+                    reader.onload = (e) => {
+                        try {
+                            const workbook = XLSX.read(e.target.result, { type: 'array' });
+                            let text = "";
+                            workbook.SheetNames.forEach(sheetName => {
+                                text += `\n--- 表單: ${sheetName} ---\n`;
+                                let csvData = XLSX.utils.sheet_to_csv(workbook.Sheets[sheetName]);
+                                const CHAR_LIMIT = 500000;
+                                if (csvData.length > CHAR_LIMIT) {
+                                    text += csvData.substring(0, CHAR_LIMIT) + "\n\n...[⚠️ 檔案極大，已自動截斷最後部分]...";
+                                } else {
+                                    text += csvData;
+                                }
+                            });
+                            setDocPayload(file.name, text);
+                        } catch(err) {
+                            alert("Excel 解析失敗");
+                        } finally {
+                            removeLoading(loadingId);
+                        }
+                    };
+                    reader.readAsArrayBuffer(file);
+                } catch (err) {
+                    removeLoading(loadingId);
+                    alert("載入 Excel 引擎失敗");
+                }
             } else if (ext === 'pptx') {
                 const loadingId = appendLoading();
                 try {
                     await loadJszip();
                     reader.onload = async (e) => {
                         try {
-                            const zip = new JSZip(); const loadedZip = await zip.loadAsync(e.target.result); let text = `【系統解析：簡報檔名 ${file.name}】\n\n`;
-                            const slideFiles = Object.keys(loadedZip.files).filter(name => name.match(/^ppt\/slides\/slide\d+\.xml$/)); const notesFiles = Object.keys(loadedZip.files).filter(name => name.match(/^ppt\/notesSlides\/notesSlide\d+\.xml$/));
-                            const sortRegex = /(\d+)\.xml$/; slideFiles.sort((a, b) => parseInt(a.match(sortRegex)?.[1] || '0') - parseInt(b.match(sortRegex)?.[1] || '0'));
+                            const zip = new JSZip();
+                            const loadedZip = await zip.loadAsync(e.target.result);
+                            let text = `【系統解析：簡報檔名 ${file.name}】\n\n`;
+                            const slideFiles = Object.keys(loadedZip.files).filter(name => name.match(new RegExp('^ppt/slides/slide\\\\d+\\\\.xml$')));
+                            const notesFiles = Object.keys(loadedZip.files).filter(name => name.match(new RegExp('^ppt/notesSlides/notesSlide\\\\d+\\\\.xml$')));
+                            const sortRegex = new RegExp('(\\\\d+)\\\\.xml$');
+                            slideFiles.sort((a, b) => parseInt(a.match(sortRegex)?.[1] || '0') - parseInt(b.match(sortRegex)?.[1] || '0'));
                             const parser = new DOMParser();
                             for (const slidePath of slideFiles) {
-                                const slideNum = slidePath.match(sortRegex)?.[1]; text += `--- 第 ${slideNum} 頁 ---\n`;
+                                const slideNum = slidePath.match(sortRegex)?.[1];
+                                text += `--- 第 ${slideNum} 頁 ---\n`;
                                 const slideXmlString = await loadedZip.file(slidePath).async("string");
-                                if (slideXmlString) { const xmlDoc = parser.parseFromString(slideXmlString, "text/xml"); const textNodes = xmlDoc.getElementsByTagName("a:t"); let extractedText = ""; for (let i = 0; i < textNodes.length; i++) extractedText += textNodes[i].textContent + " "; text += `[投影片內容]:\n${extractedText.trim()}\n`; }
+                                if (slideXmlString) {
+                                    const xmlDoc = parser.parseFromString(slideXmlString, "text/xml");
+                                    const textNodes = xmlDoc.getElementsByTagName("a:t");
+                                    let extractedText = "";
+                                    for (let i = 0; i < textNodes.length; i++) {
+                                        extractedText += textNodes[i].textContent + " ";
+                                    }
+                                    text += `[投影片內容]:\n${extractedText.trim()}\n`;
+                                }
                                 const notePath = `ppt/notesSlides/notesSlide${slideNum}.xml`;
-                                if (notesFiles.includes(notePath)) { const noteXmlString = await loadedZip.file(notePath).async("string"); if (noteXmlString) { const xmlDoc = parser.parseFromString(noteXmlString, "text/xml"); const textNodes = xmlDoc.getElementsByTagName("a:t"); let extractedText = ""; for (let i = 0; i < textNodes.length; i++) extractedText += textNodes[i].textContent + " "; if (extractedText.trim()) text += `[講者備忘錄]:\n${extractedText.trim()}\n`; } } text += `\n`;
-                            } setDocPayload(file.name, text);
-                        } catch (err) { alert("PPTX 解析失敗"); } finally { removeLoading(loadingId); }
-                    }; reader.readAsArrayBuffer(file);
-                } catch (err) { removeLoading(loadingId); alert("載入 ZIP 引擎失敗"); }
+                                if (notesFiles.includes(notePath)) {
+                                    const noteXmlString = await loadedZip.file(notePath).async("string");
+                                    if (noteXmlString) {
+                                        const xmlDoc = parser.parseFromString(noteXmlString, "text/xml");
+                                        const textNodes = xmlDoc.getElementsByTagName("a:t");
+                                        let extractedText = "";
+                                        for (let i = 0; i < textNodes.length; i++) {
+                                            extractedText += textNodes[i].textContent + " ";
+                                        }
+                                        if (extractedText.trim()) text += `[講者備忘錄]:\n${extractedText.trim()}\n`;
+                                    }
+                                }
+                                text += `\n`;
+                            }
+                            setDocPayload(file.name, text);
+                        } catch (err) {
+                            alert("PPTX 解析失敗");
+                        } finally {
+                            removeLoading(loadingId);
+                        }
+                    };
+                    reader.readAsArrayBuffer(file);
+                } catch (err) {
+                    removeLoading(loadingId);
+                    alert("載入 ZIP 引擎失敗");
+                }
             } else {
-                reader.onload = (e) => setDocPayload(file.name, e.target.result); reader.readAsText(file);
+                reader.onload = (e) => setDocPayload(file.name, e.target.result);
+                reader.readAsText(file);
             }
         }
 
         function setDocPayload(name, text) {
-            currentDocumentName = name; currentDocumentText = text; document.getElementById('doc-filename').innerText = name;
-            document.getElementById('doc-preview').classList.remove('hidden'); document.getElementById('image-preview').classList.add('hidden'); document.getElementById('youtube-preview').classList.add('hidden'); document.getElementById('upload-preview-container').classList.remove('hidden');
+            currentDocumentName = name;
+            currentDocumentText = text;
+            document.getElementById('doc-filename').innerText = name;
+            document.getElementById('doc-preview').classList.remove('hidden');
+            document.getElementById('image-preview').classList.add('hidden');
+            document.getElementById('youtube-preview').classList.add('hidden');
+            document.getElementById('upload-preview-container').classList.remove('hidden');
         }
 
         function clearUpload() {
-            currentImageData = null; currentDocumentText = null; currentDocumentName = null; currentYouTubeId = null;
-            document.getElementById('upload-preview-container').classList.add('hidden'); document.getElementById('youtube-preview').classList.add('hidden'); document.getElementById('file-upload').value = '';
+            currentImageData = null;
+            currentDocumentText = null;
+            currentDocumentName = null;
+            currentYouTubeId = null;
+            document.getElementById('upload-preview-container').classList.add('hidden');
+            document.getElementById('youtube-preview').classList.add('hidden');
+            document.getElementById('file-upload').value = '';
         }
 
         function appendMessage(role, text, imageSrc = null, model = null) {
-            const isAI = role === 'ai'; const wrap = document.createElement('div'); wrap.className = `flex gap-3 sm:gap-4 max-w-4xl mx-auto w-full group ${!isAI ? 'flex-row-reverse' : ''}`;
+            const isAI = role === 'ai';
+            const wrap = document.createElement('div');
+            wrap.className = `flex gap-3 sm:gap-4 max-w-4xl mx-auto w-full group ${!isAI ? 'flex-row-reverse' : ''}`;
             const avatar = `<div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 shadow-lg ${isAI ? 'bg-blue-600' : 'bg-gray-700'}"><span class="material-symbols-rounded text-white text-[18px] sm:text-xl">${isAI ? 'smart_toy' : 'person'}</span></div>`;
             let body = `<div class="flex-1 ${!isAI ? 'text-right' : ''} space-y-2 max-w-[90%] sm:max-w-[85%] relative min-w-0">`;
-            if (imageSrc) body += `<img src="${imageSrc}" class="rounded-xl border border-[#333] mb-2 max-w-full">`;
-            // ✨ 這裡將 text-sm sm:text-base 加大為 text-base sm:text-lg
-            if (text) body += `<div class="prose prose-invert text-gray-200 bg-[#1e1f22] p-4 sm:p-5 rounded-2xl rounded-tl-none shadow-sm text-base sm:text-lg leading-relaxed">${isAI ? marked.parse(text) : text.replace(/\n/g, '<br>')}</div>`;
-            if (isAI && text) { body += `<div class="flex items-center gap-2 mt-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"><button class="copy-btn p-1.5 text-gray-400 hover:text-white hover:bg-[#333] rounded-md" title="複製"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">content_copy</span></button><button class="speak-btn p-1.5 text-gray-400 hover:text-green-400 hover:bg-[#333] rounded-md" title="朗讀此訊息"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">volume_up</span></button></div>`; }
-            body += `</div>`; wrap.innerHTML = avatar + body; chatContainer.appendChild(wrap);
-
+            
+            if (imageSrc) {
+                body += `<img src="${imageSrc}" class="rounded-xl border border-[#333] mb-2 max-w-full">`;
+            }
+            
+            if (text) {
+                const parsedText = isAI ? marked.parse(text) : text.replace(new RegExp('\\n', 'g'), '<br>');
+                body += `<div class="prose prose-invert text-gray-200 bg-[#1e1f22] p-4 sm:p-5 rounded-2xl rounded-tl-none shadow-sm text-base sm:text-lg leading-relaxed">${parsedText}</div>`;
+            }
+            
+            if (isAI && text) {
+                body += `<div class="flex items-center gap-2 mt-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                    <button class="copy-btn p-1.5 text-gray-400 hover:text-white hover:bg-[#333] rounded-md" title="複製">
+                        <span class="material-symbols-rounded text-[16px] sm:text-[18px]">content_copy</span>
+                    </button>
+                    <button class="speak-btn p-1.5 text-gray-400 hover:text-green-400 hover:bg-[#333] rounded-md" title="朗讀此訊息">
+                        <span class="material-symbols-rounded text-[16px] sm:text-[18px]">volume_up</span>
+                    </button>
+                </div>`;
+            }
+            
+            body += `</div>`;
+            wrap.innerHTML = avatar + body;
+            chatContainer.appendChild(wrap);
+            
             if (isAI) {
                 wrap.querySelectorAll('pre code').forEach(code => {
                     const lang = code.className;
                     if (lang.includes('language-html') || lang.includes('language-jsx') || lang.includes('language-javascript')) {
-                        const btn = document.createElement('button'); btn.className = "absolute top-2 sm:top-3 right-2 sm:right-3 bg-blue-600 hover:bg-blue-500 text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg flex items-center gap-1 shadow-lg"; btn.innerHTML = '<span class="material-symbols-rounded text-[12px] sm:text-sm">play_circle</span> 預覽';
-                        btn.onclick = () => openPreview(code.innerText); code.parentElement.appendChild(btn);
+                        const btn = document.createElement('button');
+                        btn.className = "absolute top-2 sm:top-3 right-2 sm:right-3 bg-blue-600 hover:bg-blue-500 text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg flex items-center gap-1 shadow-lg";
+                        btn.innerHTML = '<span class="material-symbols-rounded text-[12px] sm:text-sm">play_circle</span> 預覽';
+                        btn.onclick = () => openPreview(code.innerText);
+                        code.parentElement.appendChild(btn);
                     }
                 });
             }
-
+            
             if (isAI && text) {
                 const copyBtn = wrap.querySelector('.copy-btn');
-                copyBtn.onclick = () => { navigator.clipboard.writeText(text).then(() => { const icon = copyBtn.querySelector('.material-symbols-rounded'); icon.innerText = 'check'; icon.classList.add('text-green-400'); setTimeout(() => { icon.innerText = 'content_copy'; icon.classList.remove('text-green-400'); }, 2000); }); };
+                copyBtn.onclick = () => {
+                    navigator.clipboard.writeText(text).then(() => {
+                        const icon = copyBtn.querySelector('.material-symbols-rounded');
+                        icon.innerText = 'check';
+                        icon.classList.add('text-green-400');
+                        setTimeout(() => {
+                            icon.innerText = 'content_copy';
+                            icon.classList.remove('text-green-400');
+                        }, 2000);
+                    });
+                };
                 
                 const speakBtn = wrap.querySelector('.speak-btn');
                 speakBtn.onclick = () => { speakText(text, false); };
@@ -626,38 +890,126 @@
         }
 
         function appendLoading() {
-            const id = 'loader-' + Date.now(); const div = document.createElement('div'); div.id = id; div.className = "flex gap-3 sm:gap-4 max-w-4xl mx-auto w-full";
+            const id = 'loader-' + Date.now();
+            const div = document.createElement('div');
+            div.id = id;
+            div.className = "flex gap-3 sm:gap-4 max-w-4xl mx-auto w-full";
             div.innerHTML = `<div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-600 flex items-center justify-center shrink-0 animate-pulse"><span class="material-symbols-rounded text-white text-[18px] sm:text-xl">hourglass_empty</span></div><div class="pt-1.5 sm:pt-3 flex gap-2 items-center text-gray-500 text-sm sm:text-base italic typing-indicator">代理人正忙碌中<span></span><span></span><span></span></div>`;
-            chatContainer.appendChild(div); scrollToBottom(); return id;
+            chatContainer.appendChild(div);
+            scrollToBottom();
+            return id;
         }
 
-        function removeLoading(id) { const el = document.getElementById(id); if (el) el.remove(); }
-        function scrollToBottom() { chatContainer.scrollTop = chatContainer.scrollHeight; }
-        function generateUUID() { return 'xxxx-4xxx-yxxx'.replace(/[xy]/g, c => (c === 'x' ? (Math.random() * 16 | 0) : (Math.random() * 16 | 0 & 0x3 | 0x8)).toString(16)); }
-        function toggleSidebar() { const sidebar = document.getElementById('sidebar'); const overlay = document.getElementById('sidebar-overlay'); sidebar.classList.toggle('-translate-x-full'); overlay.classList.toggle('hidden'); }
+        function removeLoading(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+        
+        function scrollToBottom() {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        function generateUUID() {
+            return 'xxxx-4xxx-yxxx'.replace(new RegExp('[xy]', 'g'), c => (c === 'x' ? (Math.random() * 16 | 0) : (Math.random() * 16 | 0 & 0x3 | 0x8)).toString(16));
+        }
+        
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
         
         function startNewSession() {
-            currentSessionId = generateUUID(); chatContainer.innerHTML = '';
-            appendMessage('ai', "您好！已為您開啟新的對話。\n開啟「⚡ **連續對話**」模式後，只要點一次麥克風，您就能跟我進行免持的雙向交談，我會在您停頓時自動回覆！");
-            if (window.innerWidth < 768) toggleSidebar(); loadSessions();
+            currentSessionId = generateUUID();
+            chatContainer.innerHTML = '';
+            appendMessage('ai', "您好！已為您開啟新的對話。\n您可以透過下方的「💎 角色選單」切換我的人格設定，來完成不同的專業任務！");
+            if (window.innerWidth < 768) toggleSidebar();
+            loadSessions();
         }
 
         async function switchSession(id, title) {
             if (id === currentSessionId && chatContainer.children.length > 1) return;
-            currentSessionId = id; document.getElementById('mobile-title').innerText = title; chatContainer.innerHTML = ''; const loadingId = appendLoading();
+            currentSessionId = id;
+            document.getElementById('mobile-title').innerText = title;
+            chatContainer.innerHTML = '';
+            const loadingId = appendLoading();
+            
             if (window.innerWidth < 768) toggleSidebar();
-            try { const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'load_session', session_id: id }) }); const data = await res.json(); removeLoading(loadingId); let logsData = data.logs || []; if (Array.isArray(logsData)) { logsData.forEach(l => appendMessage(l.role === 'ai' ? 'ai' : 'user', l.text)); } loadSessions(); } catch (e) { console.error(e); }
+            
+            try {
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ mode: 'system', action: 'load_session', session_id: id })
+                });
+                const data = await res.json();
+                removeLoading(loadingId);
+                let logsData = data.logs || [];
+                if (Array.isArray(logsData)) {
+                    logsData.forEach(l => appendMessage(l.role === 'ai' ? 'ai' : 'user', l.text));
+                }
+                loadSessions();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function loadGems() {
+            try {
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ mode: 'system', action: 'get_gems' })
+                });
+                const data = await res.json();
+                if (data && data.gems && data.gems.length > 0) {
+                    currentGemsList = data.gems;
+                    const selector = document.getElementById('gem-selector');
+                    selector.innerHTML = '<option value="">🤖 預設全能助理</option>';
+                    currentGemsList.forEach((gem, idx) => {
+                        const opt = document.createElement('option');
+                        opt.value = idx;
+                        opt.text = `💎 ${gem.name}`;
+                        selector.appendChild(opt);
+                    });
+                }
+            } catch (e) { console.error("載入 Gems 失敗:", e); }
         }
 
         async function loadSessions() {
             try {
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_session_list' }) }); const data = await res.json(); const list = document.getElementById('session-list'); list.innerHTML = '';
+                const res = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ mode: 'system', action: 'get_session_list' })
+                });
+                const data = await res.json();
+                const list = document.getElementById('session-list');
+                list.innerHTML = '';
                 if (!data || !data.sessions || !Array.isArray(data.sessions)) return;
+                
                 data.sessions.forEach(s => {
-                    const isActive = s.id === currentSessionId; const isPinned = s.pinned; const item = document.createElement('div');
+                    const isActive = s.id === currentSessionId;
+                    const isPinned = s.pinned;
+                    const item = document.createElement('div');
                     item.className = `group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${isActive ? 'active-session' : 'text-gray-400 hover:bg-[#2a2b2f] hover:text-white'}`;
                     const iconName = isPinned ? 'push_pin' : (isActive ? 'chat_bubble' : 'chat');
-                    item.innerHTML = `<div class="flex items-center gap-3 truncate flex-1 min-w-0"><span class="material-symbols-rounded text-lg shrink-0 ${isPinned ? 'pinned-icon' : ''}">${iconName}</span><span class="truncate text-sm font-medium tracking-wide">${s.title}</span></div><div class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 shrink-0 ml-2 transition-opacity"><button class="p-1 pin-btn ${isPinned ? 'text-blue-500' : ''} hover:bg-[#333] rounded-md transition-colors"><span class="material-symbols-rounded text-[16px]">push_pin</span></button><button class="p-1 edit-btn hover:text-blue-400 hover:bg-[#333] rounded-md transition-colors"><span class="material-symbols-rounded text-[16px]">edit</span></button><button class="p-1 del-btn hover:text-red-400 hover:bg-[#333] rounded-md transition-colors"><span class="material-symbols-rounded text-[16px]">delete</span></button></div>`;
+                    
+                    item.innerHTML = `
+                        <div class="flex items-center gap-3 truncate flex-1 min-w-0">
+                            <span class="material-symbols-rounded text-lg shrink-0 ${isPinned ? 'pinned-icon' : ''}">${iconName}</span>
+                            <span class="truncate text-sm font-medium tracking-wide">${s.title}</span>
+                        </div>
+                        <div class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 shrink-0 ml-2 transition-opacity">
+                            <button class="p-1 pin-btn ${isPinned ? 'text-blue-500' : ''} hover:bg-[#333] rounded-md transition-colors">
+                                <span class="material-symbols-rounded text-[16px]">push_pin</span>
+                            </button>
+                            <button class="p-1 edit-btn hover:text-blue-400 hover:bg-[#333] rounded-md transition-colors">
+                                <span class="material-symbols-rounded text-[16px]">edit</span>
+                            </button>
+                            <button class="p-1 del-btn hover:text-red-400 hover:bg-[#333] rounded-md transition-colors">
+                                <span class="material-symbols-rounded text-[16px]">delete</span>
+                            </button>
+                        </div>`;
+                        
                     item.onclick = () => switchSession(s.id, s.title);
                     item.querySelector('.pin-btn').onclick = (e) => { e.stopPropagation(); togglePinSession(s.id, isPinned); };
                     item.querySelector('.edit-btn').onclick = (e) => { e.stopPropagation(); renameSession(s.id, s.title); };
@@ -667,24 +1019,88 @@
             } catch (e) {}
         }
 
-        async function togglePinSession(id, current) { await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'pin_session', session_id: id, is_pinned: !current }) }); loadSessions(); }
-        async function renameSession(id, old) { const n = prompt("重命名對話：", old); if (n && n.trim()) { await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'rename_session', session_id: id, new_title: n }) }); loadSessions(); } }
-        async function deleteSession(id) { if (confirm("確定要刪除嗎？")) { await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'delete_session', session_id: id }) }); if (id === currentSessionId) startNewSession(); else loadSessions(); } }
-
-        function openPreview(code) {
-            let renderCode = code; const isReact = code.includes('export default') || code.includes('import React') || code.includes('className='); const isHTML = code.trim().toLowerCase().startsWith('<!doctype html') || code.trim().toLowerCase().startsWith('<html');
-            if (isReact && !isHTML) {
-                let cleanedCode = code.replace(/import\s+.*?from\s+['"].*?['"];?/g, ''); let componentMatch = cleanedCode.match(/export\s+default\s+function\s+([A-Za-z0-9_]+)/); let renderTarget = componentMatch ? componentMatch[1] : 'App'; cleanedCode = cleanedCode.replace(/export\s+default\s+function/g, 'function');
-                renderCode = `<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><script src="https://unpkg.com/react@18/umd/react.production.min.js"><\/script><script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"><\/script><script src="https://unpkg.com/@babel/standalone/babel.min.js"><\/script><script src="https://cdn.tailwindcss.com"><\/script><script src="https://unpkg.com/lucide@latest"><\/script></head><body class="bg-gray-50"><div id="root"></div><script type="text/babel">const { useState, useEffect, useRef, useMemo, useCallback } = React; try { ${cleanedCode} const root = ReactDOM.createRoot(document.getElementById('root')); root.render(<${renderTarget} />); setTimeout(() => { if(window.lucide) window.lucide.createIcons(); }, 100); } catch(err) { document.getElementById('root').innerHTML = '<div class="p-4 text-red-700"><strong>渲染錯誤:</strong><br>' + err.message + '</div>'; } <\/script></body></html>`;
-            }
-            currentRenderCode = renderCode; document.getElementById('preview-modal').classList.remove('hidden'); document.getElementById('preview-modal').classList.add('flex'); document.getElementById('preview-iframe').srcdoc = renderCode;
+        async function togglePinSession(id, current) {
+            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'pin_session', session_id: id, is_pinned: !current }) });
+            loadSessions();
         }
 
-        function closePreview() { document.getElementById('preview-modal').classList.add('hidden'); document.getElementById('preview-modal').classList.remove('flex'); document.getElementById('preview-iframe').srcdoc = ''; }
-        function refreshPreview() { if (currentRenderCode) document.getElementById('preview-iframe').srcdoc = currentRenderCode; }
+        async function renameSession(id, old) {
+            const n = prompt("重命名對話：", old);
+            if (n && n.trim()) {
+                await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'rename_session', session_id: id, new_title: n }) });
+                loadSessions();
+            }
+        }
 
-        window.onload = loadSessions;
+        async function deleteSession(id) {
+            if (confirm("確定要刪除嗎？")) {
+                await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'delete_session', session_id: id }) });
+                if (id === currentSessionId) startNewSession(); else loadSessions();
+            }
+        }
+        
+        // ✨ 已全面展開排版，徹底解決「標籤」被連字的錯誤
+        function openPreview(code) {
+            let renderCode = code;
+            const isReact = code.includes('export default') || code.includes('import React') || code.includes('className=');
+            const isHTML = code.trim().toLowerCase().startsWith('<!doctype html') || code.trim().toLowerCase().startsWith('<html');
+            
+            if (isReact && !isHTML) {
+                let cleanedCode = code.replace(new RegExp('import\\s+.*?from\\s+[\'"].*?[\'"];?', 'g'), '');
+                let componentMatch = cleanedCode.match(new RegExp('export\\s+default\\s+function\\s+([A-Za-z0-9_]+)'));
+                let renderTarget = componentMatch ? componentMatch[1] : 'App';
+                cleanedCode = cleanedCode.replace(new RegExp('export\\s+default\\s+function', 'g'), 'function');
+                
+                renderCode = `<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js">${'<'}/script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js">${'<'}/script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js">${'<'}/script>
+    <script src="https://cdn.tailwindcss.com">${'<'}/script>
+    <script src="https://unpkg.com/lucide@latest">${'<'}/script>
+</head>
+<body class="bg-gray-50">
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo, useCallback } = React;
+        try {
+            ${cleanedCode}
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(<${renderTarget} />);
+            setTimeout(() => { if(window.lucide) window.lucide.createIcons(); }, 100);
+        } catch(err) {
+            document.getElementById('root').innerHTML = '<div class="p-4 text-red-700"><strong>渲染錯誤:</strong><br>' + err.message + '</div>';
+        }
+    ${'<'}/script>
+</body>
+</html>`;
+            }
+            
+            currentRenderCode = renderCode;
+            document.getElementById('preview-modal').classList.remove('hidden');
+            document.getElementById('preview-modal').classList.add('flex');
+            document.getElementById('preview-iframe').srcdoc = renderCode;
+        }
+
+        function closePreview() {
+            document.getElementById('preview-modal').classList.add('hidden');
+            document.getElementById('preview-modal').classList.remove('flex');
+            document.getElementById('preview-iframe').srcdoc = '';
+        }
+
+        function refreshPreview() {
+            if (currentRenderCode) {
+                document.getElementById('preview-iframe').srcdoc = currentRenderCode;
+            }
+        }
+
+        window.onload = () => {
+            loadSessions();
+            loadGems();
+        };
     </script>
 </body>
-
 </html>
