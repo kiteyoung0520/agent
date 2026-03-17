@@ -114,7 +114,7 @@
                 </a>
             </div>
         </div>
-        <div class="p-4 border-t border-[#333] text-xs text-gray-500 text-center font-mono shrink-0">v87.3 Smart Context</div>
+        <div class="p-4 border-t border-[#333] text-xs text-gray-500 text-center font-mono shrink-0">v87.4 Archiver</div>
     </aside>
 
     <!-- Main Chat Area -->
@@ -130,7 +130,7 @@
                 <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center shadow-lg shrink-0"><span class="material-symbols-rounded text-white">smart_toy</span></div>
                 <div class="flex-1">
                     <h2 class="text-2xl sm:text-3xl font-bold text-white mb-2">我是您的 anyGem 代理人</h2>
-                    <p class="text-gray-400 text-base sm:text-lg leading-relaxed">歷史對話已重新掛載！您可以透過左側選單切換記憶專案，或透過下方選單調整我的大腦與工具。</p>
+                    <p class="text-gray-400 text-base sm:text-lg leading-relaxed">歷史對話已重新掛載！您可以點擊歷史紀錄旁的「資料夾圖示」將發散的草稿跨區轉移至其他專案。</p>
                 </div>
             </div>
         </div>
@@ -245,7 +245,7 @@
         });
 
         let currentSessionId = generateUUID();
-        let currentWorkspace = ""; // ✨ 解除強制綁定 Main_Workspace，改由後端智慧尋找你的第一張舊頁籤
+        let currentWorkspace = ""; 
         let currentImageData = null, currentMimeType = null, currentDocumentText = null, currentDocumentName = null, currentYouTubeId = null;
         let isWaiting = false, currentRenderCode = "", abortController = null, silenceTimer = null, currentGemsList = []; 
 
@@ -535,7 +535,6 @@
             loadSessions(); 
         }
         
-        // 🗂️ 專案空間 (Workspace) 管理 - 已修復預設綁定 Bug
         async function loadWorkspaces() { 
             try { 
                 const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_workspaces' }) })).json(); 
@@ -544,7 +543,6 @@
                     d.workspaces.forEach(ws => { html += `<option value="${ws}">${ws}</option>`; });
                     sel.innerHTML = html;
                     
-                    // 智慧選擇：如果 currentWorkspace 已存在就保留，否則自動挑選第一個有效的 Workspace (通常是使用者的舊紀錄)
                     if (currentWorkspace && d.workspaces.includes(currentWorkspace)) {
                         sel.value = currentWorkspace;
                     } else if (d.workspaces.length > 0) { 
@@ -575,7 +573,41 @@
             } catch (e) {} 
         }
 
-        async function loadSessions() { try { const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_session_list', workspace: currentWorkspace }) })).json(); const l = document.getElementById('session-list'); l.innerHTML = ''; if (Array.isArray(d.sessions)) d.sessions.forEach(s => { const act = s.id === currentSessionId, pin = s.pinned, i = document.createElement('div'); i.className = `group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${act ? 'active-session' : 'text-gray-400 hover:bg-[#2a2b2f] hover:text-white'}`; i.innerHTML = `<div class="flex items-center gap-3 truncate flex-1 min-w-0"><span class="material-symbols-rounded text-lg shrink-0 ${pin ? 'pinned-icon' : ''}">${pin ? 'push_pin' : (act ? 'chat_bubble' : 'chat')}</span><span class="truncate text-sm font-medium tracking-wide">${s.title}</span></div><div class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 shrink-0 ml-2 transition-opacity"><button class="p-1 pin-btn ${pin ? 'text-blue-500' : ''} hover:bg-[#333] rounded-md transition-colors"><span class="material-symbols-rounded text-[16px]">push_pin</span></button><button class="p-1 edit-btn hover:text-blue-400 hover:bg-[#333] rounded-md transition-colors"><span class="material-symbols-rounded text-[16px]">edit</span></button><button class="p-1 del-btn hover:text-red-400 hover:bg-[#333] rounded-md transition-colors"><span class="material-symbols-rounded text-[16px]">delete</span></button></div>`; i.onclick = () => switchSession(s.id, s.title); i.querySelector('.pin-btn').onclick = (e) => { e.stopPropagation(); fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'pin_session', session_id: s.id, is_pinned: !pin, workspace: currentWorkspace }) }).then(loadSessions); }; i.querySelector('.edit-btn').onclick = (e) => { e.stopPropagation(); const n = prompt("重命名：", s.title); if (n && n.trim()) fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'rename_session', session_id: s.id, new_title: n, workspace: currentWorkspace }) }).then(loadSessions); }; i.querySelector('.del-btn').onclick = (e) => { e.stopPropagation(); if (confirm("確定要刪除嗎？")) fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'delete_session', session_id: s.id, workspace: currentWorkspace }) }).then(() => s.id === currentSessionId ? startNewSession() : loadSessions()); }; l.appendChild(i); }); } catch (e) {} }
+        // ✨ 更新的 loadSessions()：加入「資料轉移 (Move)」按鈕
+        async function loadSessions() { 
+            try { 
+                const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_session_list', workspace: currentWorkspace }) })).json(); 
+                const l = document.getElementById('session-list'); l.innerHTML = ''; 
+                if (Array.isArray(d.sessions)) d.sessions.forEach(s => { 
+                    const act = s.id === currentSessionId, pin = s.pinned, i = document.createElement('div'); 
+                    i.className = `group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${act ? 'active-session' : 'text-gray-400 hover:bg-[#2a2b2f] hover:text-white'}`; 
+                    i.innerHTML = `<div class="flex items-center gap-3 truncate flex-1 min-w-0"><span class="material-symbols-rounded text-lg shrink-0 ${pin ? 'pinned-icon' : ''}">${pin ? 'push_pin' : (act ? 'chat_bubble' : 'chat')}</span><span class="truncate text-sm font-medium tracking-wide">${s.title}</span></div><div class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 shrink-0 ml-2 transition-opacity"><button class="p-1 pin-btn ${pin ? 'text-blue-500' : ''} hover:bg-[#333] rounded-md transition-colors" title="釘選"><span class="material-symbols-rounded text-[16px]">push_pin</span></button><button class="p-1 move-btn hover:text-green-400 hover:bg-[#333] rounded-md transition-colors" title="歸檔至其他專案"><span class="material-symbols-rounded text-[16px]">drive_file_move</span></button><button class="p-1 edit-btn hover:text-blue-400 hover:bg-[#333] rounded-md transition-colors" title="重新命名"><span class="material-symbols-rounded text-[16px]">edit</span></button><button class="p-1 del-btn hover:text-red-400 hover:bg-[#333] rounded-md transition-colors" title="刪除對話"><span class="material-symbols-rounded text-[16px]">delete</span></button></div>`; 
+                    i.onclick = () => switchSession(s.id, s.title); 
+                    
+                    i.querySelector('.pin-btn').onclick = (e) => { e.stopPropagation(); fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'pin_session', session_id: s.id, is_pinned: !pin, workspace: currentWorkspace }) }).then(loadSessions); }; 
+                    i.querySelector('.edit-btn').onclick = (e) => { e.stopPropagation(); const n = prompt("重命名：", s.title); if (n && n.trim()) fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'rename_session', session_id: s.id, new_title: n, workspace: currentWorkspace }) }).then(loadSessions); }; 
+                    i.querySelector('.del-btn').onclick = (e) => { e.stopPropagation(); if (confirm("確定要刪除嗎？")) fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'delete_session', session_id: s.id, workspace: currentWorkspace }) }).then(() => s.id === currentSessionId ? startNewSession() : loadSessions()); }; 
+                    
+                    // ✨ 綁定轉移按鈕邏輯
+                    i.querySelector('.move-btn').onclick = (e) => { 
+                        e.stopPropagation(); 
+                        const targetWs = prompt(`將對話「${s.title}」歸檔\n請輸入目標專案空間名稱 (若不存在將自動建立)：`, "歸檔專案"); 
+                        if (targetWs && targetWs.trim() && targetWs.trim() !== currentWorkspace) {
+                            const lid = appendLoading("正在轉移對話紀錄...");
+                            fetch(GAS_URL, { 
+                                method: 'POST', 
+                                body: JSON.stringify({ mode: 'system', action: 'move_session', session_id: s.id, workspace: currentWorkspace, target_workspace: targetWs.trim() }) 
+                            }).then(() => {
+                                removeLoading(lid);
+                                if (s.id === currentSessionId) startNewSession(); else loadSessions();
+                                loadWorkspaces(); 
+                            }); 
+                        } 
+                    };
+                    l.appendChild(i); 
+                }); 
+            } catch (e) {} 
+        }
 
         function openPreview(code) {
             let rc = code;
@@ -603,3 +635,6 @@
     </script>
 </body>
 </html>
+
+
+
