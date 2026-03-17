@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>anyGem - Super Agent (Ultimate Edition)</title>
+    <title>anyGem - Super Agent (Ultimate Workspace Edition)</title>
     
     <link rel="preconnect" href="https://cdn.tailwindcss.com">
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
@@ -65,17 +65,33 @@
     <aside id="sidebar" class="bg-[#1e1f22] border-r border-[#333] flex flex-col transition-transform duration-300 z-30 absolute md:relative h-full -translate-x-full md:translate-x-0 w-[85vw] max-w-[340px] md:w-[288px] md:max-w-none shadow-2xl md:shadow-none" style="min-width: 200px;">
         <div id="sidebar-resizer" class="hidden md:block absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-blue-500/50 z-40 transition-colors"></div>
 
-        <div class="p-6">
-            <div class="flex items-center gap-3 mb-8">
+        <div class="p-6 pb-2">
+            <div class="flex items-center gap-3 mb-6">
                 <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
                     <span class="material-symbols-rounded text-white text-xl">auto_awesome</span>
                 </div>
                 <h1 class="text-xl font-bold tracking-tight text-white">anyGem Agent</h1>
             </div>
-            <button onclick="startNewSession()" class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-3 rounded-xl transition-all shadow-lg">
+            
+            <!-- ✨ Workspace 專案隔離選擇器 -->
+            <div class="mb-4">
+                <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wider pl-1 mb-1 block">🗂️ 專案記憶空間</label>
+                <div class="relative flex items-center mb-2">
+                    <select id="workspace-selector" onchange="changeWorkspace()" class="w-full pl-3 pr-8 py-2 bg-[#2a2b2f] hover:bg-[#333] text-indigo-200 text-sm font-semibold rounded-lg border border-[#444] outline-none focus:border-indigo-500 transition-all appearance-none cursor-pointer shadow-sm truncate">
+                        <option value="Main_Workspace">Main Workspace</option>
+                    </select>
+                    <span class="absolute right-2 text-gray-400 material-symbols-rounded text-[18px] pointer-events-none">expand_more</span>
+                </div>
+                <button onclick="createNewWorkspace()" class="w-full text-xs text-gray-400 hover:text-indigo-400 text-left pl-1 transition-colors flex items-center gap-1">
+                    <span class="material-symbols-rounded text-[14px]">add_circle</span> 建立新專案空間
+                </button>
+            </div>
+
+            <button onclick="startNewSession()" class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-all shadow-lg mt-2">
                 <span class="material-symbols-rounded">add</span> 新對話
             </button>
         </div>
+        
         <div id="session-list" class="flex-1 overflow-y-auto px-3 space-y-1 pb-4"></div>
         
         <div class="px-3 pb-4 border-t border-[#333] pt-4 shrink-0">
@@ -98,7 +114,7 @@
                 </a>
             </div>
         </div>
-        <div class="p-4 border-t border-[#333] text-xs text-gray-500 text-center font-mono shrink-0">v86.40 Ultimate Edition</div>
+        <div class="p-4 border-t border-[#333] text-xs text-gray-500 text-center font-mono shrink-0">v87.0 Workspace Edition</div>
     </aside>
 
     <!-- Main Chat Area -->
@@ -114,7 +130,7 @@
                 <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center shadow-lg shrink-0"><span class="material-symbols-rounded text-white">smart_toy</span></div>
                 <div class="flex-1">
                     <h2 class="text-2xl sm:text-3xl font-bold text-white mb-2">我是您的 anyGem 代理人</h2>
-                    <p class="text-gray-400 text-base sm:text-lg leading-relaxed">您可以透過下方的「💎 角色選單」切換專長，或使用「🧠 模型選單」自由升降級我的智商大腦！</p>
+                    <p class="text-gray-400 text-base sm:text-lg leading-relaxed">我們已開啟 <strong>內部品管 (Inner QA)</strong> 防護網，並切換至專屬記憶隔離空間！您可以透過下方選單調整我的大腦。</p>
                 </div>
             </div>
         </div>
@@ -154,7 +170,7 @@
                             <span class="absolute right-1.5 text-gray-400 material-symbols-rounded text-[16px] pointer-events-none">arrow_drop_down</span>
                         </div>
 
-                        <!-- ✨ 全域模型選擇器 -->
+                        <!-- 全域模型選擇器 -->
                         <div class="relative flex items-center mr-auto shrink-0">
                             <span class="absolute left-2 text-purple-400 material-symbols-rounded text-[14px] pointer-events-none">memory</span>
                             <select id="model-selector" class="pl-7 pr-6 py-1.5 bg-[#2a2b2f] hover:bg-[#333] text-purple-100 text-xs font-bold tracking-wide rounded-lg border border-[#444] outline-none focus:border-purple-500 transition-all appearance-none cursor-pointer max-w-[130px] sm:max-w-[160px] truncate shadow-sm">
@@ -171,7 +187,6 @@
                                 <span id="settings-menu-chevron" class="material-symbols-rounded text-[18px] text-gray-500 transition-transform duration-200">expand_less</span>
                             </button>
                             
-                            <!-- 下拉面板 -->
                             <div id="settings-dropdown" class="hidden absolute bottom-full right-0 mb-3 w-40 bg-[#2a2b2f] border border-[#444] rounded-xl shadow-[0_-10px_40px_rgba(0,0,0,0.5)] p-3 flex flex-col gap-4 z-50">
                                 <label class="relative flex items-center justify-between cursor-pointer group">
                                     <span class="text-xs font-medium text-gray-300 group-hover:text-purple-400 transition-colors flex items-center gap-1.5"><span class="material-symbols-rounded text-[16px]">palette</span> 單純繪圖</span>
@@ -190,7 +205,7 @@
                                     <div class="relative"><input type="checkbox" id="voice-output-toggle" class="sr-only peer"><div class="w-7 h-4 bg-gray-600 rounded-full peer peer-checked:bg-green-600 after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-full"></div></div>
                                 </label>
                                 <label class="relative flex items-center justify-between cursor-pointer group">
-                                    <span class="text-xs font-medium text-gray-300 group-hover:text-yellow-400 transition-colors flex items-center gap-1.5"><span class="material-symbols-rounded text-[16px]">all_inclusive</span> 連續</span>
+                                    <span class="text-xs font-medium text-gray-300 group-hover:text-yellow-400 transition-colors flex items-center gap-1.5"><span class="material-symbols-rounded text-[16px]">all_inclusive</span> 連續對話</span>
                                     <div class="relative"><input type="checkbox" id="continuous-mode-toggle" class="sr-only peer"><div class="w-7 h-4 bg-gray-600 rounded-full peer peer-checked:bg-yellow-500 after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-full"></div></div>
                                 </label>
                             </div>
@@ -233,6 +248,7 @@
         });
 
         let currentSessionId = generateUUID();
+        let currentWorkspace = "Main_Workspace"; 
         let currentImageData = null, currentMimeType = null, currentDocumentText = null, currentDocumentName = null, currentYouTubeId = null;
         let isWaiting = false, currentRenderCode = "", abortController = null, silenceTimer = null, currentGemsList = []; 
 
@@ -285,6 +301,7 @@
         }
         if (window.speechSynthesis && window.speechSynthesis.onvoiceschanged !== undefined) window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 
+        // 外部檔案處理函式庫
         let pdfjsLibLoaded = false, mammothLoaded = false, xlsxLoaded = false, jszipLoaded = false;
         async function loadPdfJs() { if(pdfjsLibLoaded) return; return new Promise((r, j) => { let s = document.createElement('script'); s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"; s.onload = () => { pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; pdfjsLibLoaded = true; r(); }; s.onerror = j; document.head.appendChild(s); }); }
         async function loadMammoth() { if(mammothLoaded) return; return new Promise((r, j) => { let s = document.createElement('script'); s.src = "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"; s.onload = () => { mammothLoaded = true; r(); }; s.onerror = j; document.head.appendChild(s); }); }
@@ -328,17 +345,13 @@
             
             const payload = { 
                 mode: 'edit_and_regenerate',
-                old_text: oldText,
-                message: newText,
-                session_id: currentSessionId, 
+                old_text: oldText, message: newText, session_id: currentSessionId, workspace: currentWorkspace,
                 file_data: null, mime_type: null, 
                 web_search: document.getElementById('web-search-toggle').checked, 
                 auto_image: document.getElementById('auto-image-toggle').checked, 
                 draw_mode: document.getElementById('draw-mode-toggle').checked, 
                 youtube_id: null, 
-                gem_prompt: agp, 
-                gem_model: agm,
-                selected_model: ms.value 
+                gem_prompt: agp, gem_model: agm, selected_model: ms.value 
             };
             
             toggleSendButton(true); const lid = appendLoading(); abortController = new AbortController(); 
@@ -380,17 +393,13 @@
             userInput.value = ''; userInput.style.height = 'auto'; finalTranscript = ''; 
             
             const payload = { 
-                message: pText, 
-                session_id: currentSessionId, 
-                file_data: currentImageData ? currentImageData.split(',')[1] : null, 
-                mime_type: currentMimeType, 
+                message: pText, session_id: currentSessionId, workspace: currentWorkspace,
+                file_data: currentImageData ? currentImageData.split(',')[1] : null, mime_type: currentMimeType, 
                 web_search: document.getElementById('web-search-toggle').checked, 
                 auto_image: document.getElementById('auto-image-toggle').checked, 
                 draw_mode: document.getElementById('draw-mode-toggle').checked, 
                 youtube_id: currentYouTubeId, 
-                gem_prompt: agp, 
-                gem_model: agm,
-                selected_model: ms.value 
+                gem_prompt: agp, gem_model: agm, selected_model: ms.value 
             };
             
             clearUpload(); toggleSendButton(true); const lid = appendLoading(); abortController = new AbortController(); 
@@ -405,7 +414,7 @@
             finally { toggleSendButton(false); abortController = null; }
         }
 
-        // ✨ 重磅更新：雙軌制檔案解析 (支援 PPTX 上傳)
+        // 支援本機大型檔案解析 (PDF/Word/Excel/PPTX)
         async function handleFileUpload(e) {
             const f = e.target.files[0]; if (!f) return; const r = new FileReader(), ext = f.name.split('.').pop().toLowerCase();
             
@@ -413,92 +422,47 @@
             else if (f.type === 'application/pdf' || ext === 'pdf') { const lid = appendLoading(); try { await loadPdfJs(); r.onload = async (ev) => { try { const pdf = await pdfjsLib.getDocument(new Uint8Array(ev.target.result)).promise; let t = ""; for (let i=1; i<=pdf.numPages; i++) t += (await (await pdf.getPage(i)).getTextContent()).items.map(s => s.str).join(' ') + "\n"; setDocPayload(f.name, t); } catch (err) { alert("PDF 解析失敗"); } finally { removeLoading(lid); } }; r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); alert("載入 PDF 引擎失敗"); } } 
             else if (ext === 'docx') { const lid = appendLoading(); try { await loadMammoth(); r.onload = async (ev) => { try { setDocPayload(f.name, (await mammoth.extractRawText({ arrayBuffer: ev.target.result })).value); } catch(err) { alert("Word 解析失敗"); } finally { removeLoading(lid); } }; r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); alert("載入 Word 引擎失敗"); } } 
             else if (ext === 'xlsx' || ext === 'csv') { const lid = appendLoading(); try { await loadXlsx(); r.onload = (ev) => { try { const wb = XLSX.read(ev.target.result, { type: 'array' }); let t = ""; wb.SheetNames.forEach(n => { t += `\n--- 表單: ${n} ---\n`; let c = XLSX.utils.sheet_to_csv(wb.Sheets[n]); t += c.length > 500000 ? c.substring(0, 500000) + "\n...[截斷]..." : c; }); setDocPayload(f.name, t); } catch(err) { alert("Excel 解析失敗"); } finally { removeLoading(lid); } }; r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); alert("載入 Excel 引擎失敗"); } } 
-            
-            // 🚀 PPTX 雙軌管線啟動
             else if (ext === 'pptx') { 
                 const lid = appendLoading("正在解析簡報檔..."); 
-                // Track 1: 如果小於 5MB，送給強大的 GAS 原生引擎處理 (包含表格、形狀)
                 if (f.size < 5 * 1024 * 1024) { 
                     try {
                         r.onload = async (ev) => {
                             try {
                                 const base64Data = ev.target.result.split(',')[1];
-                                const res = await fetch(GAS_URL, {
-                                    method: 'POST',
-                                    body: JSON.stringify({ mode: 'system', action: 'parse_pptx', file_name: f.name, file_data: base64Data })
-                                });
+                                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'parse_pptx', file_name: f.name, file_data: base64Data }) });
                                 const data = await res.json();
-                                if (data.status === 'success') {
-                                    setDocPayload(f.name, data.text);
-                                } else {
-                                    throw new Error(data.message || "雲端轉檔失敗");
-                                }
-                            } catch (err) {
-                                console.warn("雲端 PPTX 解析失敗，啟動備用引擎...", err);
-                                // GAS 發生錯誤 (可能未開 Drive API)，退回 Track 2
-                                fallbackJSZipParse(f, ev.target.result.split(',')[1], true, lid);
-                            } finally { removeLoading(lid); }
-                        };
-                        r.readAsDataURL(f);
+                                if (data.status === 'success') { setDocPayload(f.name, data.text); } else { throw new Error(data.message || "雲端轉檔失敗"); }
+                            } catch (err) { console.warn("雲端 PPTX 解析失敗，啟動備用引擎...", err); fallbackJSZipParse(f, ev.target.result.split(',')[1], true, lid); } 
+                            finally { removeLoading(lid); }
+                        }; r.readAsDataURL(f);
                     } catch (err) { removeLoading(lid); }
                 } 
-                // Track 2: 檔案太大，直接在瀏覽器暴力解析 XML (保護伺服器不 Crash)
-                else {
-                    try {
-                        r.onload = (ev) => fallbackJSZipParse(f, ev.target.result, false, lid);
-                        r.readAsArrayBuffer(f);
-                    } catch (err) { removeLoading(lid); }
-                }
+                else { try { r.onload = (ev) => fallbackJSZipParse(f, ev.target.result, false, lid); r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); } }
             } 
             else { r.onload = (ev) => setDocPayload(f.name, ev.target.result); r.readAsText(f); }
         }
 
-        // 獨立出 JSZip 本機備用解析引擎 (當雲端解析失敗或檔案過大時觸發)
         async function fallbackJSZipParse(fileObj, fileData, isBase64, loaderId) {
             try { 
-                await loadJszip(); 
-                const zip = await (new JSZip()).loadAsync(fileData, isBase64 ? { base64: true } : {}); 
+                await loadJszip(); const zip = await (new JSZip()).loadAsync(fileData, isBase64 ? { base64: true } : {}); 
                 let t = `【系統解析：簡報檔名 ${fileObj.name} (啟動本機輕量模式)】\n\n`; 
-                
                 const sFiles = Object.keys(zip.files).filter(n => n.match(/^ppt\/slides\/slide\d+\.xml$/)).sort((a, b) => parseInt(a.match(/(\d+)\.xml$/)[1]) - parseInt(b.match(/(\d+)\.xml$/)[1]));
                 const nFiles = Object.keys(zip.files).filter(n => n.match(/^ppt\/notesSlides\/notesSlide\d+\.xml$/));
                 const parser = new DOMParser(); 
-                
                 for (const p of sFiles) { 
-                    const sn = p.match(/(\d+)\.xml$/)[1]; 
-                    t += `--- 第 ${sn} 頁 ---\n`; 
+                    const sn = p.match(/(\d+)\.xml$/)[1]; t += `--- 第 ${sn} 頁 ---\n`; 
                     const sx = await zip.file(p).async("string"); 
-                    if (sx) { 
-                        const xmlDoc = parser.parseFromString(sx, "text/xml"); 
-                        const textNodes = Array.from(xmlDoc.getElementsByTagName("a:t")); 
-                        let extText = textNodes.map(n => n.textContent).join(" ");
-                        t += `[投影片內容]:\n${extText.trim()}\n`; 
-                    } 
-                    
+                    if (sx) { const xmlDoc = parser.parseFromString(sx, "text/xml"); const textNodes = Array.from(xmlDoc.getElementsByTagName("a:t")); let extText = textNodes.map(n => n.textContent).join(" "); t += `[投影片內容]:\n${extText.trim()}\n`; } 
                     const np = `ppt/notesSlides/notesSlide${sn}.xml`; 
-                    if (nFiles.includes(np)) { 
-                        const nx = await zip.file(np).async("string"); 
-                        if (nx) { 
-                            const xmlDoc = parser.parseFromString(nx, "text/xml"); 
-                            const textNodes = Array.from(xmlDoc.getElementsByTagName("a:t")); 
-                            let extText = textNodes.map(n => n.textContent).join(" ");
-                            if (extText.trim()) t += `[講者備忘錄]:\n${extText.trim()}\n`; 
-                        } 
-                    } 
+                    if (nFiles.includes(np)) { const nx = await zip.file(np).async("string"); if (nx) { const xmlDoc = parser.parseFromString(nx, "text/xml"); const textNodes = Array.from(xmlDoc.getElementsByTagName("a:t")); let extText = textNodes.map(n => n.textContent).join(" "); if (extText.trim()) t += `[講者備忘錄]:\n${extText.trim()}\n`; } } 
                     t += `\n`; 
-                } 
-                setDocPayload(fileObj.name, t); 
-            } catch (err) { 
-                alert("PPTX 本機備用解析失敗"); 
-            } finally { 
-                removeLoading(loaderId); 
-            }
+                } setDocPayload(fileObj.name, t); 
+            } catch (err) { alert("PPTX 本機備用解析失敗"); } finally { removeLoading(loaderId); }
         }
 
         function setDocPayload(n, t) { currentDocumentName = n; currentDocumentText = t; document.getElementById('doc-filename').innerText = n; document.getElementById('doc-preview').classList.remove('hidden'); document.getElementById('image-preview').classList.add('hidden'); document.getElementById('youtube-preview').classList.add('hidden'); document.getElementById('upload-preview-container').classList.remove('hidden'); }
         function clearUpload() { currentImageData = currentDocumentText = currentDocumentName = currentYouTubeId = null; document.getElementById('upload-preview-container').classList.add('hidden'); document.getElementById('file-upload').value = ''; }
 
-        // ✨ UI：注入編輯 (Edit) 與回收刪除 (Soft-delete) 按鈕的邏輯
         function appendMessage(role, text, imageSrc = null, model = null) {
             const isAI = role === 'ai', w = document.createElement('div'); w.className = `flex gap-3 sm:gap-4 max-w-4xl mx-auto w-full group ${!isAI ? 'flex-row-reverse' : ''}`;
             let b = `<div class="flex-1 ${!isAI ? 'text-right' : ''} space-y-2 max-w-[90%] sm:max-w-[85%] relative min-w-0">`;
@@ -507,7 +471,7 @@
             if (imageSrc) b += `<img src="${imageSrc}" class="rounded-xl border border-[#333] mb-2 max-w-full">`;
             if (text) b += `<div class="prose prose-invert text-gray-200 bg-[#1e1f22] p-4 sm:p-5 rounded-2xl rounded-tl-none shadow-sm text-base sm:text-lg leading-relaxed text-left">${isAI ? marked.parse(text) : text.replace(new RegExp('\\n', 'g'), '<br>')}</div>`;
             
-            // 動態功能按鈕區
+            // 重新加入強大的訊息操作按鈕
             b += `<div class="flex items-center gap-2 mt-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity ${!isAI ? 'justify-end' : ''}">`;
             if (isAI && text) {
                 b += `<button class="copy-btn p-1.5 text-gray-400 hover:text-white hover:bg-[#333] rounded-md" title="複製"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">content_copy</span></button>`;
@@ -524,7 +488,7 @@
             w.innerHTML = `<div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 shadow-lg ${isAI ? 'bg-blue-600' : 'bg-gray-700'}"><span class="material-symbols-rounded text-white text-[18px] sm:text-xl">${isAI ? 'smart_toy' : 'person'}</span></div>` + b;
             chatContainer.appendChild(w);
 
-            // Artifacts 渲染按鈕
+            // 重新加入代碼預覽 (Artifacts) 功能
             if (isAI) { w.querySelectorAll('pre code').forEach(c => { if (c.className.includes('language-html') || c.className.includes('language-jsx') || c.className.includes('language-javascript')) { let btn = document.createElement('button'); btn.className = "absolute top-2 sm:top-3 right-2 sm:right-3 bg-blue-600 hover:bg-blue-500 text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg flex items-center gap-1 shadow-lg"; btn.innerHTML = '<span class="material-symbols-rounded text-[12px] sm:text-sm">play_circle</span> 預覽'; btn.onclick = () => openPreview(c.innerText); c.parentElement.appendChild(btn); } }); }
             
             if (isAI && text) { 
@@ -532,68 +496,29 @@
                 w.querySelector('.speak-btn').onclick = () => speakText(text, false); 
             } 
             
-            // 綁定「編輯/時光機」事件
             if (!isAI && text) {
                 w.querySelector('.edit-btn').onclick = () => {
-                    const contentDiv = w.querySelector('.prose');
-                    const actionsDiv = w.querySelector('.flex.items-center.gap-2.mt-2');
-                    contentDiv.classList.add('hidden');
-                    actionsDiv.classList.add('hidden');
-                    
-                    const editContainer = document.createElement('div');
-                    editContainer.className = "w-full mt-2 flex flex-col gap-2 text-left";
-                    
+                    const contentDiv = w.querySelector('.prose'); const actionsDiv = w.querySelector('.flex.items-center.gap-2.mt-2'); contentDiv.classList.add('hidden'); actionsDiv.classList.add('hidden');
+                    const editContainer = document.createElement('div'); editContainer.className = "w-full mt-2 flex flex-col gap-2 text-left";
                     let cleanEditText = text.replace(new RegExp('^【使用角色：.*?】\\n'), '').replace(new RegExp('^📎 \\[(?:文件|檔案): .*?\\]\\n'), '').replace(new RegExp('^📺 \\[YouTube 影片\\]\\n'), '');
-
-                    editContainer.innerHTML = `
-                        <textarea class="w-full bg-[#2a2b2f] text-white p-3 rounded-xl border border-blue-500 outline-none resize-y min-h-[100px] text-base leading-relaxed">${cleanEditText}</textarea>
-                        <div class="flex justify-end gap-2">
-                            <button class="cancel-edit-btn px-3 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-[#333] transition-colors">取消</button>
-                            <button class="save-edit-btn px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1 transition-colors shadow-md"><span class="material-symbols-rounded text-[16px]">send</span> 重新發送</button>
-                        </div>
-                    `;
+                    editContainer.innerHTML = `<textarea class="w-full bg-[#2a2b2f] text-white p-3 rounded-xl border border-blue-500 outline-none resize-y min-h-[100px] text-base leading-relaxed">${cleanEditText}</textarea><div class="flex justify-end gap-2"><button class="cancel-edit-btn px-3 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-[#333] transition-colors">取消</button><button class="save-edit-btn px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1 transition-colors shadow-md"><span class="material-symbols-rounded text-[16px]">send</span> 重新發送</button></div>`;
                     w.querySelector('.flex-1').appendChild(editContainer);
-                    
-                    editContainer.querySelector('.cancel-edit-btn').onclick = () => {
-                        editContainer.remove();
-                        contentDiv.classList.remove('hidden');
-                        actionsDiv.classList.remove('hidden');
-                    };
-                    
+                    editContainer.querySelector('.cancel-edit-btn').onclick = () => { editContainer.remove(); contentDiv.classList.remove('hidden'); actionsDiv.classList.remove('hidden'); };
                     editContainer.querySelector('.save-edit-btn').onclick = () => {
-                        const newText = editContainer.querySelector('textarea').value.trim();
-                        if (!newText) return;
-                        
-                        let curr = w;
-                        while(curr) {
-                            let next = curr.nextElementSibling;
-                            curr.remove();
-                            curr = next;
-                        }
+                        const newText = editContainer.querySelector('textarea').value.trim(); if (!newText) return;
+                        let curr = w; while(curr) { let next = curr.nextElementSibling; curr.remove(); curr = next; }
                         sendEditAndRegenerate(text, newText); 
                     };
                 };
             }
 
-            // 綁定「刪除/回收」事件
             if (w.querySelector('.delete-btn')) {
                 w.querySelector('.delete-btn').onclick = () => {
                     if (confirm("確定要刪除這則訊息嗎？\n(刪除後系統將徹底忘記這段對話)")) {
-                        w.remove();
-                        fetch(GAS_URL, {
-                            method: 'POST',
-                            body: JSON.stringify({
-                                mode: 'system',
-                                action: 'delete_message',
-                                session_id: currentSessionId,
-                                target_text: text,
-                                target_role: role
-                            })
-                        });
+                        w.remove(); fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'delete_message', session_id: currentSessionId, workspace: currentWorkspace, target_text: text, target_role: role }) });
                     }
                 };
             }
-
             scrollToBottom();
         }
 
@@ -607,28 +532,43 @@
         function scrollToBottom() { chatContainer.scrollTop = chatContainer.scrollHeight; }
         function generateUUID() { return 'xxxx-4xxx-yxxx'.replace(new RegExp('[xy]', 'g'), c => (c === 'x' ? (Math.random() * 16 | 0) : (Math.random() * 16 | 0 & 0x3 | 0x8)).toString(16)); }
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('-translate-x-full'); document.getElementById('sidebar-overlay').classList.toggle('hidden'); }
-        function startNewSession() { currentSessionId = generateUUID(); chatContainer.innerHTML = ''; appendMessage('ai', "您好！已為您開啟新的對話。\n您可以透過下方的「💎 角色選單」切換專長，或使用「🧠 模型選單」自由升降級我的智商大腦！"); if (window.innerWidth < 768) toggleSidebar(); loadSessions(); }
+        function startNewSession() { currentSessionId = generateUUID(); chatContainer.innerHTML = ''; appendMessage('ai', `您已進入 **${currentWorkspace}** 專案空間。\n我會自動隔離記憶，確保任務上下文精準不發散！\n(下方的麥克風與功能選單皆已就緒)`); if (window.innerWidth < 768) toggleSidebar(); loadSessions(); }
         
-        async function switchSession(id, title) { if (id === currentSessionId && chatContainer.children.length > 1) return; currentSessionId = id; document.getElementById('mobile-title').innerText = title; chatContainer.innerHTML = ''; const lid = appendLoading(); if (window.innerWidth < 768) toggleSidebar(); try { const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'load_session', session_id: id }) })).json(); removeLoading(lid); if (Array.isArray(d.logs)) d.logs.forEach(l => appendMessage(l.role === 'ai' ? 'ai' : 'user', l.text)); loadSessions(); } catch (e) {} }
-        
-        async function loadGems() { try { const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_gems' }) })).json(); if (d && d.gems) { currentGemsList = d.gems; const s = document.getElementById('gem-selector'); s.innerHTML = '<option value="">🤖 全能助理</option>'; currentGemsList.forEach((g, i) => s.innerHTML += `<option value="${i}">💎 ${g.name}</option>`); } } catch (e) {} }
-        
-        async function loadModels() { 
+        // 🗂️ 專案空間 (Workspace) 管理
+        async function loadWorkspaces() { 
             try { 
-                const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_models' }) })).json(); 
-                const s = document.getElementById('model-selector'); 
-                s.innerHTML = '<option value="">🧠 預設模型 (自動)</option>'; 
-                if (d && d.models && d.models.length > 0) { 
-                    d.models.forEach(m => s.innerHTML += `<option value="${m.id}">${m.name}</option>`); 
-                } else {
-                    s.innerHTML += `<option value="gemini-2.5-flash">⚡ 閃電 (2.5 Flash)</option>`;
-                    s.innerHTML += `<option value="gemini-2.5-pro">🧠 專家 (2.5 Pro)</option>`;
-                    s.innerHTML += `<option value="gemini-2.0-pro-exp-02-05">💡 實驗 (2.0 Pro Exp)</option>`;
+                const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_workspaces' }) })).json(); 
+                if (d && d.workspaces) {
+                    const sel = document.getElementById('workspace-selector'); let html = '';
+                    d.workspaces.forEach(ws => { html += `<option value="${ws}">${ws}</option>`; });
+                    sel.innerHTML = html;
+                    if (d.workspaces.includes(currentWorkspace)) sel.value = currentWorkspace;
+                    else if (d.workspaces.length > 0) { currentWorkspace = d.workspaces[0]; sel.value = currentWorkspace; }
                 }
             } catch (e) {} 
         }
 
-        async function loadSessions() { try { const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_session_list' }) })).json(); const l = document.getElementById('session-list'); l.innerHTML = ''; if (Array.isArray(d.sessions)) d.sessions.forEach(s => { const act = s.id === currentSessionId, pin = s.pinned, i = document.createElement('div'); i.className = `group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${act ? 'active-session' : 'text-gray-400 hover:bg-[#2a2b2f] hover:text-white'}`; i.innerHTML = `<div class="flex items-center gap-3 truncate flex-1 min-w-0"><span class="material-symbols-rounded text-lg shrink-0 ${pin ? 'pinned-icon' : ''}">${pin ? 'push_pin' : (act ? 'chat_bubble' : 'chat')}</span><span class="truncate text-sm font-medium tracking-wide">${s.title}</span></div><div class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 shrink-0 ml-2 transition-opacity"><button class="p-1 pin-btn ${pin ? 'text-blue-500' : ''} hover:bg-[#333] rounded-md transition-colors"><span class="material-symbols-rounded text-[16px]">push_pin</span></button><button class="p-1 edit-btn hover:text-blue-400 hover:bg-[#333] rounded-md transition-colors"><span class="material-symbols-rounded text-[16px]">edit</span></button><button class="p-1 del-btn hover:text-red-400 hover:bg-[#333] rounded-md transition-colors"><span class="material-symbols-rounded text-[16px]">delete</span></button></div>`; i.onclick = () => switchSession(s.id, s.title); i.querySelector('.pin-btn').onclick = (e) => { e.stopPropagation(); fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'pin_session', session_id: s.id, is_pinned: !pin }) }).then(loadSessions); }; i.querySelector('.edit-btn').onclick = (e) => { e.stopPropagation(); const n = prompt("重命名：", s.title); if (n && n.trim()) fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'rename_session', session_id: s.id, new_title: n }) }).then(loadSessions); }; i.querySelector('.del-btn').onclick = (e) => { e.stopPropagation(); if (confirm("確定要刪除嗎？")) fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'delete_session', session_id: s.id }) }).then(() => s.id === currentSessionId ? startNewSession() : loadSessions()); }; l.appendChild(i); }); } catch (e) {} }
+        function changeWorkspace() { currentWorkspace = document.getElementById('workspace-selector').value; startNewSession(); }
+        
+        function createNewWorkspace() {
+            const name = prompt("請輸入新專案空間 (Workspace) 的名稱：");
+            if (name && name.trim()) { currentWorkspace = name.trim(); const sel = document.getElementById('workspace-selector'); sel.innerHTML += `<option value="${currentWorkspace}">${currentWorkspace}</option>`; sel.value = currentWorkspace; startNewSession(); }
+        }
+
+        async function switchSession(id, title) { if (id === currentSessionId && chatContainer.children.length > 1) return; currentSessionId = id; document.getElementById('mobile-title').innerText = title; chatContainer.innerHTML = ''; const lid = appendLoading(); if (window.innerWidth < 768) toggleSidebar(); try { const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'load_session', session_id: id, workspace: currentWorkspace }) })).json(); removeLoading(lid); if (Array.isArray(d.logs)) d.logs.forEach(l => appendMessage(l.role === 'ai' ? 'ai' : 'user', l.text)); loadSessions(); } catch (e) {} }
+        
+        async function loadGems() { try { const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_gems', workspace: currentWorkspace }) })).json(); if (d && d.gems) { currentGemsList = d.gems; const s = document.getElementById('gem-selector'); s.innerHTML = '<option value="">🤖 全能助理</option>'; currentGemsList.forEach((g, i) => s.innerHTML += `<option value="${i}">💎 ${g.name}</option>`); } } catch (e) {} }
+        
+        async function loadModels() { 
+            try { 
+                const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_models', workspace: currentWorkspace }) })).json(); 
+                const s = document.getElementById('model-selector'); s.innerHTML = '<option value="">🧠 預設模型 (自動)</option>'; 
+                if (d && d.models && d.models.length > 0) { d.models.forEach(m => s.innerHTML += `<option value="${m.id}">${m.name}</option>`); } 
+                else { s.innerHTML += `<option value="gemini-2.5-flash">⚡ 閃電 (2.5 Flash)</option><option value="gemini-2.5-pro">🧠 專家 (2.5 Pro)</option><option value="gemini-3.1-flash-lite-preview">🔍 審查員 (3.1 Lite)</option>`; }
+            } catch (e) {} 
+        }
+
+        async function loadSessions() { try { const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_session_list', workspace: currentWorkspace }) })).json(); const l = document.getElementById('session-list'); l.innerHTML = ''; if (Array.isArray(d.sessions)) d.sessions.forEach(s => { const act = s.id === currentSessionId, pin = s.pinned, i = document.createElement('div'); i.className = `group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${act ? 'active-session' : 'text-gray-400 hover:bg-[#2a2b2f] hover:text-white'}`; i.innerHTML = `<div class="flex items-center gap-3 truncate flex-1 min-w-0"><span class="material-symbols-rounded text-lg shrink-0 ${pin ? 'pinned-icon' : ''}">${pin ? 'push_pin' : (act ? 'chat_bubble' : 'chat')}</span><span class="truncate text-sm font-medium tracking-wide">${s.title}</span></div><div class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 shrink-0 ml-2 transition-opacity"><button class="p-1 pin-btn ${pin ? 'text-blue-500' : ''} hover:bg-[#333] rounded-md transition-colors"><span class="material-symbols-rounded text-[16px]">push_pin</span></button><button class="p-1 edit-btn hover:text-blue-400 hover:bg-[#333] rounded-md transition-colors"><span class="material-symbols-rounded text-[16px]">edit</span></button><button class="p-1 del-btn hover:text-red-400 hover:bg-[#333] rounded-md transition-colors"><span class="material-symbols-rounded text-[16px]">delete</span></button></div>`; i.onclick = () => switchSession(s.id, s.title); i.querySelector('.pin-btn').onclick = (e) => { e.stopPropagation(); fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'pin_session', session_id: s.id, is_pinned: !pin, workspace: currentWorkspace }) }).then(loadSessions); }; i.querySelector('.edit-btn').onclick = (e) => { e.stopPropagation(); const n = prompt("重命名：", s.title); if (n && n.trim()) fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'rename_session', session_id: s.id, new_title: n, workspace: currentWorkspace }) }).then(loadSessions); }; i.querySelector('.del-btn').onclick = (e) => { e.stopPropagation(); if (confirm("確定要刪除嗎？")) fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'delete_session', session_id: s.id, workspace: currentWorkspace }) }).then(() => s.id === currentSessionId ? startNewSession() : loadSessions()); }; l.appendChild(i); }); } catch (e) {} }
 
         function openPreview(code) {
             let rc = code;
@@ -648,10 +588,9 @@
         function closePreview() { document.getElementById('preview-modal').classList.add('hidden'); document.getElementById('preview-modal').classList.remove('flex'); document.getElementById('preview-iframe').srcdoc = ''; }
         function refreshPreview() { if (currentRenderCode) document.getElementById('preview-iframe').srcdoc = currentRenderCode; }
 
-        window.onload = () => { 
-            loadSessions(); 
-            loadGems(); 
-            loadModels(); 
+        window.onload = async () => { 
+            await loadWorkspaces(); 
+            loadSessions(); loadGems(); loadModels(); 
         };
     </script>
 </body>
