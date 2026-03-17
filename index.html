@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>anyGem - Super Agent (Ultimate Workspace Edition)</title>
+    <title>anyGem - Super Agent (Ultimate Edition)</title>
     
     <link rel="preconnect" href="https://cdn.tailwindcss.com">
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
@@ -75,10 +75,10 @@
             
             <!-- ✨ Workspace 專案隔離選擇器 -->
             <div class="mb-4">
-                <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wider pl-1 mb-1 block">🗂️ 專案記憶空間</label>
+                <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wider pl-1 mb-1 block">🗂️ 專案記憶空間 (Workspace)</label>
                 <div class="relative flex items-center mb-2">
                     <select id="workspace-selector" onchange="changeWorkspace()" class="w-full pl-3 pr-8 py-2 bg-[#2a2b2f] hover:bg-[#333] text-indigo-200 text-sm font-semibold rounded-lg border border-[#444] outline-none focus:border-indigo-500 transition-all appearance-none cursor-pointer shadow-sm truncate">
-                        <option value="Main_Workspace">Main Workspace</option>
+                        <option value="">載入中...</option>
                     </select>
                     <span class="absolute right-2 text-gray-400 material-symbols-rounded text-[18px] pointer-events-none">expand_more</span>
                 </div>
@@ -114,7 +114,7 @@
                 </a>
             </div>
         </div>
-        <div class="p-4 border-t border-[#333] text-xs text-gray-500 text-center font-mono shrink-0">v87.0 Workspace Edition</div>
+        <div class="p-4 border-t border-[#333] text-xs text-gray-500 text-center font-mono shrink-0">v87.3 Smart Context</div>
     </aside>
 
     <!-- Main Chat Area -->
@@ -130,7 +130,7 @@
                 <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center shadow-lg shrink-0"><span class="material-symbols-rounded text-white">smart_toy</span></div>
                 <div class="flex-1">
                     <h2 class="text-2xl sm:text-3xl font-bold text-white mb-2">我是您的 anyGem 代理人</h2>
-                    <p class="text-gray-400 text-base sm:text-lg leading-relaxed">我們已開啟 <strong>內部品管 (Inner QA)</strong> 防護網，並切換至專屬記憶隔離空間！您可以透過下方選單調整我的大腦。</p>
+                    <p class="text-gray-400 text-base sm:text-lg leading-relaxed">歷史對話已重新掛載！您可以透過左側選單切換記憶專案，或透過下方選單調整我的大腦與工具。</p>
                 </div>
             </div>
         </div>
@@ -159,9 +159,8 @@
 
                 <!-- Input Area -->
                 <div class="bg-[#1e1f22] rounded-2xl border border-[#333] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] focus-within:border-blue-500 transition-all p-1.5 sm:p-2 mx-1 sm:mx-0">
-                    <div class="flex items-center flex-wrap gap-2 sm:gap-3 px-2 sm:px-3 mb-1 sm:mb-2 pt-1 border-b border-[#333] pb-1.5 sm:pb-2">
+                    <div class="flex items-center flex-wrap gap-2 sm:gap-3 px-2 sm:px-3 mb-1 pt-1 border-b border-[#333] pb-1.5">
                         
-                        <!-- Gems 角色選擇器 -->
                         <div class="relative flex items-center shrink-0">
                             <span class="absolute left-2 text-blue-400 material-symbols-rounded text-[14px] pointer-events-none">diamond</span>
                             <select id="gem-selector" class="pl-7 pr-6 py-1.5 bg-[#2a2b2f] hover:bg-[#333] text-blue-100 text-xs font-bold tracking-wide rounded-lg border border-[#444] outline-none focus:border-blue-500 transition-all appearance-none cursor-pointer max-w-[130px] sm:max-w-[160px] truncate shadow-sm">
@@ -170,7 +169,6 @@
                             <span class="absolute right-1.5 text-gray-400 material-symbols-rounded text-[16px] pointer-events-none">arrow_drop_down</span>
                         </div>
 
-                        <!-- 全域模型選擇器 -->
                         <div class="relative flex items-center mr-auto shrink-0">
                             <span class="absolute left-2 text-purple-400 material-symbols-rounded text-[14px] pointer-events-none">memory</span>
                             <select id="model-selector" class="pl-7 pr-6 py-1.5 bg-[#2a2b2f] hover:bg-[#333] text-purple-100 text-xs font-bold tracking-wide rounded-lg border border-[#444] outline-none focus:border-purple-500 transition-all appearance-none cursor-pointer max-w-[130px] sm:max-w-[160px] truncate shadow-sm">
@@ -179,7 +177,6 @@
                             <span class="absolute right-1.5 text-gray-400 material-symbols-rounded text-[16px] pointer-events-none">arrow_drop_down</span>
                         </div>
 
-                        <!-- 收納式進階設定選單 -->
                         <div class="relative shrink-0">
                             <button type="button" id="settings-menu-btn" onclick="toggleSettingsMenu()" class="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1.5 bg-[#2a2b2f] hover:bg-[#333] text-gray-300 text-xs font-bold tracking-wide rounded-lg border border-[#444] outline-none transition-all shadow-sm">
                                 <span class="material-symbols-rounded text-[16px] text-gray-400">tune</span>
@@ -248,7 +245,7 @@
         });
 
         let currentSessionId = generateUUID();
-        let currentWorkspace = "Main_Workspace"; 
+        let currentWorkspace = ""; // ✨ 解除強制綁定 Main_Workspace，改由後端智慧尋找你的第一張舊頁籤
         let currentImageData = null, currentMimeType = null, currentDocumentText = null, currentDocumentName = null, currentYouTubeId = null;
         let isWaiting = false, currentRenderCode = "", abortController = null, silenceTimer = null, currentGemsList = []; 
 
@@ -301,7 +298,6 @@
         }
         if (window.speechSynthesis && window.speechSynthesis.onvoiceschanged !== undefined) window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 
-        // 外部檔案處理函式庫
         let pdfjsLibLoaded = false, mammothLoaded = false, xlsxLoaded = false, jszipLoaded = false;
         async function loadPdfJs() { if(pdfjsLibLoaded) return; return new Promise((r, j) => { let s = document.createElement('script'); s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"; s.onload = () => { pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; pdfjsLibLoaded = true; r(); }; s.onerror = j; document.head.appendChild(s); }); }
         async function loadMammoth() { if(mammothLoaded) return; return new Promise((r, j) => { let s = document.createElement('script'); s.src = "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"; s.onload = () => { mammothLoaded = true; r(); }; s.onerror = j; document.head.appendChild(s); }); }
@@ -314,9 +310,11 @@
         document.addEventListener('mousemove', (e) => { if (!window.isResizing || window.innerWidth < 768) return; let nw = Math.max(200, Math.min(e.clientX, window.innerWidth * 0.5)); if (sidebarDom) sidebarDom.style.width = nw + 'px'; });
         document.addEventListener('mouseup', () => { if(window.isResizing){ window.isResizing = false; document.body.style.cursor = ''; document.body.style.userSelect = ''; } });
         window.addEventListener('resize', () => { if (window.innerWidth < 768) { if (sidebarDom) sidebarDom.style.width = ''; } });
+        
         function toggleBookmarks() { const l = document.getElementById('bookmark-list'), c = document.getElementById('bookmark-chevron'); l.classList.toggle('hidden'); c.style.transform = l.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)'; }
         function toggleSendButton(w) { isWaiting = w; sendBtnIcon.innerText = w ? 'stop' : 'send'; sendBtn.className = w ? "p-2.5 sm:p-3 shrink-0 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-all shadow-md flex items-center justify-center" : "p-2.5 sm:p-3 shrink-0 bg-white text-black rounded-xl hover:bg-gray-200 transition-all shadow-md flex items-center justify-center"; sendBtn.onclick = w ? stopGeneration : sendMessage; }
-        sendBtn.onclick = sendMessage; function stopGeneration() { if (abortController) { abortController.abort(); abortController = null; } }
+        
+        function stopGeneration() { if (abortController) { abortController.abort(); abortController = null; } }
 
         userInput.addEventListener('paste', function(e) {
             const pt = (e.clipboardData || window.clipboardData).getData('text');
@@ -414,14 +412,13 @@
             finally { toggleSendButton(false); abortController = null; }
         }
 
-        // 支援本機大型檔案解析 (PDF/Word/Excel/PPTX)
         async function handleFileUpload(e) {
             const f = e.target.files[0]; if (!f) return; const r = new FileReader(), ext = f.name.split('.').pop().toLowerCase();
             
             if (f.type.startsWith('image/')) { r.onload = (ev) => { currentImageData = ev.target.result; currentMimeType = f.type; document.getElementById('image-preview').src = currentImageData; document.getElementById('image-preview').classList.remove('hidden'); document.getElementById('doc-preview').classList.add('hidden'); document.getElementById('youtube-preview').classList.add('hidden'); document.getElementById('upload-preview-container').classList.remove('hidden'); }; r.readAsDataURL(f); } 
-            else if (f.type === 'application/pdf' || ext === 'pdf') { const lid = appendLoading(); try { await loadPdfJs(); r.onload = async (ev) => { try { const pdf = await pdfjsLib.getDocument(new Uint8Array(ev.target.result)).promise; let t = ""; for (let i=1; i<=pdf.numPages; i++) t += (await (await pdf.getPage(i)).getTextContent()).items.map(s => s.str).join(' ') + "\n"; setDocPayload(f.name, t); } catch (err) { alert("PDF 解析失敗"); } finally { removeLoading(lid); } }; r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); alert("載入 PDF 引擎失敗"); } } 
-            else if (ext === 'docx') { const lid = appendLoading(); try { await loadMammoth(); r.onload = async (ev) => { try { setDocPayload(f.name, (await mammoth.extractRawText({ arrayBuffer: ev.target.result })).value); } catch(err) { alert("Word 解析失敗"); } finally { removeLoading(lid); } }; r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); alert("載入 Word 引擎失敗"); } } 
-            else if (ext === 'xlsx' || ext === 'csv') { const lid = appendLoading(); try { await loadXlsx(); r.onload = (ev) => { try { const wb = XLSX.read(ev.target.result, { type: 'array' }); let t = ""; wb.SheetNames.forEach(n => { t += `\n--- 表單: ${n} ---\n`; let c = XLSX.utils.sheet_to_csv(wb.Sheets[n]); t += c.length > 500000 ? c.substring(0, 500000) + "\n...[截斷]..." : c; }); setDocPayload(f.name, t); } catch(err) { alert("Excel 解析失敗"); } finally { removeLoading(lid); } }; r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); alert("載入 Excel 引擎失敗"); } } 
+            else if (f.type === 'application/pdf' || ext === 'pdf') { const lid = appendLoading("載入 PDF 解析引擎..."); try { await loadPdfJs(); r.onload = async (ev) => { try { const pdf = await pdfjsLib.getDocument(new Uint8Array(ev.target.result)).promise; let t = ""; for (let i=1; i<=pdf.numPages; i++) t += (await (await pdf.getPage(i)).getTextContent()).items.map(s => s.str).join(' ') + "\n"; setDocPayload(f.name, t); } catch (err) { alert("PDF 解析失敗"); } finally { removeLoading(lid); } }; r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); alert("載入 PDF 引擎失敗"); } } 
+            else if (ext === 'docx') { const lid = appendLoading("載入 Word 解析引擎..."); try { await loadMammoth(); r.onload = async (ev) => { try { setDocPayload(f.name, (await mammoth.extractRawText({ arrayBuffer: ev.target.result })).value); } catch(err) { alert("Word 解析失敗"); } finally { removeLoading(lid); } }; r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); alert("載入 Word 引擎失敗"); } } 
+            else if (ext === 'xlsx' || ext === 'csv') { const lid = appendLoading("載入 Excel 解析引擎..."); try { await loadXlsx(); r.onload = (ev) => { try { const wb = XLSX.read(ev.target.result, { type: 'array' }); let t = ""; wb.SheetNames.forEach(n => { t += `\n--- 表單: ${n} ---\n`; let c = XLSX.utils.sheet_to_csv(wb.Sheets[n]); t += c.length > 500000 ? c.substring(0, 500000) + "\n...[截斷]..." : c; }); setDocPayload(f.name, t); } catch(err) { alert("Excel 解析失敗"); } finally { removeLoading(lid); } }; r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); alert("載入 Excel 引擎失敗"); } } 
             else if (ext === 'pptx') { 
                 const lid = appendLoading("正在解析簡報檔..."); 
                 if (f.size < 5 * 1024 * 1024) { 
@@ -433,7 +430,6 @@
                                 const data = await res.json();
                                 if (data.status === 'success') { setDocPayload(f.name, data.text); } else { throw new Error(data.message || "雲端轉檔失敗"); }
                             } catch (err) { console.warn("雲端 PPTX 解析失敗，啟動備用引擎...", err); fallbackJSZipParse(f, ev.target.result.split(',')[1], true, lid); } 
-                            finally { removeLoading(lid); }
                         }; r.readAsDataURL(f);
                     } catch (err) { removeLoading(lid); }
                 } 
@@ -471,7 +467,6 @@
             if (imageSrc) b += `<img src="${imageSrc}" class="rounded-xl border border-[#333] mb-2 max-w-full">`;
             if (text) b += `<div class="prose prose-invert text-gray-200 bg-[#1e1f22] p-4 sm:p-5 rounded-2xl rounded-tl-none shadow-sm text-base sm:text-lg leading-relaxed text-left">${isAI ? marked.parse(text) : text.replace(new RegExp('\\n', 'g'), '<br>')}</div>`;
             
-            // 重新加入強大的訊息操作按鈕
             b += `<div class="flex items-center gap-2 mt-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity ${!isAI ? 'justify-end' : ''}">`;
             if (isAI && text) {
                 b += `<button class="copy-btn p-1.5 text-gray-400 hover:text-white hover:bg-[#333] rounded-md" title="複製"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">content_copy</span></button>`;
@@ -488,7 +483,6 @@
             w.innerHTML = `<div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 shadow-lg ${isAI ? 'bg-blue-600' : 'bg-gray-700'}"><span class="material-symbols-rounded text-white text-[18px] sm:text-xl">${isAI ? 'smart_toy' : 'person'}</span></div>` + b;
             chatContainer.appendChild(w);
 
-            // 重新加入代碼預覽 (Artifacts) 功能
             if (isAI) { w.querySelectorAll('pre code').forEach(c => { if (c.className.includes('language-html') || c.className.includes('language-jsx') || c.className.includes('language-javascript')) { let btn = document.createElement('button'); btn.className = "absolute top-2 sm:top-3 right-2 sm:right-3 bg-blue-600 hover:bg-blue-500 text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg flex items-center gap-1 shadow-lg"; btn.innerHTML = '<span class="material-symbols-rounded text-[12px] sm:text-sm">play_circle</span> 預覽'; btn.onclick = () => openPreview(c.innerText); c.parentElement.appendChild(btn); } }); }
             
             if (isAI && text) { 
@@ -532,9 +526,16 @@
         function scrollToBottom() { chatContainer.scrollTop = chatContainer.scrollHeight; }
         function generateUUID() { return 'xxxx-4xxx-yxxx'.replace(new RegExp('[xy]', 'g'), c => (c === 'x' ? (Math.random() * 16 | 0) : (Math.random() * 16 | 0 & 0x3 | 0x8)).toString(16)); }
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('-translate-x-full'); document.getElementById('sidebar-overlay').classList.toggle('hidden'); }
-        function startNewSession() { currentSessionId = generateUUID(); chatContainer.innerHTML = ''; appendMessage('ai', `您已進入 **${currentWorkspace}** 專案空間。\n我會自動隔離記憶，確保任務上下文精準不發散！\n(下方的麥克風與功能選單皆已就緒)`); if (window.innerWidth < 768) toggleSidebar(); loadSessions(); }
         
-        // 🗂️ 專案空間 (Workspace) 管理
+        function startNewSession() { 
+            currentSessionId = generateUUID(); 
+            chatContainer.innerHTML = ''; 
+            appendMessage('ai', `您已進入 **${currentWorkspace || "主"}** 專案空間。\n我會自動隔離記憶，確保任務上下文精準不發散！\n(下方的麥克風與進階功能選單皆已就緒)`); 
+            if (window.innerWidth < 768) toggleSidebar(); 
+            loadSessions(); 
+        }
+        
+        // 🗂️ 專案空間 (Workspace) 管理 - 已修復預設綁定 Bug
         async function loadWorkspaces() { 
             try { 
                 const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_workspaces' }) })).json(); 
@@ -542,8 +543,14 @@
                     const sel = document.getElementById('workspace-selector'); let html = '';
                     d.workspaces.forEach(ws => { html += `<option value="${ws}">${ws}</option>`; });
                     sel.innerHTML = html;
-                    if (d.workspaces.includes(currentWorkspace)) sel.value = currentWorkspace;
-                    else if (d.workspaces.length > 0) { currentWorkspace = d.workspaces[0]; sel.value = currentWorkspace; }
+                    
+                    // 智慧選擇：如果 currentWorkspace 已存在就保留，否則自動挑選第一個有效的 Workspace (通常是使用者的舊紀錄)
+                    if (currentWorkspace && d.workspaces.includes(currentWorkspace)) {
+                        sel.value = currentWorkspace;
+                    } else if (d.workspaces.length > 0) { 
+                        currentWorkspace = d.workspaces[0]; 
+                        sel.value = currentWorkspace; 
+                    }
                 }
             } catch (e) {} 
         }
@@ -555,7 +562,7 @@
             if (name && name.trim()) { currentWorkspace = name.trim(); const sel = document.getElementById('workspace-selector'); sel.innerHTML += `<option value="${currentWorkspace}">${currentWorkspace}</option>`; sel.value = currentWorkspace; startNewSession(); }
         }
 
-        async function switchSession(id, title) { if (id === currentSessionId && chatContainer.children.length > 1) return; currentSessionId = id; document.getElementById('mobile-title').innerText = title; chatContainer.innerHTML = ''; const lid = appendLoading(); if (window.innerWidth < 768) toggleSidebar(); try { const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'load_session', session_id: id, workspace: currentWorkspace }) })).json(); removeLoading(lid); if (Array.isArray(d.logs)) d.logs.forEach(l => appendMessage(l.role === 'ai' ? 'ai' : 'user', l.text)); loadSessions(); } catch (e) {} }
+        async function switchSession(id, title) { if (id === currentSessionId && chatContainer.children.length > 1) return; currentSessionId = id; document.getElementById('mobile-title').innerText = title; chatContainer.innerHTML = ''; const lid = appendLoading("正在載入歷史對話..."); if (window.innerWidth < 768) toggleSidebar(); try { const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'load_session', session_id: id, workspace: currentWorkspace }) })).json(); removeLoading(lid); if (Array.isArray(d.logs)) d.logs.forEach(l => appendMessage(l.role === 'ai' ? 'ai' : 'user', l.text)); loadSessions(); } catch (e) {} }
         
         async function loadGems() { try { const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_gems', workspace: currentWorkspace }) })).json(); if (d && d.gems) { currentGemsList = d.gems; const s = document.getElementById('gem-selector'); s.innerHTML = '<option value="">🤖 全能助理</option>'; currentGemsList.forEach((g, i) => s.innerHTML += `<option value="${i}">💎 ${g.name}</option>`); } } catch (e) {} }
         
@@ -588,6 +595,7 @@
         function closePreview() { document.getElementById('preview-modal').classList.add('hidden'); document.getElementById('preview-modal').classList.remove('flex'); document.getElementById('preview-iframe').srcdoc = ''; }
         function refreshPreview() { if (currentRenderCode) document.getElementById('preview-iframe').srcdoc = currentRenderCode; }
 
+        // 啟動入口
         window.onload = async () => { 
             await loadWorkspaces(); 
             loadSessions(); loadGems(); loadModels(); 
