@@ -114,7 +114,7 @@
                 </a>
             </div>
         </div>
-        <div class="p-4 border-t border-[#333] text-xs text-gray-500 text-center font-mono shrink-0">v87.4 Archiver</div>
+        <div class="p-4 border-t border-[#333] text-xs text-gray-500 text-center font-mono shrink-0">v87.5 Full Functional</div>
     </aside>
 
     <!-- Main Chat Area -->
@@ -130,7 +130,7 @@
                 <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center shadow-lg shrink-0"><span class="material-symbols-rounded text-white">smart_toy</span></div>
                 <div class="flex-1">
                     <h2 class="text-2xl sm:text-3xl font-bold text-white mb-2">我是您的 anyGem 代理人</h2>
-                    <p class="text-gray-400 text-base sm:text-lg leading-relaxed">歷史對話已重新掛載！您可以點擊歷史紀錄旁的「資料夾圖示」將發散的草稿跨區轉移至其他專案。</p>
+                    <p class="text-gray-400 text-base sm:text-lg leading-relaxed">我們已開啟 <strong>內部品管 (Inner QA)</strong> 防護網！介面按鈕已修復，您可以順利傳送指令了。</p>
                 </div>
             </div>
         </div>
@@ -232,8 +232,8 @@
     <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden" onclick="toggleSidebar()"></div>
 
     <script>
-        // ⚠️ 部署前，請務必將下方的網址替換為您的 Google Apps Script Web App URL
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbyNEz6Kv6WOEEif3Ghjt8fd-IXRt6f6BxV7dg2SXSwTn6dJsP5lgwVuCgslHSdBbD4C/exec";
+        // ⚠️ 部署前，請務必將下方的網址替換為您的 Google Apps Script Web App URL ⚠️
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbyNEz6Kv6WOEEif3Ghjt8fd-IXRt6f6BxV7dg2SXSwTn6dJsP5lgwVuCgslHSdBbD4C/exec"; 
 
         marked.use({
             renderer: {
@@ -249,7 +249,16 @@
         let currentImageData = null, currentMimeType = null, currentDocumentText = null, currentDocumentName = null, currentYouTubeId = null;
         let isWaiting = false, currentRenderCode = "", abortController = null, silenceTimer = null, currentGemsList = []; 
 
-        const chatContainer = document.getElementById('chat-container'), userInput = document.getElementById('user-input'), sendBtn = document.getElementById('send-btn'), sendBtnIcon = sendBtn.querySelector('.material-symbols-rounded');
+        const chatContainer = document.getElementById('chat-container'), 
+              userInput = document.getElementById('user-input'), 
+              sendBtn = document.getElementById('send-btn'), 
+              sendBtnIcon = sendBtn.querySelector('.material-symbols-rounded');
+
+        // 🐛 修復：補回被遺漏的按鈕綁定事件
+        sendBtn.addEventListener('click', () => {
+            if (isWaiting) stopGeneration();
+            else sendMessage();
+        });
 
         userInput.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight > 240 ? 240 : this.scrollHeight) + 'px'; });
 
@@ -312,7 +321,12 @@
         window.addEventListener('resize', () => { if (window.innerWidth < 768) { if (sidebarDom) sidebarDom.style.width = ''; } });
         
         function toggleBookmarks() { const l = document.getElementById('bookmark-list'), c = document.getElementById('bookmark-chevron'); l.classList.toggle('hidden'); c.style.transform = l.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)'; }
-        function toggleSendButton(w) { isWaiting = w; sendBtnIcon.innerText = w ? 'stop' : 'send'; sendBtn.className = w ? "p-2.5 sm:p-3 shrink-0 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-all shadow-md flex items-center justify-center" : "p-2.5 sm:p-3 shrink-0 bg-white text-black rounded-xl hover:bg-gray-200 transition-all shadow-md flex items-center justify-center"; sendBtn.onclick = w ? stopGeneration : sendMessage; }
+        
+        function toggleSendButton(w) { 
+            isWaiting = w; 
+            sendBtnIcon.innerText = w ? 'stop' : 'send'; 
+            sendBtn.className = w ? "p-2.5 sm:p-3 shrink-0 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-all shadow-md flex items-center justify-center" : "p-2.5 sm:p-3 shrink-0 bg-white text-black rounded-xl hover:bg-gray-200 transition-all shadow-md flex items-center justify-center"; 
+        }
         
         function stopGeneration() { if (abortController) { abortController.abort(); abortController = null; } }
 
@@ -324,7 +338,14 @@
             if (pt && pt.startsWith('data:image/')) { e.preventDefault(); currentImageData = pt; const m = pt.match(new RegExp('data:(.*?);')); currentMimeType = m ? m[1] : 'image/png'; document.getElementById('image-preview').src = currentImageData; document.getElementById('image-preview').classList.remove('hidden'); document.getElementById('doc-preview').classList.add('hidden'); document.getElementById('youtube-preview').classList.add('hidden'); document.getElementById('upload-preview-container').classList.remove('hidden'); }
             setTimeout(() => { userInput.style.height = 'auto'; userInput.style.height = (userInput.scrollHeight > 240 ? 240 : userInput.scrollHeight) + 'px'; }, 0);
         });
-        userInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { if (window.innerWidth < 768) return; e.preventDefault(); isWaiting ? stopGeneration() : sendMessage(); } });
+        
+        userInput.addEventListener('keydown', (e) => { 
+            if (e.key === 'Enter' && !e.shiftKey) { 
+                if (window.innerWidth < 768) return; 
+                e.preventDefault(); 
+                isWaiting ? stopGeneration() : sendMessage(); 
+            } 
+        });
 
         async function sendEditAndRegenerate(oldText, newText) {
             if (isWaiting) return;
@@ -355,6 +376,7 @@
             toggleSendButton(true); const lid = appendLoading(); abortController = new AbortController(); 
 
             try {
+                if(GAS_URL.includes("請在此填入")) throw new Error("請先在 HTML 檔案第 117 行更換 GAS_URL！");
                 const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload), signal: abortController.signal });
                 const data = await res.json(); removeLoading(lid);
                 if (data.status === "error") throw new Error(data.error || "伺服器錯誤");
@@ -403,6 +425,7 @@
             clearUpload(); toggleSendButton(true); const lid = appendLoading(); abortController = new AbortController(); 
 
             try {
+                if(GAS_URL.includes("請在此填入")) throw new Error("請先在 HTML 檔案第 117 行更換 GAS_URL！");
                 const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload), signal: abortController.signal });
                 const data = await res.json(); removeLoading(lid);
                 if (data.status === "error") throw new Error(data.error || "伺服器錯誤");
@@ -573,7 +596,6 @@
             } catch (e) {} 
         }
 
-        // ✨ 更新的 loadSessions()：加入「資料轉移 (Move)」按鈕
         async function loadSessions() { 
             try { 
                 const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_session_list', workspace: currentWorkspace }) })).json(); 
@@ -588,7 +610,6 @@
                     i.querySelector('.edit-btn').onclick = (e) => { e.stopPropagation(); const n = prompt("重命名：", s.title); if (n && n.trim()) fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'rename_session', session_id: s.id, new_title: n, workspace: currentWorkspace }) }).then(loadSessions); }; 
                     i.querySelector('.del-btn').onclick = (e) => { e.stopPropagation(); if (confirm("確定要刪除嗎？")) fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'delete_session', session_id: s.id, workspace: currentWorkspace }) }).then(() => s.id === currentSessionId ? startNewSession() : loadSessions()); }; 
                     
-                    // ✨ 綁定轉移按鈕邏輯
                     i.querySelector('.move-btn').onclick = (e) => { 
                         e.stopPropagation(); 
                         const targetWs = prompt(`將對話「${s.title}」歸檔\n請輸入目標專案空間名稱 (若不存在將自動建立)：`, "歸檔專案"); 
@@ -635,6 +656,3 @@
     </script>
 </body>
 </html>
-
-
-
