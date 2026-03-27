@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>anyGem - Super Agent (Streaming Edition)</title>
     
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
@@ -34,7 +38,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        // ⚠️ 在這裡填入您的 GAS Web App URL
+        // ⚠️ 關鍵步驟：請在此填入您的 GAS Web App URL (結尾為 /exec)
         const GAS_URL = "https://script.google.com/macros/s/AKfycbyNEz6Kv6WOEEif3Ghjt8fd-IXRt6f6BxV7dg2SXSwTn6dJsP5lgwVuCgslHSdBbD4C/exec";
 
         const { useState, useEffect, useRef } = React;
@@ -48,20 +52,52 @@
                 this.apiKey = null;
                 this.systemInstruction = null;
                 this.tools = null;
+                this.models = null;
             }
 
+            // 防呆診斷與初始化
             async init(workspace) {
                 if (this.apiKey) return;
-                const res = await fetch(this.gasUrl, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_config', workspace: workspace }) });
-                const data = await res.json();
+                
+                if (!this.gasUrl || this.gasUrl.includes("在此輸入您的GAS網址")) {
+                    throw new Error("前端未設定 GAS_URL！\n請用文字編輯器開啟 index.html，在第 35 行填入您的 Web App 網址。");
+                }
+
+                let res;
+                try {
+                    res = await fetch(this.gasUrl, { 
+                        method: 'POST', 
+                        body: JSON.stringify({ mode: 'system', action: 'get_config', workspace: workspace }) 
+                    });
+                } catch(e) {
+                    throw new Error(`無法連線至 GAS 後端 (網址可能有誤或遭到瀏覽器阻擋)。\n底層錯誤：${e.message}`);
+                }
+
+                let data;
+                try {
+                    data = await res.json();
+                } catch(e) {
+                    throw new Error("GAS 伺服器回傳了非 JSON 格式。\n這通常是因為您更新了後端程式碼，卻忘記點選「部署 -> 新增部署作業 (建立新版本)」，導致網頁還在跑舊版程式碼。");
+                }
+
+                if (data.status === "error") {
+                    throw new Error(`GAS 伺服器回報錯誤：${data.message}\n(若顯示 Unknown action，請務必至 GAS 重新「建立新版本」部署)`);
+                }
+                
+                if (!data.apiKey) {
+                    throw new Error("成功連線至 GAS，但未能取得 Gemini API Key。請確認您的 GAS 專案設定 (指令碼屬性) 中已正確填寫 GEMINI_API_KEY。");
+                }
+
                 this.apiKey = data.apiKey;
                 this.systemInstruction = data.systemInstruction;
                 this.tools = data.tools;
-                this.models = data.models;
+                this.models = data.models || { editor: "gemini-2.5-flash", gatherer: "gemini-2.5-flash" };
             }
 
             async *generateStream(params) {
                 const { text, history, workspace, sessionId, fileData, mimeType, drawMode, webSearch, modelId } = params;
+                
+                // 1. 強制初始化檢查
                 await this.init(workspace);
 
                 let sysInstr = this.systemInstruction;
@@ -86,7 +122,6 @@
                 contents.push({ role: "user", parts: newPart });
 
                 let finalReply = "";
-                let finalImage = null;
                 let turn = 0;
                 const maxTurns = 5;
 
@@ -105,7 +140,10 @@
                     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${this.apiKey}`;
 
                     const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                    if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                    if (!response.ok) {
+                        const errTxt = await response.text();
+                        throw new Error(`Google Gemini API 拒絕請求 (HTTP ${response.status}):\n${errTxt}`);
+                    }
 
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder("utf-8");
@@ -152,7 +190,6 @@
                         for (let fc of functionCalls) {
                             yield { type: 'tool_start', name: fc.name };
                             
-                            // ⚡ 呼叫 GAS 執行工具
                             let gasRes = await fetch(this.gasUrl, {
                                 method: 'POST',
                                 body: JSON.stringify({ mode: 'system', action: 'execute_tool', tool_name: fc.name, args: fc.args, session_id: sessionId })
@@ -163,7 +200,6 @@
                             if (toolResult && toolResult.isTerminal) {
                                 yield { type: 'terminal', text: toolResult.reply, image: toolResult.image };
                                 finalReply = toolResult.reply;
-                                if (toolResult.image) finalImage = toolResult.image;
                                 turn = maxTurns; break;
                             }
                             toolResponses.push({ functionResponse: { name: fc.name, response: toolResult || {status: "error"} } });
@@ -175,11 +211,11 @@
                     }
                 }
 
-                // ⚡ 儲存歷史紀錄至後端
+                // 背景儲存對話
                 fetch(this.gasUrl, {
                     method: 'POST',
                     body: JSON.stringify({ mode: 'system', action: 'save_history', session_id: sessionId, user_msg: text, ai_reply: finalReply })
-                });
+                }).catch(e => console.log("History save failed:", e));
             }
         }
 
@@ -268,7 +304,7 @@
                 return (match && match[2].length === 11) ? match[2] : null;
             };
 
-            // 🚀 核心：串流發送邏輯
+            // 🚀 核心發送邏輯
             const handleSend = async (e) => {
                 e?.preventDefault();
                 if ((!input.trim() && !fileData) || isSubmitting) return;
@@ -280,12 +316,11 @@
                 let ytId = extractYoutubeId(userText);
                 let actualMessage = userText;
 
-                // 加入畫面 UI
+                // 先將使用者的訊息放入畫面，準備好 AI 的泡泡
                 setMessages(prev => [...prev, { role: 'user', text: userText }, { role: 'ai', text: '', isSubmitting: true }]);
                 scrollToBottom();
 
                 try {
-                    // 若有 YT 連結，先去 GAS 抓逐字稿
                     if (ytId) {
                         setMessages(prev => { let m = [...prev]; m[m.length-1].text = "*(正在擷取 YouTube 逐字稿...)*"; return m; });
                         const ytRes = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_youtube', youtube_id: ytId }) });
@@ -297,6 +332,7 @@
                         }
                     }
 
+                    // 啟動 Streaming 引擎
                     const stream = streamEngine.current.generateStream({
                         text: actualMessage,
                         history: messages.filter(m => !m.isError && m.text),
@@ -310,12 +346,13 @@
 
                     let currentAiText = "";
 
+                    // 逐字解析串流資料
                     for await (const chunk of stream) {
                         if (chunk.type === 'chunk') {
                             currentAiText = chunk.fullText;
                             setMessages(prev => {
                                 const newMsgs = [...prev];
-                                newMsgs[newMsgs.length - 1] = { role: 'ai', text: currentAiText, isSubmitting: false };
+                                newMsgs[newMsgs.length - 1] = { role: 'ai', text: currentAiText, isSubmitting: true };
                                 return newMsgs;
                             });
                             scrollToBottom();
@@ -323,7 +360,7 @@
                             currentAiText += `\n> ⚙️ *執行工具中：\`${chunk.name}\`...*\n\n`;
                             setMessages(prev => {
                                 const newMsgs = [...prev];
-                                newMsgs[newMsgs.length - 1] = { role: 'ai', text: currentAiText, isSubmitting: false };
+                                newMsgs[newMsgs.length - 1] = { role: 'ai', text: currentAiText, isSubmitting: true };
                                 return newMsgs;
                             });
                             scrollToBottom();
@@ -339,19 +376,34 @@
                         }
                     }
 
+                    // 串流結束，關閉打字機特效
+                    setMessages(prev => {
+                        const newMsgs = [...prev];
+                        newMsgs[newMsgs.length - 1].isSubmitting = false;
+                        return newMsgs;
+                    });
+
                     removeFile();
                     setDrawMode(false);
                     setWebSearch(false);
                     loadSessions();
 
                 } catch (err) {
+                    console.error("Agent Execution Error:", err);
+                    // 🛡️ 防呆機制：若發生錯誤，明確印出錯誤訊息並解除封鎖
                     setMessages(prev => {
                         const newMsgs = [...prev];
-                        newMsgs[newMsgs.length - 1] = { role: 'ai', text: '❌ 系統發生錯誤: ' + err.message, isError: true };
+                        newMsgs[newMsgs.length - 1] = { 
+                            role: 'ai', 
+                            text: `❌ **系統發生錯誤**\n\n${err.message}`, 
+                            isError: true, 
+                            isSubmitting: false 
+                        };
                         return newMsgs;
                     });
                 } finally {
                     setIsSubmitting(false);
+                    scrollToBottom();
                 }
             };
 
@@ -401,7 +453,7 @@
                                 <button className="md:hidden text-gray-400 hover:text-white" onClick={() => setIsSidebarOpen(true)}>
                                     <span className="material-symbols-rounded">menu</span>
                                 </button>
-                                <div className="text-gray-200 font-medium">✨ 串流效能版 (Streaming Edition)</div>
+                                <div className="text-gray-200 font-medium">✨ 串流大腦版 (Streaming Edition)</div>
                             </div>
                         </header>
 
@@ -423,7 +475,7 @@
                                                 </div>
                                             )}
                                             
-                                            <div className={`prose prose-invert max-w-none text-[15px] leading-relaxed ${msg.isSubmitting ? 'typing-indicator' : ''}`} dangerouslySetInnerHTML={{ __html: msg.text ? marked.parse(msg.text) : (msg.isSubmitting ? '思考中...' : '') }} />
+                                            <div className={`prose prose-invert max-w-none text-[15px] leading-relaxed ${msg.isSubmitting ? 'typing-indicator' : ''}`} dangerouslySetInnerHTML={{ __html: msg.text ? marked.parse(msg.text) : (msg.isSubmitting ? '' : '') }} />
                                         </div>
                                     </div>
                                 ))
