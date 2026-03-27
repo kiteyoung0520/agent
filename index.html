@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>anyGem - Super Agent (Streaming Edition)</title>
+    <title>anyGem - Super Agent (Streaming & Full UI Edition)</title>
     
     <link rel="preconnect" href="https://cdn.tailwindcss.com">
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
@@ -28,6 +28,9 @@
         .prose ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 0.75rem; }
         .typing-indicator::after { content: '▋'; animation: blink 1s step-end infinite; color: #38bdf8; }
         @keyframes blink { 50% { opacity: 0; } }
+        /* Toggle Switch CSS */
+        .toggle-checkbox:checked { right: 0; border-color: #38bdf8; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #38bdf8; }
     </style>
 
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -38,7 +41,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        // ⚠️ 關鍵步驟：請在此填入您的 GAS Web App URL (結尾為 /exec)
+        // ⚠️ 關鍵步驟：請在此填入您的 GAS Web App URL
         const GAS_URL = "https://script.google.com/macros/s/AKfycbyNEz6Kv6WOEEif3Ghjt8fd-IXRt6f6BxV7dg2SXSwTn6dJsP5lgwVuCgslHSdBbD4C/exec";
 
         const { useState, useEffect, useRef } = React;
@@ -52,52 +55,22 @@
                 this.apiKey = null;
                 this.systemInstruction = null;
                 this.tools = null;
-                this.models = null;
+                this.availableModels = [];
             }
 
-            // 防呆診斷與初始化
             async init(workspace) {
                 if (this.apiKey) return;
+                const res = await fetch(this.gasUrl, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_config', workspace: workspace }) });
+                const data = await res.json();
+                if (data.status === "error") throw new Error(data.message);
                 
-                if (!this.gasUrl || this.gasUrl.includes("在此輸入您的GAS網址")) {
-                    throw new Error("前端未設定 GAS_URL！\n請用文字編輯器開啟 index.html，在第 35 行填入您的 Web App 網址。");
-                }
-
-                let res;
-                try {
-                    res = await fetch(this.gasUrl, { 
-                        method: 'POST', 
-                        body: JSON.stringify({ mode: 'system', action: 'get_config', workspace: workspace }) 
-                    });
-                } catch(e) {
-                    throw new Error(`無法連線至 GAS 後端 (網址可能有誤或遭到瀏覽器阻擋)。\n底層錯誤：${e.message}`);
-                }
-
-                let data;
-                try {
-                    data = await res.json();
-                } catch(e) {
-                    throw new Error("GAS 伺服器回傳了非 JSON 格式。\n這通常是因為您更新了後端程式碼，卻忘記點選「部署 -> 新增部署作業 (建立新版本)」，導致網頁還在跑舊版程式碼。");
-                }
-
-                if (data.status === "error") {
-                    throw new Error(`GAS 伺服器回報錯誤：${data.message}\n(若顯示 Unknown action，請務必至 GAS 重新「建立新版本」部署)`);
-                }
-                
-                if (!data.apiKey) {
-                    throw new Error("成功連線至 GAS，但未能取得 Gemini API Key。請確認您的 GAS 專案設定 (指令碼屬性) 中已正確填寫 GEMINI_API_KEY。");
-                }
-
                 this.apiKey = data.apiKey;
                 this.systemInstruction = data.systemInstruction;
                 this.tools = data.tools;
-                this.models = data.models || { editor: "gemini-2.5-flash", gatherer: "gemini-2.5-flash" };
             }
 
             async *generateStream(params) {
-                const { text, history, workspace, sessionId, fileData, mimeType, drawMode, webSearch, modelId } = params;
-                
-                // 1. 強制初始化檢查
+                const { text, history, workspace, sessionId, fileData, mimeType, drawMode, webSearch, modelId, autoImage } = params;
                 await this.init(workspace);
 
                 let sysInstr = this.systemInstruction;
@@ -112,7 +85,6 @@
                 }
 
                 let contents = history.map(h => ({ role: h.role === 'ai' ? 'model' : 'user', parts: [{ text: h.text }] }));
-
                 let newPart = { text: text };
                 if (fileData && mimeType) {
                     newPart = [ { text: text }, { inlineData: { mimeType: mimeType, data: fileData } } ];
@@ -136,14 +108,11 @@
                         payload.tools = currentTools;
                     }
 
-                    const model = modelId || this.models.editor || "gemini-2.5-flash";
+                    const model = modelId || "gemini-2.5-flash";
                     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${this.apiKey}`;
 
                     const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                    if (!response.ok) {
-                        const errTxt = await response.text();
-                        throw new Error(`Google Gemini API 拒絕請求 (HTTP ${response.status}):\n${errTxt}`);
-                    }
+                    if (!response.ok) throw new Error(`Google API 拒絕請求 (HTTP ${response.status})`);
 
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder("utf-8");
@@ -172,9 +141,7 @@
                                             turnReply += p.text;
                                             yield { type: 'chunk', fullText: finalReply + turnReply };
                                         }
-                                        if (p.functionCall) {
-                                            functionCalls.push(p.functionCall);
-                                        }
+                                        if (p.functionCall) functionCalls.push(p.functionCall);
                                     }
                                 } catch (e) {}
                             }
@@ -192,7 +159,12 @@
                             
                             let gasRes = await fetch(this.gasUrl, {
                                 method: 'POST',
-                                body: JSON.stringify({ mode: 'system', action: 'execute_tool', tool_name: fc.name, args: fc.args, session_id: sessionId })
+                                body: JSON.stringify({ 
+                                    mode: 'system', action: 'execute_tool', 
+                                    tool_name: fc.name, args: fc.args, 
+                                    session_id: sessionId,
+                                    auto_image: autoImage // 傳遞配圖設定給後端
+                                })
                             });
                             let gasData = await gasRes.json();
                             let toolResult = gasData.result;
@@ -215,7 +187,9 @@
                 fetch(this.gasUrl, {
                     method: 'POST',
                     body: JSON.stringify({ mode: 'system', action: 'save_history', session_id: sessionId, user_msg: text, ai_reply: finalReply })
-                }).catch(e => console.log("History save failed:", e));
+                }).catch(e => console.log("History save error:", e));
+                
+                return finalReply; // 回傳最終文字供語音使用
             }
         }
 
@@ -231,22 +205,84 @@
             const [workspaces, setWorkspaces] = useState(["Main_Workspace"]);
             const [currentWorkspace, setCurrentWorkspace] = useState("Main_Workspace");
             const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+            const [showSettings, setShowSettings] = useState(false);
             const [fileData, setFileData] = useState(null);
             const [mimeType, setMimeType] = useState(null);
-            const [drawMode, setDrawMode] = useState(false);
+            
+            // 模型與開關狀態
+            const [models, setModels] = useState([{id: "gemini-2.5-flash", name: "⚡ 閃電 (2.5 Flash)"}]);
+            const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash");
             const [webSearch, setWebSearch] = useState(false);
+            const [drawMode, setDrawMode] = useState(false);
+            const [autoImage, setAutoImage] = useState(false);
+            const [autoPlay, setAutoPlay] = useState(false);
+            const [autoChat, setAutoChat] = useState(false);
+            
+            // 語音辨識狀態
+            const [isListening, setIsListening] = useState(false);
+
             const messagesEndRef = useRef(null);
             const streamEngine = useRef(new GeminiStreamEngine(GAS_URL));
+            const recognitionRef = useRef(null);
 
-            const scrollToBottom = () => {
-                setTimeout(() => {
-                    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-                }, 50);
-            };
+            const scrollToBottom = () => { setTimeout(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, 50); };
 
-            useEffect(() => { loadWorkspaces(); }, []);
+            // 初始化載入
+            useEffect(() => { 
+                loadWorkspaces(); 
+                loadModels();
+                initSpeechRecognition();
+            }, []);
             useEffect(() => { loadSessions(); }, [currentWorkspace]);
             useEffect(() => { loadSessionLogs(currentSessionId); }, [currentSessionId]);
+
+            // 語音辨識初始化
+            const initSpeechRecognition = () => {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (SpeechRecognition) {
+                    recognitionRef.current = new SpeechRecognition();
+                    recognitionRef.current.continuous = false;
+                    recognitionRef.current.lang = 'zh-TW';
+                    recognitionRef.current.interimResults = false;
+                    
+                    recognitionRef.current.onresult = (event) => {
+                        const transcript = event.results[0][0].transcript;
+                        setInput(transcript);
+                        // 如果是自動對話模式，直接發送
+                        if (autoChat) {
+                            setTimeout(() => document.getElementById('send-btn').click(), 500);
+                        }
+                    };
+                    recognitionRef.current.onerror = (e) => { setIsListening(false); };
+                    recognitionRef.current.onend = () => { setIsListening(false); };
+                }
+            };
+
+            const toggleListening = () => {
+                if (isListening) {
+                    recognitionRef.current?.stop();
+                    setIsListening(false);
+                } else {
+                    recognitionRef.current?.start();
+                    setIsListening(true);
+                }
+            };
+
+            const speakText = (text) => {
+                if (!window.speechSynthesis) return;
+                window.speechSynthesis.cancel();
+                // 移除 Markdown 符號讓語音更順暢
+                let cleanText = text.replace(/[#*`_]/g, '').replace(/\[.*?\]\(.*?\)/g, '');
+                const utterance = new SpeechSynthesisUtterance(cleanText);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 1.1;
+                
+                // 語音結束後，如果開啟了自動對話，自動打開麥克風
+                utterance.onend = () => {
+                    if (autoChat) toggleListening();
+                };
+                window.speechSynthesis.speak(utterance);
+            };
 
             async function loadWorkspaces() {
                 try {
@@ -256,7 +292,18 @@
                         setWorkspaces(data.workspaces);
                         if (!data.workspaces.includes(currentWorkspace)) setCurrentWorkspace(data.workspaces[0]);
                     }
-                } catch(e) { console.error("Load Workspaces Error", e); }
+                } catch(e) {}
+            }
+
+            async function loadModels() {
+                try {
+                    const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_models' }) });
+                    const data = await res.json();
+                    if (data.models && data.models.length > 0) {
+                        setModels(data.models);
+                        setSelectedModel(data.models[0].id);
+                    }
+                } catch(e) {}
             }
 
             async function loadSessions() {
@@ -295,7 +342,6 @@
                 };
                 reader.readAsDataURL(file);
             };
-
             const removeFile = () => { setFileData(null); setMimeType(null); };
 
             const extractYoutubeId = (url) => {
@@ -304,7 +350,7 @@
                 return (match && match[2].length === 11) ? match[2] : null;
             };
 
-            // 🚀 核心發送邏輯
+            // 🚀 核心：發送與串流處理
             const handleSend = async (e) => {
                 e?.preventDefault();
                 if ((!input.trim() && !fileData) || isSubmitting) return;
@@ -312,11 +358,11 @@
                 const userText = input;
                 setInput('');
                 setIsSubmitting(true);
+                if (isListening) toggleListening(); // 停止聆聽
 
                 let ytId = extractYoutubeId(userText);
                 let actualMessage = userText;
 
-                // 先將使用者的訊息放入畫面，準備好 AI 的泡泡
                 setMessages(prev => [...prev, { role: 'user', text: userText }, { role: 'ai', text: '', isSubmitting: true }]);
                 scrollToBottom();
 
@@ -332,7 +378,6 @@
                         }
                     }
 
-                    // 啟動 Streaming 引擎
                     const stream = streamEngine.current.generateStream({
                         text: actualMessage,
                         history: messages.filter(m => !m.isError && m.text),
@@ -341,69 +386,43 @@
                         fileData: fileData,
                         mimeType: mimeType,
                         drawMode: drawMode,
-                        webSearch: webSearch
+                        webSearch: webSearch,
+                        modelId: selectedModel,
+                        autoImage: autoImage
                     });
 
                     let currentAiText = "";
 
-                    // 逐字解析串流資料
                     for await (const chunk of stream) {
                         if (chunk.type === 'chunk') {
                             currentAiText = chunk.fullText;
-                            setMessages(prev => {
-                                const newMsgs = [...prev];
-                                newMsgs[newMsgs.length - 1] = { role: 'ai', text: currentAiText, isSubmitting: true };
-                                return newMsgs;
-                            });
+                            setMessages(prev => { const newMsgs = [...prev]; newMsgs[newMsgs.length - 1] = { role: 'ai', text: currentAiText, isSubmitting: true }; return newMsgs; });
                             scrollToBottom();
                         } else if (chunk.type === 'tool_start') {
                             currentAiText += `\n> ⚙️ *執行工具中：\`${chunk.name}\`...*\n\n`;
-                            setMessages(prev => {
-                                const newMsgs = [...prev];
-                                newMsgs[newMsgs.length - 1] = { role: 'ai', text: currentAiText, isSubmitting: true };
-                                return newMsgs;
-                            });
+                            setMessages(prev => { const newMsgs = [...prev]; newMsgs[newMsgs.length - 1] = { role: 'ai', text: currentAiText, isSubmitting: true }; return newMsgs; });
                             scrollToBottom();
                         } else if (chunk.type === 'terminal') {
                             currentAiText = chunk.text;
                             let img = chunk.image ? `\n\n<img src="data:image/png;base64,${chunk.image}" class="max-w-full rounded-xl shadow-lg mt-2"/>` : "";
-                            setMessages(prev => {
-                                const newMsgs = [...prev];
-                                newMsgs[newMsgs.length - 1] = { role: 'ai', text: currentAiText + img, isSubmitting: false };
-                                return newMsgs;
-                            });
+                            setMessages(prev => { const newMsgs = [...prev]; newMsgs[newMsgs.length - 1] = { role: 'ai', text: currentAiText + img, isSubmitting: false }; return newMsgs; });
                             scrollToBottom();
                         }
                     }
 
-                    // 串流結束，關閉打字機特效
-                    setMessages(prev => {
-                        const newMsgs = [...prev];
-                        newMsgs[newMsgs.length - 1].isSubmitting = false;
-                        return newMsgs;
-                    });
+                    setMessages(prev => { const newMsgs = [...prev]; newMsgs[newMsgs.length - 1].isSubmitting = false; return newMsgs; });
+                    
+                    // 自動撥放語音
+                    if (autoPlay || autoChat) {
+                        speakText(currentAiText);
+                    }
 
-                    removeFile();
-                    setDrawMode(false);
-                    setWebSearch(false);
-                    loadSessions();
+                    removeFile(); setDrawMode(false); setWebSearch(false); loadSessions();
 
                 } catch (err) {
-                    console.error("Agent Execution Error:", err);
-                    // 🛡️ 防呆機制：若發生錯誤，明確印出錯誤訊息並解除封鎖
-                    setMessages(prev => {
-                        const newMsgs = [...prev];
-                        newMsgs[newMsgs.length - 1] = { 
-                            role: 'ai', 
-                            text: `❌ **系統發生錯誤**\n\n${err.message}`, 
-                            isError: true, 
-                            isSubmitting: false 
-                        };
-                        return newMsgs;
-                    });
+                    setMessages(prev => { const newMsgs = [...prev]; newMsgs[newMsgs.length - 1] = { role: 'ai', text: `❌ **系統發生錯誤**\n\n${err.message}`, isError: true, isSubmitting: false }; return newMsgs; });
                 } finally {
-                    setIsSubmitting(false);
-                    scrollToBottom();
+                    setIsSubmitting(false); scrollToBottom();
                 }
             };
 
@@ -420,19 +439,16 @@
                                 <span className="material-symbols-rounded">close</span>
                             </button>
                         </div>
-                        
                         <div className="p-3">
                             <select value={currentWorkspace} onChange={(e) => { setCurrentWorkspace(e.target.value); createNewSession(); }} className="w-full bg-[#2d2d2d] text-white p-2 rounded-lg border border-[#444] focus:outline-none focus:border-[#38bdf8]">
                                 {workspaces.map(ws => <option key={ws} value={ws}>{ws.replace(/_/g, ' ')}</option>)}
                             </select>
                         </div>
-
                         <div className="p-3">
                             <button onClick={createNewSession} className="w-full flex items-center justify-center gap-2 bg-[#38bdf8] text-[#0f172a] p-3 rounded-xl font-semibold hover:bg-[#7dd3fc] transition-colors shadow-[0_0_15px_rgba(56,189,248,0.3)]">
                                 <span className="material-symbols-rounded">add</span> 新對話
                             </button>
                         </div>
-
                         <div className="flex-1 overflow-y-auto p-3 space-y-2">
                             {sessions.map(s => (
                                 <div key={s.id} onClick={() => { setCurrentSessionId(s.id); if (window.innerWidth < 768) setIsSidebarOpen(false); }} className={`p-3 rounded-xl cursor-pointer transition-colors flex items-center justify-between group ${currentSessionId === s.id ? 'bg-[#2d2d2d] border border-[#444]' : 'hover:bg-[#252525] border border-transparent'}`}>
@@ -447,18 +463,31 @@
 
                     {/* Main Chat Area */}
                     <div className="flex-1 flex flex-col relative h-full bg-[#131314]">
-                        {/* Header */}
+                        
+                        {/* Header with Model Selector & Settings */}
                         <header className="h-16 flex items-center justify-between px-4 border-b border-[#333] bg-[#1e1e1e]/80 backdrop-blur-md sticky top-0 z-10">
                             <div className="flex items-center gap-3">
                                 <button className="md:hidden text-gray-400 hover:text-white" onClick={() => setIsSidebarOpen(true)}>
                                     <span className="material-symbols-rounded">menu</span>
                                 </button>
-                                <div className="text-gray-200 font-medium">✨ 串流大腦版 (Streaming Edition)</div>
+                                
+                                {/* 模型選單 */}
+                                <select 
+                                    value={selectedModel} 
+                                    onChange={(e) => setSelectedModel(e.target.value)}
+                                    className="bg-[#2d2d2d] text-white text-sm py-1.5 px-3 rounded-lg border border-[#444] focus:outline-none focus:border-[#38bdf8]"
+                                >
+                                    {models.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                                </select>
                             </div>
+
+                            <button onClick={() => setShowSettings(true)} className="text-gray-400 hover:text-white transition-colors">
+                                <span className="material-symbols-rounded">settings</span>
+                            </button>
                         </header>
 
                         {/* Chat Messages */}
-                        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 pb-32">
+                        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 pb-36">
                             {messages.length === 0 ? (
                                 <div className="h-full flex flex-col items-center justify-center text-gray-500 space-y-4">
                                     <span className="material-symbols-rounded text-6xl text-[#333]">forum</span>
@@ -474,7 +503,6 @@
                                                     <span className="font-semibold text-sm">anyGem</span>
                                                 </div>
                                             )}
-                                            
                                             <div className={`prose prose-invert max-w-none text-[15px] leading-relaxed ${msg.isSubmitting ? 'typing-indicator' : ''}`} dangerouslySetInnerHTML={{ __html: msg.text ? marked.parse(msg.text) : (msg.isSubmitting ? '' : '') }} />
                                         </div>
                                     </div>
@@ -495,41 +523,89 @@
                                     </div>
                                 )}
 
-                                <div className="flex gap-2 mb-3">
-                                    <button onClick={() => setDrawMode(!drawMode)} className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border transition-colors ${drawMode ? 'bg-purple-900/50 border-purple-500 text-purple-300' : 'bg-[#1e1e1e] border-[#444] text-gray-400 hover:text-white'}`}>
-                                        <span className="material-symbols-rounded text-[14px]">palette</span> 畫圖
-                                    </button>
-                                    <button onClick={() => setWebSearch(!webSearch)} className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border transition-colors ${webSearch ? 'bg-blue-900/50 border-blue-500 text-blue-300' : 'bg-[#1e1e1e] border-[#444] text-gray-400 hover:text-white'}`}>
-                                        <span className="material-symbols-rounded text-[14px]">travel_explore</span> 聯網
+                                <div className="flex justify-between items-center mb-3">
+                                    <div className="flex gap-2">
+                                        <button onClick={() => setDrawMode(!drawMode)} className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border transition-colors ${drawMode ? 'bg-purple-900/50 border-purple-500 text-purple-300' : 'bg-[#1e1e1e] border-[#444] text-gray-400 hover:text-white'}`}>
+                                            <span className="material-symbols-rounded text-[14px]">palette</span> 畫圖
+                                        </button>
+                                        <button onClick={() => setWebSearch(!webSearch)} className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border transition-colors ${webSearch ? 'bg-blue-900/50 border-blue-500 text-blue-300' : 'bg-[#1e1e1e] border-[#444] text-gray-400 hover:text-white'}`}>
+                                            <span className="material-symbols-rounded text-[14px]">travel_explore</span> 聯網
+                                        </button>
+                                    </div>
+                                    
+                                    {/* 語音按鈕 */}
+                                    <button onClick={toggleListening} className={`flex items-center justify-center w-8 h-8 rounded-full transition-all ${isListening ? 'bg-red-500 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]' : 'bg-[#2d2d2d] text-gray-400 hover:text-white border border-[#444]'}`}>
+                                        <span className="material-symbols-rounded text-[18px]">mic</span>
                                     </button>
                                 </div>
 
                                 <form onSubmit={handleSend} className="relative flex items-end bg-[#1e1e1e] rounded-2xl border border-[#333] shadow-2xl overflow-hidden focus-within:border-[#555] transition-colors">
-                                    
                                     <label className="cursor-pointer p-3 text-gray-400 hover:text-[#38bdf8] transition-colors self-end mb-1 ml-1">
                                         <input type="file" className="hidden" onChange={handleFileChange} />
                                         <span className="material-symbols-rounded">attach_file</span>
                                     </label>
-
                                     <textarea 
                                         value={input}
                                         onChange={(e) => setInput(e.target.value)}
                                         onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                                        placeholder="傳送訊息給 anyGem..."
+                                        placeholder={isListening ? "正在聆聽..." : "傳送訊息給 anyGem..."}
                                         className="flex-1 bg-transparent text-gray-100 p-4 min-h-[60px] max-h-[200px] resize-none focus:outline-none placeholder-gray-500 text-[15px]"
                                         rows="1"
                                     />
-
-                                    <button type="submit" disabled={isSubmitting || (!input.trim() && !fileData)} className={`p-3 m-2 rounded-xl flex items-center justify-center transition-all self-end ${isSubmitting || (!input.trim() && !fileData) ? 'bg-[#2d2d2d] text-gray-500 cursor-not-allowed' : 'bg-[#38bdf8] text-[#0f172a] hover:bg-[#7dd3fc] shadow-[0_0_10px_rgba(56,189,248,0.2)]'}`}>
+                                    <button type="submit" id="send-btn" disabled={isSubmitting || (!input.trim() && !fileData)} className={`p-3 m-2 rounded-xl flex items-center justify-center transition-all self-end ${isSubmitting || (!input.trim() && !fileData) ? 'bg-[#2d2d2d] text-gray-500 cursor-not-allowed' : 'bg-[#38bdf8] text-[#0f172a] hover:bg-[#7dd3fc] shadow-[0_0_10px_rgba(56,189,248,0.2)]'}`}>
                                         {isSubmitting ? <span className="material-symbols-rounded animate-spin">sync</span> : <span className="material-symbols-rounded">send</span>}
                                     </button>
                                 </form>
-                                <div className="text-center text-xs text-gray-600 mt-3 font-medium tracking-wide">
-                                    Powered by Serverless GAS & Gemini Stream Engine
-                                </div>
                             </div>
                         </div>
                     </div>
+
+                    {/* Settings Modal */}
+                    {showSettings && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+                            <div className="bg-[#1e1e1e] w-full max-w-sm rounded-2xl border border-[#333] shadow-2xl p-6">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-xl font-semibold text-white">系統設定</h2>
+                                    <button onClick={() => setShowSettings(false)} className="text-gray-400 hover:text-white"><span className="material-symbols-rounded">close</span></button>
+                                </div>
+                                
+                                <div className="space-y-5">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <div className="text-gray-200 font-medium">簡報自動配圖</div>
+                                            <div className="text-gray-500 text-xs">生成投影片時自動插入 AI 圖片</div>
+                                        </div>
+                                        <div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                                            <input type="checkbox" name="toggle1" id="toggle1" checked={autoImage} onChange={() => setAutoImage(!autoImage)} className="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 border-gray-600 appearance-none cursor-pointer transition-all duration-300 z-10 top-0 left-0"/>
+                                            <label htmlFor="toggle1" className="toggle-label block overflow-hidden h-5 rounded-full bg-gray-600 cursor-pointer transition-colors duration-300"></label>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <div className="text-gray-200 font-medium">語音自動撥放</div>
+                                            <div className="text-gray-500 text-xs">AI 回覆後自動朗讀內容</div>
+                                        </div>
+                                        <div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                                            <input type="checkbox" name="toggle2" id="toggle2" checked={autoPlay} onChange={() => setAutoPlay(!autoPlay)} className="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 border-gray-600 appearance-none cursor-pointer transition-all duration-300 z-10 top-0 left-0"/>
+                                            <label htmlFor="toggle2" className="toggle-label block overflow-hidden h-5 rounded-full bg-gray-600 cursor-pointer transition-colors duration-300"></label>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <div className="text-gray-200 font-medium text-[#38bdf8]">自動連續對話</div>
+                                            <div className="text-gray-500 text-xs">AI 講完話自動開啟麥克風聆聽</div>
+                                        </div>
+                                        <div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                                            <input type="checkbox" name="toggle3" id="toggle3" checked={autoChat} onChange={() => setAutoChat(!autoChat)} className="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 border-gray-600 appearance-none cursor-pointer transition-all duration-300 z-10 top-0 left-0"/>
+                                            <label htmlFor="toggle3" className="toggle-label block overflow-hidden h-5 rounded-full bg-gray-600 cursor-pointer transition-colors duration-300"></label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         }
