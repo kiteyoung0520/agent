@@ -257,7 +257,7 @@ const AGENT_TOOLS = [{
 
         { name: "read_web_page", description: "讀取一般網頁(URL)的純文字內容。當使用者貼上一般新聞、部落格或網站連結並要求總結、閱讀或提問時，強制呼叫此工具。取得內容後，請嚴格基於內容回答，禁止腦補。", parameters: { type: "OBJECT", properties: { url: { type: "STRING", description: "要讀取的網頁完整網址 (需包含 http/https)" } }, required: ["url"] } },
 
-        { name: "create_project_wiki", description: "建立專案 Wiki 導覽文件。", parameters: { type: "OBJECT", properties: { projectName: { type: "STRING" }, content: { type: "STRING" } }, required: ["projectName", "content"] } },
+        { name: "create_project_wiki", description: "建立專案 Wiki 導覽文件。當使用者要求「生成 Wiki」、「專案總結」或「建立索引」時呼叫。", parameters: { type: "OBJECT", properties: { projectName: { type: "STRING" }, content: { type: "STRING", description: "Wiki 完整內容 (Markdown 格式)" } }, required: ["projectName", "content"] } },
         { name: "organize_drive_folder", description: "智慧整理 Google Drive 資料夾。", parameters: { type: "OBJECT", properties: { folderName: { type: "STRING" } }, required: ["folderName"] } },
         
         { name: "create_google_doc", description: "建立全新的 Google 文件。支援 Markdown 排版。", parameters: { type: "OBJECT", properties: { topic: { type: "STRING" }, content: { type: "STRING" }, folderName: { type: "STRING" } }, required: ["topic", "content"] } },
@@ -303,10 +303,6 @@ const AGENT_TOOLS = [{
                 required: ["presentationUrl"]
             }
         },
-        { name: "append_to_google_sheet", description: "將資料批次寫入或新增到指定的 Google Sheet 試算表最下方。", parameters: { type: "OBJECT", properties: { sheetUrl: { type: "STRING", description: "要寫入的試算表完整網址。" }, sheetName: { type: "STRING", description: "工作表(頁籤)名稱" }, content: { type: "STRING", description: "要寫入的資料，請強制輸出符合標準的 JSON 陣列字串。" } }, required: ["sheetUrl", "sheetName", "content"] } },
-        { name: "update_google_sheet", description: "修改或更新指定的 Google Sheet 試算表特定範圍內的資料。", parameters: { type: "OBJECT", properties: { sheetUrl: { type: "STRING" }, sheetName: { type: "STRING" }, range: { type: "STRING" }, content: { type: "STRING" } }, required: ["sheetUrl", "sheetName", "range", "content"] } },
-        { name: "generate_art", description: "當使用者要求「畫圖」時呼叫此工具。", parameters: { type: "OBJECT", properties: { prompt: { type: "STRING" }, aspectRatio: { type: "STRING" } }, required: ["prompt"] } },
-        { name: "create_project_wiki", description: "建立專案 Wiki 導覽文件。當使用者要求「生成 Wiki」、「專案總結」或「建立索引」時呼叫。", parameters: { type: "OBJECT", properties: { projectName: { type: "STRING" }, content: { type: "STRING", description: "Wiki 完整內容 (Markdown 格式)" } }, required: ["projectName", "content"] } },
         { 
             name: "create_presentation", 
             description: "建立全新的 Google Slides 幾何風格簡報。", 
@@ -321,22 +317,9 @@ const AGENT_TOOLS = [{
                 required: ["topic", "customColors", "shapeStyle", "slidesData"] 
             } 
         },
-        { 
-            name: "update_presentation", 
-            description: "修改現有簡報。action 可為 append, overwrite, insert_at。", 
-            parameters: { 
-                type: "OBJECT", 
-                properties: { 
-                    presentationUrl: { type: "STRING" }, 
-                    action: { type: "STRING" }, 
-                    insertIndex: { type: "NUMBER" },
-                    customColors: { type: "STRING" }, 
-                    shapeStyle: { type: "STRING" }, 
-                    slidesData: { type: "STRING" } 
-                }, 
-                required: ["presentationUrl", "action", "slidesData"] 
-            } 
-        }
+        { name: "append_to_google_sheet", description: "將資料批次寫入或新增到指定的 Google Sheet 試算表最下方。", parameters: { type: "OBJECT", properties: { sheetUrl: { type: "STRING", description: "要寫入的試算表完整網址。" }, sheetName: { type: "STRING", description: "工作表(頁籤)名稱" }, content: { type: "STRING", description: "要寫入的資料，請強制輸出符合標準的 JSON 陣列字串。" } }, required: ["sheetUrl", "sheetName", "content"] } },
+        { name: "update_google_sheet", description: "修改或更新指定的 Google Sheet 試算表特定範圍內的資料。", parameters: { type: "OBJECT", properties: { sheetUrl: { type: "STRING" }, sheetName: { type: "STRING" }, range: { type: "STRING" }, content: { type: "STRING" } }, required: ["sheetUrl", "sheetName", "range", "content"] } },
+        { name: "generate_art", description: "當使用者要求「畫圖」時呼叫此工具。", parameters: { type: "OBJECT", properties: { prompt: { type: "STRING" }, aspectRatio: { type: "STRING" } }, required: ["prompt"] } }
     ]
 }];
 
