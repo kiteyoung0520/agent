@@ -507,7 +507,7 @@
                 b += `<div class="prose prose-invert text-gray-200 bg-[#1e1f22] p-4 sm:p-5 rounded-2xl rounded-tl-none shadow-sm text-base sm:text-lg leading-relaxed text-left ${isShared ? 'shared-message' : ''}">${isAI ? marked.parse(text) : text.replace(new RegExp('\\n', 'g'), '<br>')}${isShared ? '<span class="shared-badge">專案共用</span>' : ''}</div>`;
             }
             
-            b += `<div class="flex items-center gap-2 mt-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity ${!isAI ? 'justify-end' : ''}">`;
+            b += `<div class="flex items-center gap-2 mt-2 opacity-100 sm:opacity-50 sm:group-hover:opacity-100 transition-opacity ${!isAI ? 'justify-end' : ''}">`;
             if (isAI && text) {
                 b += `<button class="share-btn p-1.5 text-gray-400 hover:text-yellow-400 hover:bg-[#333] rounded-md" title="同步至專案共用資料"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">verified</span></button>`;
                 b += `<button class="copy-btn p-1.5 text-gray-400 hover:text-white hover:bg-[#333] rounded-md" title="複製"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">content_copy</span></button>`;
