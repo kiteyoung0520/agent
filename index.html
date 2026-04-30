@@ -118,8 +118,6 @@
         
         <div id="session-list" class="flex-1 overflow-y-auto px-3 space-y-1 pb-4"></div>
         
-        <div id="session-list" class="flex-1 overflow-y-auto px-3 space-y-1 pb-4"></div>
-        
         <div class="px-3 pb-4 border-t border-[#333] pt-4 shrink-0">
             <button onclick="toggleBookmarks()" class="w-full flex items-center justify-between px-3 mb-1 group cursor-pointer outline-none hover:bg-[#2a2b2f] p-2 rounded-lg transition-colors">
                 <div class="flex items-center gap-2">
@@ -129,7 +127,6 @@
                 <span id="bookmark-chevron" class="material-symbols-rounded text-gray-500 text-sm transition-transform duration-200">expand_more</span>
             </button>
             <div id="bookmark-list" class="space-y-1 hidden mt-2">
-                </a>
                 <a href="https://ppt-azure.vercel.app/" target="_blank" class="flex items-center gap-3 p-3 rounded-xl text-gray-400 hover:bg-[#2a2b2f] hover:text-white transition-all group">
                     <span class="material-symbols-rounded text-lg shrink-0 group-hover:text-blue-400 transition-colors">style</span><span class="truncate text-sm">智慧圖卡</span>
                 </a>
@@ -576,7 +573,7 @@
                 const isShared = window.sharedKnowledgeSet && window.sharedKnowledgeSet.has(text.trim());
                 let cleanText = text;
                 if (isAI) {
-                    cleanText = cleanText.replace(/<(?:think|thought)>/g, '<details class="text-xs text-gray-500 mb-2 border-l-2 border-gray-600 pl-2"><summary class="cursor-pointer font-bold">查看思考過程</summary>\\n\\n').replace(/<\/(?:think|thought)>/g, '\\n\\n</details>\\n');
+                    cleanText = cleanText.replace(/<(?:think|thought)>/g, `<details class="text-xs text-gray-500 mb-2 border-l-2 border-gray-600 pl-2"><summary class="cursor-pointer font-bold">查看思考過程</summary>\n\n`).replace(/<\/(?:think|thought)>/g, `\n\n</details>\n`);
                 }
                 let parsedText = isAI ? marked.parse(cleanText) : cleanText.replace(new RegExp('\\n', 'g'), '<br>');
                 if (isAI) {
@@ -961,7 +958,7 @@
 請直接呼叫 create_project_wiki 工具執行。`;
 
             try {
-                const chatInput = document.getElementById('chat-input');
+                const chatInput = document.getElementById('user-input');
                 chatInput.value = prompt;
                 await sendMessage();
             } finally {
