@@ -1373,7 +1373,7 @@ function runAutonomousAgentLoop(config) {
     if (iterations >= MAX_ITERATIONS) finalReply = "⚠️ 任務過於複雜，已達到單次執行上限。\n\n" + finalReply;
     if (!finalReply && !finalImage) finalReply = "⚠️ 系統已接收指令，但未產出任何內容或動作。";
     if (!finalReply && finalImage) finalReply = "🎨 圖像繪製完成。";
-    if (finalReply && !finalImage) { finalReply = performInnerQALoop(finalReply, config.apiKey, false); }
+    // if (finalReply && !finalImage) { finalReply = performInnerQALoop(finalReply, config.apiKey, false); }
     
     return { reply: finalReply, model: finalModel, image: finalImage, mime: finalMime };
 }

@@ -574,7 +574,11 @@
             if (imageSrc) b += `<img src="${imageSrc}" class="rounded-xl border border-[#333] mb-2 max-w-full">`;
             if (text) {
                 const isShared = window.sharedKnowledgeSet && window.sharedKnowledgeSet.has(text.trim());
-                let parsedText = isAI ? marked.parse(text) : text.replace(new RegExp('\\n', 'g'), '<br>');
+                let cleanText = text;
+                if (isAI) {
+                    cleanText = cleanText.replace(/<(?:think|thought)>/g, '<details class="text-xs text-gray-500 mb-2 border-l-2 border-gray-600 pl-2"><summary class="cursor-pointer font-bold">查看思考過程</summary>\\n\\n').replace(/<\/(?:think|thought)>/g, '\\n\\n</details>\\n');
+                }
+                let parsedText = isAI ? marked.parse(cleanText) : cleanText.replace(new RegExp('\\n', 'g'), '<br>');
                 if (isAI) {
                     parsedText = parsedText.replace(/\[來源\s*(\d+)\]/g, '<span class="citation" onclick="highlightSource($1)">[來源 $1]</span>');
                 }
