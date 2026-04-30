@@ -44,13 +44,7 @@
         .citation { color: #38bdf8; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
         .citation:hover { color: #7dd3fc; }
 
-        /* Right Panel & Dock */
-        #right-mini-dock { width: 56px; border-left: 1px solid #333; background: #1e1f22; display: flex; flex-direction: column; align-items: center; padding-top: 20px; gap: 20px; z-index: 45; }
-        .dock-btn { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #888; transition: all 0.2s; cursor: pointer; }
-        .dock-btn:hover { background: #2a2b2f; color: #fff; }
-        .dock-btn.active { background: #38bdf8; color: #fff; box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); }
-        .dock-btn.settings-active { background: #a855f7; color: #fff; box-shadow: 0 0 15px rgba(168, 85, 247, 0.4); }
-
+        /* Right Panel & Resizer */
         #right-panel { transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); border-left: 1px solid #333; position: relative; }
         .right-panel-open #right-panel { width: var(--right-panel-width, 340px); }
         .right-panel-closed #right-panel { width: 0; border-left: none; }
@@ -60,8 +54,7 @@
         #right-panel-resizer:hover::after { background: #38bdf8; width: 4px; }
 
         @media (max-width: 1024px) {
-            #right-mini-dock { position: fixed; right: 0; top: 0; height: 100%; width: 56px; }
-            .right-panel-open #right-panel { width: calc(100vw - 56px); position: absolute; right: 56px; top: 0; height: 100%; z-index: 50; }
+            .right-panel-open #right-panel { width: 100vw; position: absolute; right: 0; top: 0; height: 100%; z-index: 50; }
         }
     </style>
 </head>
@@ -146,6 +139,16 @@
             <div class="flex items-center gap-2">
                 <button onclick="toggleSidebar()" class="p-2 text-gray-400 md:hidden"><span class="material-symbols-rounded">menu</span></button>
                 <span class="font-semibold text-sm truncate md:text-base text-gray-200" id="mobile-title">新對話</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="switchRightPanel('settings')" class="flex items-center gap-2 px-3 py-1.5 bg-[#2a2b2f] hover:bg-[#333] text-purple-400 rounded-lg border border-[#444] transition-all group">
+                    <span class="material-symbols-rounded text-[20px]">tune</span>
+                    <span class="text-xs font-bold hidden sm:inline">功能設定</span>
+                </button>
+                <button onclick="switchRightPanel('library')" class="flex items-center gap-2 px-3 py-1.5 bg-[#2a2b2f] hover:bg-[#333] text-blue-400 rounded-lg border border-[#444] transition-all group">
+                    <span class="material-symbols-rounded text-[20px]">library_books</span>
+                    <span class="text-xs font-bold hidden sm:inline">專案圖書館</span>
+                </button>
             </div>
         </header>
 
@@ -244,21 +247,6 @@
             </p>
         </div>
     </aside>
-
-    <!-- ⚓ Right Mini-Dock -->
-    <div id="right-mini-dock">
-        <div id="dock-library" class="dock-btn active" title="專案圖書館" onclick="switchRightPanel('library')">
-            <span class="material-symbols-rounded">inventory_2</span>
-        </div>
-        <div id="dock-settings" class="dock-btn" title="功能設定" onclick="switchRightPanel('settings')">
-            <span class="material-symbols-rounded">tune</span>
-        </div>
-        <div class="mt-auto pb-6">
-            <div class="dock-btn" title="切換深淺色" onclick="alert('深色模式已鎖定')">
-                <span class="material-symbols-rounded">dark_mode</span>
-            </div>
-        </div>
-    </div>
 
     <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden" onclick="toggleSidebar()"></div>
     <div id="right-panel-overlay" class="fixed inset-0 bg-black/50 z-30 hidden" onclick="toggleRightPanel()"></div>
@@ -360,8 +348,7 @@
 
             document.addEventListener('mousemove', (e) => {
                 if (!isResizing) return;
-                const dockWidth = 56;
-                const newWidth = window.innerWidth - e.clientX - dockWidth;
+                const newWidth = window.innerWidth - e.clientX;
                 if (newWidth > 200 && newWidth < window.innerWidth * 0.7) {
                     panel.style.width = `${newWidth}px`;
                     document.documentElement.style.setProperty('--right-panel-width', `${newWidth}px`);
@@ -841,10 +828,8 @@
             p.classList.toggle('right-panel-closed');
             
             if (window.innerWidth < 1024) o.classList.toggle('hidden');
-            // 移除原本手動調整 body padding 的邏輯，改由 Flexbox 自動處理
             
             if (isOpen) renderRightPanelContent();
-            else document.querySelectorAll('.dock-btn').forEach(b => b.classList.remove('active', 'settings-active'));
         }
         
         function toggleSettingsMenu() { switchRightPanel('settings'); }
