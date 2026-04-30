@@ -39,8 +39,9 @@
         .pinned-icon { transform: rotate(-45deg); color: #8ab4f8; }
 
         @keyframes pulse-ring { 0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
-        .recording-pulse { animation: pulse-ring 2s infinite; background-color: rgba(239, 68, 68, 0.15); border-radius: 50%; color: #ef4444 !important; }
         thought_process { display: none; }
+        .shared-message { border-left: 4px solid #facc15 !important; background-color: rgba(250, 204, 21, 0.05) !important; }
+        .shared-badge { background: #facc15; color: #000; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-left: 8px; vertical-align: middle; }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden">
@@ -94,6 +95,20 @@
         </div>
         
         <div id="session-list" class="flex-1 overflow-y-auto px-3 space-y-1 pb-4"></div>
+        
+        <!-- 💡 專案共用知識區 -->
+        <div class="px-3 pb-4 border-t border-[#333] pt-4 shrink-0">
+            <button onclick="toggleSharedData()" class="w-full flex items-center justify-between px-3 mb-1 group cursor-pointer outline-none hover:bg-[#2a2b2f] p-2 rounded-lg transition-colors">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-rounded text-yellow-500 text-[16px]">verified</span>
+                    <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider group-hover:text-white transition-colors">專案共用知識</span>
+                </div>
+                <span id="shared-data-chevron" class="material-symbols-rounded text-gray-500 text-sm transition-transform duration-200">expand_more</span>
+            </button>
+            <div id="shared-data-list" class="space-y-1 hidden mt-2 max-h-[150px] overflow-y-auto scrollbar-hide">
+                <div class="p-2 text-[11px] text-gray-500 italic text-center">尚無共用資料</div>
+            </div>
+        </div>
         
         <div class="px-3 pb-4 border-t border-[#333] pt-4 shrink-0">
             <button onclick="toggleBookmarks()" class="w-full flex items-center justify-between px-3 mb-1 group cursor-pointer outline-none hover:bg-[#2a2b2f] p-2 rounded-lg transition-colors">
@@ -487,14 +502,19 @@
             
             if (model && isAI) b += `<div class="text-[10px] text-gray-500 mb-1 ml-1 select-none font-mono">Powered by ${model}</div>`;
             if (imageSrc) b += `<img src="${imageSrc}" class="rounded-xl border border-[#333] mb-2 max-w-full">`;
-            if (text) b += `<div class="prose prose-invert text-gray-200 bg-[#1e1f22] p-4 sm:p-5 rounded-2xl rounded-tl-none shadow-sm text-base sm:text-lg leading-relaxed text-left">${isAI ? marked.parse(text) : text.replace(new RegExp('\\n', 'g'), '<br>')}</div>`;
+            if (text) {
+                const isShared = window.sharedKnowledgeSet && window.sharedKnowledgeSet.has(text.trim());
+                b += `<div class="prose prose-invert text-gray-200 bg-[#1e1f22] p-4 sm:p-5 rounded-2xl rounded-tl-none shadow-sm text-base sm:text-lg leading-relaxed text-left ${isShared ? 'shared-message' : ''}">${isAI ? marked.parse(text) : text.replace(new RegExp('\\n', 'g'), '<br>')}${isShared ? '<span class="shared-badge">專案共用</span>' : ''}</div>`;
+            }
             
             b += `<div class="flex items-center gap-2 mt-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity ${!isAI ? 'justify-end' : ''}">`;
             if (isAI && text) {
+                b += `<button class="share-btn p-1.5 text-gray-400 hover:text-yellow-400 hover:bg-[#333] rounded-md" title="同步至專案共用資料"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">verified</span></button>`;
                 b += `<button class="copy-btn p-1.5 text-gray-400 hover:text-white hover:bg-[#333] rounded-md" title="複製"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">content_copy</span></button>`;
                 b += `<button class="speak-btn p-1.5 text-gray-400 hover:text-green-400 hover:bg-[#333] rounded-md" title="朗讀此訊息"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">volume_up</span></button>`;
             } 
             if (!isAI && text) {
+                b += `<button class="share-btn p-1.5 text-gray-400 hover:text-yellow-400 hover:bg-[#333] rounded-md" title="同步至專案共用資料"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">verified</span></button>`;
                 b += `<button class="edit-btn p-1.5 text-gray-400 hover:text-blue-400 hover:bg-[#333] rounded-md transition-colors" title="編輯並重新生成"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">edit</span></button>`;
             }
             if (text || imageSrc) {
@@ -508,11 +528,15 @@
             if (isAI) { w.querySelectorAll('pre code').forEach(c => { if (c.className.includes('language-html') || c.className.includes('language-jsx') || c.className.includes('language-javascript')) { let btn = document.createElement('button'); btn.className = "absolute top-2 sm:top-3 right-2 sm:right-3 bg-blue-600 hover:bg-blue-500 text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg flex items-center gap-1 shadow-lg"; btn.innerHTML = '<span class="material-symbols-rounded text-[12px] sm:text-sm">play_circle</span> 預覽'; btn.onclick = () => openPreview(c.innerText); c.parentElement.appendChild(btn); } }); }
             
             if (isAI && text) { 
+                const sBtn = w.querySelector('.share-btn');
+                if (sBtn) sBtn.onclick = () => toggleMessageSharing(text, w);
                 w.querySelector('.copy-btn').onclick = () => navigator.clipboard.writeText(text).then(() => { let ic = w.querySelector('.copy-btn .material-symbols-rounded'); ic.innerText = 'check'; ic.classList.add('text-green-400'); setTimeout(() => { ic.innerText = 'content_copy'; ic.classList.remove('text-green-400'); }, 2000); }); 
                 w.querySelector('.speak-btn').onclick = () => speakText(text, false); 
             } 
             
             if (!isAI && text) {
+                const sBtn = w.querySelector('.share-btn');
+                if (sBtn) sBtn.onclick = () => toggleMessageSharing(text, w);
                 w.querySelector('.edit-btn').onclick = () => {
                     const contentDiv = w.querySelector('.prose'); const actionsDiv = w.querySelector('.flex.items-center.gap-2.mt-2'); contentDiv.classList.add('hidden'); actionsDiv.classList.add('hidden');
                     const editContainer = document.createElement('div'); editContainer.className = "w-full mt-2 flex flex-col gap-2 text-left";
@@ -554,7 +578,7 @@
             chatContainer.innerHTML = ''; 
             appendMessage('ai', `您已進入 **${currentWorkspace || "主"}** 專案空間。\n我會自動隔離記憶，確保任務上下文精準不發散！\n(下方的麥克風與進階功能選單皆已就緒)`); 
             if (window.innerWidth < 768) toggleSidebar(); 
-            loadSessions(); 
+            loadSessions(); loadWorkspaceContext();
         }
         
         async function loadWorkspaces() { 
@@ -575,14 +599,14 @@
             } catch (e) {} 
         }
 
-        function changeWorkspace() { currentWorkspace = document.getElementById('workspace-selector').value; startNewSession(); }
+        function changeWorkspace() { currentWorkspace = document.getElementById('workspace-selector').value; startNewSession(); loadWorkspaceContext(); }
         
         function createNewWorkspace() {
             const name = prompt("請輸入新專案空間 (Workspace) 的名稱：");
             if (name && name.trim()) { currentWorkspace = name.trim(); const sel = document.getElementById('workspace-selector'); sel.innerHTML += `<option value="${currentWorkspace}">${currentWorkspace}</option>`; sel.value = currentWorkspace; startNewSession(); }
         }
 
-        async function switchSession(id, title) { if (id === currentSessionId && chatContainer.children.length > 1) return; currentSessionId = id; document.getElementById('mobile-title').innerText = title; chatContainer.innerHTML = ''; const lid = appendLoading("正在載入歷史對話..."); if (window.innerWidth < 768) toggleSidebar(); try { const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'load_session', session_id: id, workspace: currentWorkspace }) })).json(); removeLoading(lid); if (Array.isArray(d.logs)) d.logs.forEach(l => appendMessage(l.role === 'ai' ? 'ai' : 'user', l.text)); loadSessions(); } catch (e) {} }
+        async function switchSession(id, title) { if (id === currentSessionId && chatContainer.children.length > 1) return; currentSessionId = id; document.getElementById('mobile-title').innerText = title; chatContainer.innerHTML = ''; const lid = appendLoading("正在載入歷史對話..."); if (window.innerWidth < 768) toggleSidebar(); try { const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'load_session', session_id: id, workspace: currentWorkspace }) })).json(); removeLoading(lid); if (Array.isArray(d.logs)) d.logs.forEach(l => appendMessage(l.role === 'ai' ? 'ai' : 'user', l.text)); loadSessions(); loadWorkspaceContext(); } catch (e) {} }
         
         async function loadGems() { try { const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_gems', workspace: currentWorkspace }) })).json(); if (d && d.gems) { currentGemsList = d.gems; const s = document.getElementById('gem-selector'); s.innerHTML = '<option value="">🤖 全能助理</option>'; currentGemsList.forEach((g, i) => s.innerHTML += `<option value="${i}">💎 ${g.name}</option>`); } } catch (e) {} }
         
@@ -647,10 +671,46 @@
         function closePreview() { document.getElementById('preview-modal').classList.add('hidden'); document.getElementById('preview-modal').classList.remove('flex'); document.getElementById('preview-iframe').srcdoc = ''; }
         function refreshPreview() { if (currentRenderCode) document.getElementById('preview-iframe').srcdoc = currentRenderCode; }
 
+        function toggleSharedData() { const l = document.getElementById('shared-data-list'), c = document.getElementById('shared-data-chevron'); l.classList.toggle('hidden'); c.style.transform = l.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)'; }
+        
+        window.sharedKnowledgeSet = new Set();
+        async function loadWorkspaceContext() {
+            try {
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_workspace_context', workspace: currentWorkspace }) });
+                const d = await res.json();
+                const l = document.getElementById('shared-data-list');
+                l.innerHTML = '';
+                window.sharedKnowledgeSet.clear();
+                if (d.context && d.context.length > 0) {
+                    d.context.forEach(item => {
+                        window.sharedKnowledgeSet.add(item.text.trim());
+                        const div = document.createElement('div');
+                        div.className = "flex items-center gap-2 p-2 bg-[#2a2b2f] rounded-lg text-xs text-gray-300 hover:text-white transition-colors group";
+                        div.innerHTML = `<span class="material-symbols-rounded text-yellow-500 text-[14px]">verified</span><span class="truncate flex-1">${item.text.substring(0, 30)}...</span><button class="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400"><span class="material-symbols-rounded text-[14px]">close</span></button>`;
+                        div.querySelector('button').onclick = (e) => { e.stopPropagation(); toggleMessageSharing(item.text, null, false); };
+                        l.appendChild(div);
+                    });
+                } else { l.innerHTML = '<div class="p-2 text-[11px] text-gray-500 italic text-center">尚無共用資料</div>'; }
+            } catch (e) {}
+        }
+
+        async function toggleMessageSharing(text, element, forceState) {
+            const isShared = (forceState !== undefined) ? forceState : !window.sharedKnowledgeSet.has(text.trim());
+            try {
+                await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'toggle_workspace_context', workspace: currentWorkspace, target_text: text, session_id: currentSessionId, is_shared: isShared }) });
+                if (element) {
+                    const contentDiv = element.querySelector('.prose');
+                    if (isShared) { contentDiv.classList.add('shared-message'); if (!contentDiv.querySelector('.shared-badge')) contentDiv.innerHTML += '<span class="shared-badge">專案共用</span>'; }
+                    else { contentDiv.classList.remove('shared-message'); const badge = contentDiv.querySelector('.shared-badge'); if (badge) badge.remove(); }
+                }
+                loadWorkspaceContext();
+            } catch (e) { alert("同步失敗"); }
+        }
+
         // 啟動入口
         window.onload = async () => { 
             await loadWorkspaces(); 
-            loadSessions(); loadGems(); loadModels(); 
+            loadSessions(); loadGems(); loadModels(); loadWorkspaceContext();
         };
     </script>
 </body>
