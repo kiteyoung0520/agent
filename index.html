@@ -40,6 +40,7 @@
 
         @keyframes pulse-ring { 0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
         .recording-pulse { animation: pulse-ring 2s infinite; background-color: rgba(239, 68, 68, 0.15); border-radius: 50%; color: #ef4444 !important; }
+        thought_process { display: none; }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden">
@@ -293,7 +294,7 @@
             if (isAutoPlay && !document.getElementById('voice-output-toggle').checked) return false;
             if (!window.speechSynthesis) return false; window.speechSynthesis.cancel(); 
             const bt = String.fromCharCode(96, 96, 96);
-            let cleanText = text.replace(new RegExp(bt + '[\\s\\S]*?' + bt, 'g'), '').replace(new RegExp('https?:\\/\\/[^\\s]+', 'g'), '網址').replace(new RegExp('[*_#~|]', 'g'), '').trim();
+            let cleanText = text.replace(/<thought_process>[\s\S]*?<\/thought_process>/g, '').replace(new RegExp(bt + '[\\s\\S]*?' + bt, 'g'), '').replace(new RegExp('https?:\\/\\/[^\\s]+', 'g'), '網址').replace(new RegExp('[*_#~|]', 'g'), '').trim();
             if (!cleanText) return false;
             let utterance = new SpeechSynthesisUtterance(cleanText);
             let v = window.speechSynthesis.getVoices(), sv = null;
