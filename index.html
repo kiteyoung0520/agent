@@ -779,6 +779,12 @@
                 title.innerText = '專案圖書館';
                 footer.innerHTML = '<span class="material-symbols-rounded text-[12px] align-middle mr-1">info</span>所有來源與片段均會自動作為 AI 思考的背景知識。';
                 container.innerHTML = `
+                    <div class="mb-4">
+                        <button onclick="generateWiki()" class="w-full py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95">
+                            <span class="material-symbols-rounded text-[18px]">auto_stories</span>
+                            一鍵生成專案 Wiki
+                        </button>
+                    </div>
                     <section>
                         <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 px-1 flex items-center justify-between">資料來源 (SOURCES) <span class="bg-blue-600/20 text-blue-400 px-1.5 py-0.5 rounded text-[9px]" id="source-count">0</span></h4>
                         <div class="space-y-3">
@@ -935,6 +941,29 @@
             const peek = document.getElementById('source-peek');
             peek.style.display = 'none'; 
             peek.classList.add('hidden');
+        }
+
+        async function generateWiki() {
+            const btn = event.currentTarget;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[18px]">sync</span> 正在分析專案...';
+            btn.disabled = true;
+
+            const prompt = `請幫我分析目前的專案背景、現有的資料來源（包含 ${cachedSources.length} 個檔案）與我們先前的討論進度，自動建立一份結構完整的「專案 Wiki」導覽文件。內容請包含：
+1. 專案願景與目標
+2. 現有資料資產索引
+3. 開發/討論里程碑
+4. 後續建議行動
+請直接呼叫 create_project_wiki 工具執行。`;
+
+            try {
+                const chatInput = document.getElementById('chat-input');
+                chatInput.value = prompt;
+                await sendMessage();
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
         }
 
         // 啟動入口

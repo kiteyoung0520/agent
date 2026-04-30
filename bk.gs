@@ -306,24 +306,25 @@ const AGENT_TOOLS = [{
         { name: "append_to_google_sheet", description: "將資料批次寫入或新增到指定的 Google Sheet 試算表最下方。", parameters: { type: "OBJECT", properties: { sheetUrl: { type: "STRING", description: "要寫入的試算表完整網址。" }, sheetName: { type: "STRING", description: "工作表(頁籤)名稱" }, content: { type: "STRING", description: "要寫入的資料，請強制輸出符合標準的 JSON 陣列字串。" } }, required: ["sheetUrl", "sheetName", "content"] } },
         { name: "update_google_sheet", description: "修改或更新指定的 Google Sheet 試算表特定範圍內的資料。", parameters: { type: "OBJECT", properties: { sheetUrl: { type: "STRING" }, sheetName: { type: "STRING" }, range: { type: "STRING" }, content: { type: "STRING" } }, required: ["sheetUrl", "sheetName", "range", "content"] } },
         { name: "generate_art", description: "當使用者要求「畫圖」時呼叫此工具。", parameters: { type: "OBJECT", properties: { prompt: { type: "STRING" }, aspectRatio: { type: "STRING" } }, required: ["prompt"] } },
-        { name: "read_google_presentation", description: "讀取現有 Google Slides 簡報的所有文字內容、投影片結構與備忘錄。", parameters: { type: "OBJECT", properties: { presentationUrl: { type: "STRING" } }, required: ["presentationUrl"] } },
+        { name: "create_project_wiki", description: "建立專案 Wiki 導覽文件。當使用者要求「生成 Wiki」、「專案總結」或「建立索引」時呼叫。", parameters: { type: "OBJECT", properties: { projectName: { type: "STRING" }, content: { type: "STRING", description: "Wiki 完整內容 (Markdown 格式)" } }, required: ["projectName", "content"] } },
+        { name: "read_google_presentation", description: "【讀取簡報內容】取得 Google Slides 的文字與備忘錄內容。", parameters: { type: "OBJECT", properties: { presentationUrl: { type: "STRING" } }, required: ["presentationUrl"] } },
         { 
             name: "create_presentation", 
-            description: "製作全新的 Google Slides。", 
+            description: "建立全新的 Google Slides 幾何風格簡報。", 
             parameters: { 
                 type: "OBJECT", 
                 properties: { 
                     topic: { type: "STRING" }, 
-                    customColors: { type: "STRING" }, 
+                    customColors: { type: "STRING", description: "配色 JSON" }, 
                     shapeStyle: { type: "STRING" }, 
-                    slidesData: { type: "STRING" } 
+                    slidesData: { type: "STRING", description: "簡報內容 JSON" } 
                 }, 
                 required: ["topic", "customColors", "shapeStyle", "slidesData"] 
             } 
         },
         { 
             name: "update_presentation", 
-            description: "修改現有的 Google Slides 簡報。支援 append, overwrite, insert_at。", 
+            description: "修改現有簡報。action 可為 append, overwrite, insert_at。", 
             parameters: { 
                 type: "OBJECT", 
                 properties: { 
