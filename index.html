@@ -573,9 +573,13 @@
                 const isShared = window.sharedKnowledgeSet && window.sharedKnowledgeSet.has(text.trim());
                 let cleanText = text;
                 if (isAI) {
-                    cleanText = cleanText.replace(/<(?:think|thought)>/g, `<details class="text-xs text-gray-500 mb-2 border-l-2 border-gray-600 pl-2"><summary class="cursor-pointer font-bold">查看思考過程</summary>\n\n`).replace(/<\/(?:think|thought)>/g, `\n\n</details>\n`);
+                    const nl = String.fromCharCode(10);
+                    cleanText = cleanText.split('<think>').join('<details class="text-xs text-gray-500 mb-2 border-l-2 border-gray-600 pl-2"><summary class="cursor-pointer font-bold">查看思考過程</summary>' + nl + nl)
+                                 .split('</think>').join(nl + nl + '</details>' + nl)
+                                 .split('<thought>').join('<details class="text-xs text-gray-500 mb-2 border-l-2 border-gray-600 pl-2"><summary class="cursor-pointer font-bold">查看思考過程</summary>' + nl + nl)
+                                 .split('</thought>').join(nl + nl + '</details>' + nl);
                 }
-                let parsedText = isAI ? marked.parse(cleanText) : cleanText.replace(new RegExp('\\n', 'g'), '<br>');
+                let parsedText = isAI ? marked.parse(cleanText) : cleanText.split('\\n').join('<br>');
                 if (isAI) {
                     parsedText = parsedText.replace(/\[來源\s*(\d+)\]/g, '<span class="citation" onclick="highlightSource($1)">[來源 $1]</span>');
                 }
