@@ -53,6 +53,14 @@
         #right-panel-resizer::after { content: ""; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 2px; height: 32px; background: #444; border-radius: 1px; transition: background 0.2s; }
         #right-panel-resizer:hover::after { background: #38bdf8; width: 4px; }
 
+        /* Source Peek Overlay */
+        #source-peek { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; background: #2a2b2f; border: 1px solid #444; border-radius: 16px; padding: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); z-index: 60; display: none; animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        @keyframes slideUp { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+        .peek-header { display: flex; items: center; gap: 10px; margin-bottom: 12px; }
+        .peek-title { font-size: 14px; font-weight: 700; color: #fff; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .peek-content { font-size: 12px; color: #aaa; line-height: 1.6; margin-bottom: 15px; max-height: 100px; overflow-y: auto; }
+        .peek-action { display: flex; justify-content: flex-end; gap: 10px; }
+
         @media (max-width: 1024px) {
             .right-panel-open #right-panel { width: 100vw; position: absolute; right: 0; top: 0; height: 100%; z-index: 50; }
         }
@@ -159,6 +167,23 @@
                     <h2 class="text-2xl sm:text-3xl font-bold text-white mb-2">我是您的 anyGem 代理人</h2>
                     <p class="text-gray-400 text-base sm:text-lg leading-relaxed">我們已開啟 <strong>內部品管 (Inner QA)</strong> 防護網！介面按鈕已修復，您可以順利傳送指令了。</p>
                 </div>
+            </div>
+        </div>
+
+        <!-- 🕵️ Source Peek Overlay -->
+        <div id="source-peek" class="hidden">
+            <div class="peek-header">
+                <span id="peek-icon" class="material-symbols-rounded text-blue-400">description</span>
+                <span id="peek-title" class="peek-title">來源標題載入中...</span>
+                <button onclick="closePeek()" class="text-gray-500 hover:text-white"><span class="material-symbols-rounded text-[18px]">close</span></button>
+            </div>
+            <div id="peek-content" class="peek-content text-gray-300">
+                正在抓取內容摘錄...
+            </div>
+            <div class="peek-action">
+                <a id="peek-link" href="#" target="_blank" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg flex items-center gap-1 transition-all">
+                    <span class="material-symbols-rounded text-[14px]">open_in_new</span> 開啟原始檔案
+                </a>
             </div>
         </div>
 
@@ -834,6 +859,7 @@
         
         function toggleSettingsMenu() { switchRightPanel('settings'); }
 
+        let cachedSources = [];
         async function loadSources() {
             try {
                 const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_sources', workspace: currentWorkspace }) });
@@ -842,9 +868,10 @@
                 const countEl = document.getElementById('source-count');
                 if (!l) return;
                 l.innerHTML = '';
-                if (d.sources && d.sources.length > 0) {
-                    countEl.innerText = d.sources.length;
-                    d.sources.forEach((s, i) => {
+                cachedSources = d.sources || [];
+                if (cachedSources.length > 0) {
+                    countEl.innerText = cachedSources.length;
+                    cachedSources.forEach((s, i) => {
                         const icon = s.type === 'youtube' ? 'subscriptions' : (s.type === 'web' ? 'public' : 'description');
                         const div = document.createElement('div');
                         div.id = `source-item-${i+1}`;
@@ -880,6 +907,19 @@
         }
 
         function highlightSource(num) {
+            const source = cachedSources[num - 1];
+            if (!source) return;
+
+            const peek = document.getElementById('source-peek');
+            document.getElementById('peek-title').innerText = source.title;
+            document.getElementById('peek-link').href = source.url;
+            document.getElementById('peek-icon').innerText = source.type === 'youtube' ? 'subscriptions' : (source.type === 'web' ? 'public' : 'description');
+            document.getElementById('peek-content').innerText = source.content ? source.content.substring(0, 300) + '...' : '正在讀取文件摘要與關鍵段落...';
+            
+            peek.classList.remove('hidden');
+            peek.style.display = 'block';
+            
+            // 同步亮起右側面板中的項目
             switchRightPanel('library');
             setTimeout(() => {
                 const el = document.getElementById(`source-item-${num}`);
@@ -889,6 +929,12 @@
                     setTimeout(() => el.classList.remove('bg-blue-600/30', 'ring-2', 'ring-blue-500'), 3000);
                 }
             }, 350);
+        }
+
+        function closePeek() { 
+            const peek = document.getElementById('source-peek');
+            peek.style.display = 'none'; 
+            peek.classList.add('hidden');
         }
 
         // 啟動入口
