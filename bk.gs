@@ -116,55 +116,6 @@ class FirebaseClient {
         return results.slice(0, 50);
     }
 
-    getWorkspaceContext(workspace) {
-        if (!this.apiKey) return [];
-        const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents:runQuery?key=${this.apiKey}`;
-        const payload = {
-            structuredQuery: {
-                from: [{ collectionId: "workspace_context" }],
-                where: {
-                    fieldFilter: { field: { fieldPath: "workspace" }, op: "EQUAL", value: { stringValue: workspace } }
-                }
-            }
-        };
-        const res = this.fetchWithRetry(url, { method: "post", contentType: "application/json", payload: JSON.stringify(payload), muteHttpExceptions: true });
-        if (!res) return [];
-        const results = JSON.parse(res.getContentText());
-        if (!Array.isArray(results)) return [];
-        return results.map(x => x.document ? this._parseData(x.document.fields) : null).filter(x => x);
-    }
-
-    addWorkspaceContext(workspace, text, sourceSessionId) {
-        const id = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, workspace + text).map(b => (b < 0 ? b + 256 : b).toString(16).padStart(2, '0')).join('');
-        return this.write("workspace_context", id, { workspace: workspace, text: text, source_session: sourceSessionId, created_at: new Date() });
-    }
-
-    removeWorkspaceContext(workspace, text) {
-        const id = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, workspace + text).map(b => (b < 0 ? b + 256 : b).toString(16).padStart(2, '0')).join('');
-        this.delete("workspace_context", id);
-        return true;
-    }
-
-    getSources(workspace) {
-        if (!this.apiKey) return [];
-        const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents:runQuery?key=${this.apiKey}`;
-        const payload = { structuredQuery: { from: [{ collectionId: "sources" }], where: { fieldFilter: { field: { fieldPath: "workspace" }, op: "EQUAL", value: { stringValue: workspace } } } } };
-        const res = this.fetchWithRetry(url, { method: "post", contentType: "application/json", payload: JSON.stringify(payload), muteHttpExceptions: true });
-        if (!res) return [];
-        const results = JSON.parse(res.getContentText());
-        return Array.isArray(results) ? results.map(x => x.document ? this._parseData(x.document.fields) : null).filter(x => x) : [];
-    }
-
-    addSource(workspace, sourceData) {
-        const id = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, workspace + (sourceData.url || sourceData.title)).map(b => (b < 0 ? b + 256 : b).toString(16).padStart(2, '0')).join('');
-        return this.write("sources", id, { ...sourceData, workspace: workspace, created_at: new Date() });
-    }
-
-    removeSource(workspace, sourceId) {
-        this.delete("sources", sourceId);
-        return true;
-    }
-
     _formatData(data) {
         const fields = {};
         for (const [key, value] of Object.entries(data)) {
@@ -257,7 +208,6 @@ const AGENT_TOOLS = [{
 
         { name: "read_web_page", description: "讀取一般網頁(URL)的純文字內容。當使用者貼上一般新聞、部落格或網站連結並要求總結、閱讀或提問時，強制呼叫此工具。取得內容後，請嚴格基於內容回答，禁止腦補。", parameters: { type: "OBJECT", properties: { url: { type: "STRING", description: "要讀取的網頁完整網址 (需包含 http/https)" } }, required: ["url"] } },
 
-        { name: "read_web_page", description: "讀取一般網頁(URL)的純文字內容。當使用者貼上一般新聞、部落格或網站連結並要求總結、閱讀或提問時，強制呼叫此工具。取得內容後，請嚴格基於內容回答，禁止腦補。", parameters: { type: "OBJECT", properties: { url: { type: "STRING", description: "要讀取的網頁完整網址 (需包含 http/https)" } }, required: ["url"] } },
         { name: "organize_drive_folder", description: "智慧整理 Google Drive 資料夾。", parameters: { type: "OBJECT", properties: { folderName: { type: "STRING" } }, required: ["folderName"] } },
         
         { name: "create_google_doc", description: "建立全新的 Google 文件。支援 Markdown 排版。", parameters: { type: "OBJECT", properties: { topic: { type: "STRING" }, content: { type: "STRING" }, folderName: { type: "STRING" } }, required: ["topic", "content"] } },
@@ -266,59 +216,62 @@ const AGENT_TOOLS = [{
         
         { name: "append_to_google_doc", description: "在現有 Google 文件最下方「補充/附加」新內容。", parameters: { type: "OBJECT", properties: { docUrl: { type: "STRING", description: "該 Google 文件的完整網址。" }, content: { type: "STRING", description: "要附加的新內容，支援 Markdown 排版" } }, required: ["docUrl", "content"] } },
         { name: "overwrite_google_doc", description: "完全覆寫現有 Google 文件。當使用者要求「修改整份文件」時使用。使用前務必先用 read_google_doc 讀取舊內容融合。", parameters: { type: "OBJECT", properties: { docUrl: { type: "STRING", description: "該 Google 文件的完整網址。" }, content: { type: "STRING", description: "修改後的「完整」新內容，舊內容將被清空，支援 Markdown" } }, required: ["docUrl", "content"] } },
-        
+
         { name: "read_google_sheet", description: "讀取特定的 Google Sheet 試算表內容。", parameters: { type: "OBJECT", properties: { sheetUrl: { type: "STRING", description: "要讀取的試算表完整網址。" }, sheetName: { type: "STRING", description: "工作表(頁籤)名稱，若不指定則預設讀取第一頁。" }, range: { type: "STRING", description: "指定範圍，如 'A1:D10'，預設或填 'ALL' 讀取全部" } }, required: ["sheetUrl"] } },
+        { name: "append_to_google_sheet", description: "【新增資料】將資料批次寫入或新增到指定的 Google Sheet 試算表最下方。如果頁籤不存在會自動建立。", parameters: { type: "OBJECT", properties: { sheetUrl: { type: "STRING", description: "要寫入的試算表完整網址。" }, sheetName: { type: "STRING", description: "工作表(頁籤)名稱" }, content: { type: "STRING", description: "要寫入的資料，請強制輸出符合標準的 JSON 陣列字串 (Array of Arrays) ，請務必使用「雙引號」而非單引號。例如: [[\"日期\", \"項目\", \"金額\"], [\"03/16\", \"午餐\", 150]]" } }, required: ["sheetUrl", "sheetName", "content"] } },
+        { name: "update_google_sheet", description: "【修改資料】修改或更新指定的 Google Sheet 試算表特定範圍內的資料。當使用者要求「更新」、「修改」某特定欄位或整行資料時呼叫此工具。", parameters: { type: "OBJECT", properties: { sheetUrl: { type: "STRING", description: "要修改的試算表完整網址。" }, sheetName: { type: "STRING", description: "工作表(頁籤)名稱" }, range: { type: "STRING", description: "要更新的起始儲存格範圍，例如 'A2' 或 'B5:D5'" }, content: { type: "STRING", description: "要更新的新資料，請強制輸出符合標準的 JSON 陣列字串，務必使用「雙引號」。例如: [[\"已修改的A\", \"已修改的B\"]]" } }, required: ["sheetUrl", "sheetName", "range", "content"] } },
+
+        { name: "generate_art", description: "【強制呼叫】當使用者要求「畫圖」、「生成圖片」時，請務必呼叫此工具。", parameters: { type: "OBJECT", properties: { prompt: { type: "STRING", description: "詳細的英文畫面描述" }, aspectRatio: { type: "STRING", description: "比例: 1:1, 16:9, 4:3, 3:4 之一" } }, required: ["prompt"] } },
+        { name: "query_knowledge_base", description: "搜尋專屬知識庫 (NotebookLM)。", parameters: { type: "OBJECT", properties: { query: { type: "STRING" } }, required: ["query"] } },
+        
         { 
-            name: "update_presentation", 
-            description: "【修改/擴充簡報】修改現有的 Google Slides 簡報。支援在簡報最末端「附加(append)」新投影片，或「完全覆寫(overwrite)」整份簡報，亦可在指定位置「插入(insert_at)」新投影片。修改前強烈建議先讀取現有內容。", 
+            name: "read_presentation", 
+            description: "【強制呼叫】讀取 Google Slides (簡報) 的所有文字與備忘錄。當使用者貼上 Google 簡報網址並要求閱讀、摘要或總結時，請唯一且強制呼叫此工具取得內容。", 
             parameters: { 
                 type: "OBJECT", 
                 properties: { 
-                    presentationUrl: { type: "STRING", description: "現有簡報的完整網址" }, 
-                    action: { type: "STRING", description: "'append' (附加), 'overwrite' (覆寫), 'insert_at' (在指定索引插入)" }, 
-                    insertIndex: { type: "NUMBER", description: "當 action 為 insert_at 時，指定要插入的位置 (從 0 開始)。" },
-                    customColors: { type: "STRING", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。" }, 
-                    shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist', 'rounded', 'cyber', 'dynamic', 'layered' 擇一。" }, 
-                    slidesData: { type: "STRING", description: "要新增、插入或覆寫的簡報 JSON 陣列。格式同 create_presentation。" } 
+                    presentationUrl: { type: "STRING", description: "該 Google 簡報的完整網址" } 
                 }, 
-                required: ["presentationUrl", "action", "slidesData"] 
+                required: ["presentationUrl"] 
             } 
         },
-        {
-            name: "read_google_presentation",
-            description: "【讀取簡報內容】讀取現有 Google Slides 簡報的所有文字內容、投影片結構與備忘錄。這對於修改簡報前的現況分析至關重要。",
-            parameters: {
-                type: "OBJECT",
-                properties: {
-                    presentationUrl: { type: "STRING", description: "要讀取的簡報網址" }
-                },
-                required: ["presentationUrl"]
-            }
-        },
+
         { 
             name: "create_presentation", 
-            description: "建立全新的 Google Slides 幾何風格簡報。", 
+            description: "【首席簡報總監】製作全新的 Google Slides。", 
             parameters: { 
                 type: "OBJECT", 
                 properties: { 
                     topic: { type: "STRING" }, 
-                    customColors: { type: "STRING", description: "配色 JSON" }, 
-                    shapeStyle: { type: "STRING" }, 
-                    slidesData: { type: "STRING", description: "簡報內容 JSON" } 
+                    customColors: { type: "STRING", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。請依主題氛圍自主調配。" }, 
+                    shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist', 'rounded', 'cyber', 'dynamic', 'layered' 擇一。" }, 
+                    slidesData: { type: "STRING", description: "簡報 JSON 陣列。格式：[{layout: 'cover|title_only|standard_list|split_column|image_right|image_left|icon_grid', title: '標題', content: '內文', points: ['重點'], left: '左欄', right: '右欄', imageKeyword: '英文生圖提示詞', gridItems: [{title:'小標', content:'內文', iconKeyword:'英文圖標關鍵字'}]}]。⚠️警告：若文本有指定「配圖或影像建議」，務必翻譯成英文寫入 imageKeyword！若有指定版型，務必對應 layout！" } 
                 }, 
                 required: ["topic", "customColors", "shapeStyle", "slidesData"] 
             } 
         },
-        { name: "append_to_google_sheet", description: "將資料批次寫入或新增到指定的 Google Sheet 試算表最下方。", parameters: { type: "OBJECT", properties: { sheetUrl: { type: "STRING", description: "要寫入的試算表完整網址。" }, sheetName: { type: "STRING", description: "工作表(頁籤)名稱" }, content: { type: "STRING", description: "要寫入的資料，請強制輸出符合標準的 JSON 陣列字串。" } }, required: ["sheetUrl", "sheetName", "content"] } },
-        { name: "update_google_sheet", description: "修改或更新指定的 Google Sheet 試算表特定範圍內的資料。", parameters: { type: "OBJECT", properties: { sheetUrl: { type: "STRING" }, sheetName: { type: "STRING" }, range: { type: "STRING" }, content: { type: "STRING" } }, required: ["sheetUrl", "sheetName", "range", "content"] } },
-        { name: "generate_art", description: "當使用者要求「畫圖」時呼叫此工具。", parameters: { type: "OBJECT", properties: { prompt: { type: "STRING" }, aspectRatio: { type: "STRING" } }, required: ["prompt"] } }
+        { 
+            name: "update_presentation", 
+            description: "【修改/擴充簡報】修改現有的 Google Slides 簡報。支援在簡報最末端「附加(append)」新投影片，或「完全覆寫(overwrite)」整份簡報。修改前強烈建議先讀取現有內容。", 
+            parameters: { 
+                type: "OBJECT", 
+                properties: { 
+                    presentationUrl: { type: "STRING", description: "現有簡報的完整網址" }, 
+                    action: { type: "STRING", description: "'append' (附加投影片到最後) 或 'overwrite' (清空並重新繪製整份簡報)" }, 
+                    customColors: { type: "STRING", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。" }, 
+                    shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist', 'rounded', 'cyber', 'dynamic', 'layered' 擇一。" }, 
+                    slidesData: { type: "STRING", description: "要新增或覆寫的簡報 JSON 陣列。格式同 create_presentation。" } 
+                }, 
+                required: ["presentationUrl", "action", "slidesData"] 
+            } 
+        }
     ]
 }];
 
 // ==========================================
 // DRY 原則：共用的系統大腦 Prompt 生成器
 // ==========================================
-function getSuperAgentPrompt(wsName, customRules, workspaceContext = [], sources = []) {
+function getSuperAgentPrompt(wsName, customRules) {
     const tz = Session.getScriptTimeZone();
     const now = new Date();
     const days = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
@@ -327,32 +280,10 @@ function getSuperAgentPrompt(wsName, customRules, workspaceContext = [], sources
     return `【絕對核心時鐘與時空錨點】
 現在真實系統時間：${timeString} (時區：${tz})
 
-你是一位全能、嚴謹且具備深度洞察力的 anyGem AI 思考合夥人 (Thinking Partner)。
-你不僅是一位【首席簡報總監】與【數位藝術家】，更是一位協助使用者釐清邏輯、挑戰盲點並共同成長的「創業共創者」。
-
-【🧠 內部思考框架 (Chain of Thought)】
-⚠️ **強制規範**：在每一則回覆的最開頭，你「必須」先使用 <thought_process> 標籤包裹你的內部思考過程。
-思考內容應包含：
-1. **任務拆解**：使用者真正的意圖是什麼？
-2. **辯證思考**：是否有更優的解法？或是使用者遺漏了什麼風險？
-3. **策略規劃**：準備呼叫哪些工具？順序為何？
-4. **語氣校準**：如何回應才能既專業又像個合夥人？
-完成思考後，才輸出正式的回應內容給使用者。
+你是一位全能、嚴謹且實事求是的 anyGem AI 代理人。你不僅能聊天，更是一位【首席簡報總監】與【數位藝術家】。
 
 【🗂️ 專案記憶隔離 (Workspace)】
-您目前正處於『${wsName}』的專案空間中。
-
-${sources.length > 0 ? `【📚 專案核心來源 (Sources Library - NotebookLM Mode)】
-以下是本專案的「核心參考資料來源」。請以此作為你回答的「最高事實基準」：
-${sources.map((s, i) => `[來源 ${i + 1}] 名稱: ${s.title} | 類別: ${s.type} | 內容摘要: ${s.snippet || s.url}`).join('\n')}
-
-⚠️ **引註規範**：當你的回覆內容引用自上述來源時，請務必在該語句末端加上 [來源 編號] (例如 [來源 1])。
-` : ''}
-
-${workspaceContext.length > 0 ? `【💡 專案共用知識 (Shared Knowledge)】
-以下是使用者釘選的重要片段：
-${workspaceContext.map((c, i) => `* ${c.text}`).join('\n')}
-` : ''}
+您目前正處於『${wsName}』的專案空間中。請針對此空間的脈絡進行連貫性對話。
 
 【🌟 全格式讀取能力宣告 (Anti-Refusal Protocol)】
 你已獲得系統底層的「最高讀取授權」！當使用者貼上任何網址（包含 Google Drive、Google Docs、Google Slides、一般網頁）並要求閱讀、總結或搜尋時，你「絕對具備」讀取權限。
@@ -365,7 +296,6 @@ ${workspaceContext.map((c, i) => `* ${c.text}`).join('\n')}
 1. 無論使用了什麼工具（包含行事曆、Drive 等），你的「最終回覆」必須是自然、流暢、具備溫度的「繁體中文口語化文字」。
 2. 請將系統回傳的生硬資料（如行程、檔案清單）轉化為人類容易閱讀的 Markdown 排版（如條列式、粗體）。
 3. ⛔ 絕對禁止直接向使用者輸出原始的 JSON 格式資料（除非使用者明確要求寫程式）。
-4. 積極對話：若使用者提出的指令較為模糊或缺乏深度，請在回覆末端主動提出 1-2 個具備啟發性的問題來引導討論，而非僅僅被動執行。
 
 【🧠 使用者專屬大腦與規則 (Custom Rules)】
 <rules>
@@ -376,6 +306,18 @@ ${customRules}
 若要建立行事曆，請嚴格計算「現在真實系統時間」，並將 startTime 與 endTime 轉換為標準 ISO 8601 格式。
 
 
+
+[場景 A：建立新專案]
+當使用者要求「自動部署全端」、「做一個 App」時：
+1. 呼叫 \`create_database_sheet\` 建立資料庫，取得 \`sheetId\`。
+2. 呼叫 \`deploy_fullstack_matrix\`，利用 additionalFiles 參數傳遞您拆分好的模組檔案。系統會自動幫您建立 GitHub 專案與 CI/CD 腳本。
+
+[場景 B：修改與熱更新已部署專案]
+當使用者要求「修改」時：絕對不要重新建立專案！請判斷只需修改哪個模組 (例如只改 \`frontend/components.js\`)，然後只呼叫 \`push_to_github\` 去精準覆寫該特定檔案，將破壞半徑降到最低。
+
+[場景 C：災難復原 (Rollback)]
+當使用者反應「剛剛的更新壞了」、「畫面卡死」、「退回上一版」時：
+立刻呼叫 \`rollback_github_deployment\` 工具退回 Git 版本。退回成功後，請深呼吸，重新思考剛剛的邏輯哪裡有問題，並向使用者提出可能的錯誤原因與修正方案。
 
 【📁 安全歸檔模式 (Safe Archive Assistant)】
 當使用者要求「整理資料夾」、「集中歸檔」多個未知檔案時，請呼叫 \`scan_and_prepare_archive\`。取得資料後，請【強制】使用以下 5 個標題回覆使用者（請原封不動使用標題字眼）：
@@ -462,9 +404,7 @@ function doPost(e) {
             }
         }
 
-        let wsContext = db.getWorkspaceContext(wsName);
-        let wsSources = db.getSources(wsName);
-        let finalSystemInstruction = getSuperAgentPrompt(wsName, CONFIG.CUSTOM_RULES, wsContext, wsSources);
+        let finalSystemInstruction = getSuperAgentPrompt(wsName, CONFIG.CUSTOM_RULES);
 
         if (gem_prompt) {
             let actualGemPrompt = gem_prompt;
@@ -607,9 +547,7 @@ function handleLineWebhook(payload, ss, apiKey, lineToken, CONFIG, db) {
                 actualMessage = userMessage.replace("/search ", "").replace(/^查\s*/, "").trim();
             }
 
-            let wsContext = db.getWorkspaceContext(wsName);
-        let wsSources = db.getSources(wsName);
-        let finalSystemInstruction = getSuperAgentPrompt(wsName, CONFIG.CUSTOM_RULES, wsContext, wsSources);
+            let finalSystemInstruction = getSuperAgentPrompt(wsName, CONFIG.CUSTOM_RULES);
             let finalTools;
 
             // 🛡️ API 互斥切換
@@ -1304,16 +1242,8 @@ function runAutonomousAgentLoop(config) {
                             let presIdMatch = args.presentationUrl.match(/[-\w]{25,}/);
                             if (!presIdMatch) { toolResult = { status: "error", error_message: "無法辨識的簡報網址" }; break; }
                             let safeUpdData = args.slidesData.replace(/\n/g, ' ').replace(/\r/g, '').replace(/\t/g, ' ');
-                            updateGeometricSlides(presIdMatch[0], args.action, JSON.parse(safeUpdData), PPT_THEMES['modern_blue'], args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel, args.insertIndex);
+                            updateGeometricSlides(presIdMatch[0], args.action, JSON.parse(safeUpdData), PPT_THEMES['modern_blue'], args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel);
                             toolResult = { isTerminal: true, reply: `📊 **簡報修改完畢！**\n🔗 [點擊開啟](https://docs.google.com/presentation/d/${presIdMatch[0]}/edit)` };
-                            break;
-                        case "read_google_presentation":
-                            try {
-                                let ridMatch = args.presentationUrl.match(/[-\w]{25,}/);
-                                if (!ridMatch) throw new Error("無法解析的簡報網址");
-                                const content = readGooglePresentation(ridMatch[0]);
-                                toolResult = { status: "success", data: content };
-                            } catch(e) { toolResult = { status: "error", error_message: `讀取簡報失敗: ${e.toString()}` }; }
                             break;
                             
                         default:
@@ -1334,7 +1264,7 @@ function runAutonomousAgentLoop(config) {
     if (iterations >= MAX_ITERATIONS) finalReply = "⚠️ 任務過於複雜，已達到單次執行上限。\n\n" + finalReply;
     if (!finalReply && !finalImage) finalReply = "⚠️ 系統已接收指令，但未產出任何內容或動作。";
     if (!finalReply && finalImage) finalReply = "🎨 圖像繪製完成。";
-    // if (finalReply && !finalImage) { finalReply = performInnerQALoop(finalReply, config.apiKey, false); }
+    if (finalReply && !finalImage) { finalReply = performInnerQALoop(finalReply, config.apiKey, false); }
     
     return { reply: finalReply, model: finalModel, image: finalImage, mime: finalMime };
 }
@@ -1575,29 +1505,6 @@ function handleSystemMode(payload, ss, wsName, db) {
                 db.write("sessions", payload.session_id, session);
             }
             return response({status: "success", pinned: payload.is_pinned});
-        },
-        'toggle_workspace_context': () => {
-            if (payload.is_shared) {
-                db.addWorkspaceContext(wsName, payload.target_text, payload.session_id);
-            } else {
-                db.removeWorkspaceContext(wsName, payload.target_text);
-            }
-            return response({status: "success", is_shared: payload.is_shared});
-        },
-        'get_workspace_context': () => {
-            return response({ context: db.getWorkspaceContext(wsName) });
-        },
-        'get_sources': () => {
-            return response({ sources: db.getSources(wsName) });
-        },
-        'add_source': () => {
-            const { url, type, title, snippet } = payload;
-            db.addSource(wsName, { url, type, title, snippet });
-            return response({ status: "success" });
-        },
-        'remove_source': () => {
-            db.removeSource(wsName, payload.source_id);
-            return response({ status: "success" });
         }
     };
     if (routeHandlers[action]) return routeHandlers[action](); else return response({status: "error", message: "Unknown action"});
@@ -1791,71 +1698,12 @@ function fetchIconImage(keyword, colorHex, bgHex) {
     try { let cleanColor = colorHex.replace('#', ''); let bgClean = bgHex.replace('#', ''); let safeKeyword = encodeURIComponent(keyword.trim().split(' ')[0] || "star"); let url = `https://img.icons8.com/ios-filled/100/${cleanColor}/${safeKeyword}.png`; let res = UrlFetchApp.fetch(url, {muteHttpExceptions: true}); if(res.getResponseCode() === 200) return res.getBlob(); let fallbackUrl = `https://ui-avatars.com/api/?name=${safeKeyword}&background=${cleanColor}&color=${bgClean}&size=128&rounded=true&font-size=0.4`; let res2 = UrlFetchApp.fetch(fallbackUrl, {muteHttpExceptions: true}); if(res2.getResponseCode() === 200) return res2.getBlob(); } catch(e) {} return null;
 }
 
-function updateGeometricSlides(presentationId, action, slidesData, theme, style, enableAutoImage, apiKey, artistModel, insertIndex) {
-    const deck = SlidesApp.openById(presentationId);
-    if (action === 'overwrite') {
-        const tempSlide = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK); 
-        const slides = deck.getSlides();
-        slides.forEach(s => { if (s.getObjectId() !== tempSlide.getObjectId()) s.remove(); });
-        appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel);
-        tempSlide.remove(); 
-    } else if (action === 'insert_at') {
-        const targetIdx = (typeof insertIndex === 'number') ? insertIndex : 0;
-        appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel, targetIdx);
-    } else {
-        appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel);
-    }
-    deck.saveAndClose();
-}
-
-function readGooglePresentation(presentationId) {
-    const deck = SlidesApp.openById(presentationId);
-    const slides = deck.getSlides();
-    let result = `【簡報標題：${deck.getName()}】\n共有 ${slides.length} 頁投影片。\n\n`;
-    
-    slides.forEach((slide, index) => {
-        result += `--- 第 ${index + 1} 頁 ---\n`;
-        const pageElements = slide.getPageElements();
-        let slideText = "";
-        pageElements.forEach(el => {
-            try {
-                if (el.getPageElementType() === SlidesApp.PageElementType.SHAPE) {
-                    const text = el.asShape().getText().asString().trim();
-                    if (text) slideText += text + " ";
-                } else if (el.getPageElementType() === SlidesApp.PageElementType.TABLE) {
-                    const table = el.asTable();
-                    for (let r = 0; r < table.getNumRows(); r++) {
-                        for (let c = 0; c < table.getNumColumns(); c++) {
-                            slideText += table.getCell(r, c).getText().asString().trim() + "\t";
-                        }
-                        slideText += "\n";
-                    }
-                }
-            } catch(e) {}
-        });
-        result += `[內容]: ${slideText || "(空白或僅包含圖片)"}\n`;
-        
-        try {
-            const notes = slide.getNotesPage().getSpeakerNotesShape().getText().asString().trim();
-            if (notes) result += `[講師備忘錄]: ${notes}\n`;
-        } catch(e) {}
-        result += "\n";
-    });
-    return result;
-}
-
-function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel, insertIndex) {
+function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel) {
     let mainShape = SlidesApp.ShapeType.RECTANGLE; let coverShape = SlidesApp.ShapeType.ELLIPSE; let isMinimal = (style === 'minimalist'); let alphaMod = (style === 'layered') ? 0.3 : 1;
     if (style === 'rounded') { mainShape = SlidesApp.ShapeType.ROUND_RECTANGLE; coverShape = SlidesApp.ShapeType.ROUND_RECTANGLE; } else if (style === 'cyber') { mainShape = SlidesApp.ShapeType.RIGHT_TRIANGLE; coverShape = SlidesApp.ShapeType.RIGHT_TRIANGLE; } else if (style === 'dynamic') { mainShape = SlidesApp.ShapeType.PARALLELOGRAM; coverShape = SlidesApp.ShapeType.PARALLELOGRAM; }
 
     slidesData.forEach((d, i) => {
-        let slide;
-        if (typeof insertIndex === 'number') {
-            slide = deck.insertSlide(insertIndex + i, SlidesApp.PredefinedLayout.BLANK);
-        } else {
-            slide = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK);
-        }
-        slide.getBackground().setSolidFill(theme.bg);
+        const slide = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK); slide.getBackground().setSolidFill(theme.bg);
         let layoutType = (deck.getSlides().length === 1 && i === 0) ? 'cover' : (d.layout || 'standard_list');
         let imgBlob = null; let titleIconBlob = null; let keyword = d.imageKeyword || d.title || "presentation";
         const needsLargeImage = ['cover', 'image_right', 'image_left', 'image_top', 'image_bottom', 'profile_quote'].includes(layoutType);
