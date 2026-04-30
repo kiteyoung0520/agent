@@ -257,7 +257,7 @@ const AGENT_TOOLS = [{
 
         { name: "read_web_page", description: "讀取一般網頁(URL)的純文字內容。當使用者貼上一般新聞、部落格或網站連結並要求總結、閱讀或提問時，強制呼叫此工具。取得內容後，請嚴格基於內容回答，禁止腦補。", parameters: { type: "OBJECT", properties: { url: { type: "STRING", description: "要讀取的網頁完整網址 (需包含 http/https)" } }, required: ["url"] } },
 
-        { name: "create_project_wiki", description: "建立專案 Wiki 導覽文件。當使用者要求「生成 Wiki」、「專案總結」或「建立索引」時呼叫。", parameters: { type: "OBJECT", properties: { projectName: { type: "STRING" }, content: { type: "STRING", description: "Wiki 完整內容 (Markdown 格式)" } }, required: ["projectName", "content"] } },
+        { name: "read_web_page", description: "讀取一般網頁(URL)的純文字內容。當使用者貼上一般新聞、部落格或網站連結並要求總結、閱讀或提問時，強制呼叫此工具。取得內容後，請嚴格基於內容回答，禁止腦補。", parameters: { type: "OBJECT", properties: { url: { type: "STRING", description: "要讀取的網頁完整網址 (需包含 http/https)" } }, required: ["url"] } },
         { name: "organize_drive_folder", description: "智慧整理 Google Drive 資料夾。", parameters: { type: "OBJECT", properties: { folderName: { type: "STRING" } }, required: ["folderName"] } },
         
         { name: "create_google_doc", description: "建立全新的 Google 文件。支援 Markdown 排版。", parameters: { type: "OBJECT", properties: { topic: { type: "STRING" }, content: { type: "STRING" }, folderName: { type: "STRING" } }, required: ["topic", "content"] } },
@@ -267,14 +267,6 @@ const AGENT_TOOLS = [{
         { name: "append_to_google_doc", description: "在現有 Google 文件最下方「補充/附加」新內容。", parameters: { type: "OBJECT", properties: { docUrl: { type: "STRING", description: "該 Google 文件的完整網址。" }, content: { type: "STRING", description: "要附加的新內容，支援 Markdown 排版" } }, required: ["docUrl", "content"] } },
         { name: "overwrite_google_doc", description: "完全覆寫現有 Google 文件。當使用者要求「修改整份文件」時使用。使用前務必先用 read_google_doc 讀取舊內容融合。", parameters: { type: "OBJECT", properties: { docUrl: { type: "STRING", description: "該 Google 文件的完整網址。" }, content: { type: "STRING", description: "修改後的「完整」新內容，舊內容將被清空，支援 Markdown" } }, required: ["docUrl", "content"] } },
         
-        { name: "create_github_repo", description: "在 GitHub 上從零建立一個全新的儲存庫 (Repository)。建立完成後，會回傳 full_name。", parameters: { type: "OBJECT", properties: { repoName: { type: "STRING", description: "新儲存庫的純名稱" }, description: { type: "STRING", description: "專案的簡短描述" }, isPrivate: { type: "BOOLEAN", description: "是否設為私有專案" } }, required: ["repoName"] } },
-        { name: "push_to_github", description: "將程式碼推送到 GitHub 儲存庫，觸發自動部署。", parameters: { type: "OBJECT", properties: { repoName: { type: "STRING", description: "格式為 '擁有者/專案名' (可從 create_github_repo 取得)" }, filePath: { type: "STRING", description: "檔案路徑" }, content: { type: "STRING", description: "完整程式碼內容" }, commitMessage: { type: "STRING", description: "Commit 訊息" } }, required: ["repoName", "filePath", "content", "commitMessage"] } },
-        
-        { name: "create_database_sheet", description: "【全端部署首部曲】為新專案建立專屬的 Google Sheet 資料庫，會自動建立所需頁籤，並回傳 sheetId 供後續程式碼注入。", parameters: { type: "OBJECT", properties: { appName: { type: "STRING", description: "新專案的名稱" } }, required: ["appName"] } },
-        { name: "deploy_fullstack_matrix", description: "【全端部署二部曲】一鍵將前端與後端程式碼推送到 GitHub，並自動配置 GitHub Actions 進行 CI/CD 部署。當使用者要求「自動部署全端 App」時呼叫。", parameters: { type: "OBJECT", properties: { repoName: { type: "STRING", description: "GitHub 專案名稱 (需為英文/數字)" }, frontendCode: { type: "STRING", description: "前端 HTML/JS 完整程式碼 (請遵守模組化，僅輸出 index.html 骨架)" }, backendCode: { type: "STRING", description: "後端 Google Apps Script (.gs) 完整程式碼，請確保已寫入上一步取得的 sheetId" }, additionalFiles: { type: "STRING", description: "可選。JSON 字串格式，用於傳遞額外切分的模組檔案，如: [{'path':'frontend/components.js', 'content':'...'}]" } }, required: ["repoName", "frontendCode", "backendCode"] } },
-        
-        { name: "rollback_github_deployment", description: "【緊急修復機制】當使用者反應剛剛的更新導致系統崩潰、畫面白屏或發生錯誤時，立刻呼叫此工具。它會將 GitHub 專案的 main 分支強制回退 (Rollback) 到上一次正常的 Commit 版本，藉此觸發自動重新部署復原。", parameters: { type: "OBJECT", properties: { repoName: { type: "STRING", description: "要退回的 GitHub 專案名稱 (格式: owner/repo)" } }, required: ["repoName"] } },
-
         { name: "read_google_sheet", description: "讀取特定的 Google Sheet 試算表內容。", parameters: { type: "OBJECT", properties: { sheetUrl: { type: "STRING", description: "要讀取的試算表完整網址。" }, sheetName: { type: "STRING", description: "工作表(頁籤)名稱，若不指定則預設讀取第一頁。" }, range: { type: "STRING", description: "指定範圍，如 'A1:D10'，預設或填 'ALL' 讀取全部" } }, required: ["sheetUrl"] } },
         { 
             name: "update_presentation", 
@@ -374,7 +366,6 @@ ${workspaceContext.map((c, i) => `* ${c.text}`).join('\n')}
 2. 請將系統回傳的生硬資料（如行程、檔案清單）轉化為人類容易閱讀的 Markdown 排版（如條列式、粗體）。
 3. ⛔ 絕對禁止直接向使用者輸出原始的 JSON 格式資料（除非使用者明確要求寫程式）。
 4. 積極對話：若使用者提出的指令較為模糊或缺乏深度，請在回覆末端主動提出 1-2 個具備啟發性的問題來引導討論，而非僅僅被動執行。
-5. 🛡️ **工具呼叫節制原則**：除非使用者明確發出指令要求「建立」、「修改」、「覆寫」或「新增」特定文件（如 Google Docs, Slides, Sheets, Form, Wiki 等），否則請優先使用「文字」與使用者討論。禁止在使用者未授權的情況下擅自建立重複或不必要的檔案。
 
 【🧠 使用者專屬大腦與規則 (Custom Rules)】
 <rules>
@@ -384,21 +375,7 @@ ${customRules}
 【📅 行事曆與時間強制規範】
 若要建立行事曆，請嚴格計算「現在真實系統時間」，並將 startTime 與 endTime 轉換為標準 ISO 8601 格式。
 
-【🚀 母體全端部署協議 (Matrix Protocol) & 自我修復迴圈】
-[架構規範：微服務與模組化]
-建立專案時「嚴禁」寫成單一肥大檔案。請將專案強制拆分為模組，例如 \`frontend/index.html\` (骨架與匯入)、\`frontend/components.js\` (React/UI 元件)、\`backend/api.gs\` (路由與邏輯)、\`backend/database.gs\` (資料庫操作)。這樣未來修改時才能大幅縮小破壞半徑！
 
-[場景 A：建立新專案]
-當使用者要求「自動部署全端」、「做一個 App」時：
-1. 呼叫 \`create_database_sheet\` 建立資料庫，取得 \`sheetId\`。
-2. 呼叫 \`deploy_fullstack_matrix\`，利用 additionalFiles 參數傳遞您拆分好的模組檔案。系統會自動幫您建立 GitHub 專案與 CI/CD 腳本。
-
-[場景 B：修改與熱更新已部署專案]
-當使用者要求「修改」時：絕對不要重新建立專案！請判斷只需修改哪個模組 (例如只改 \`frontend/components.js\`)，然後只呼叫 \`push_to_github\` 去精準覆寫該特定檔案，將破壞半徑降到最低。
-
-[場景 C：災難復原 (Rollback)]
-當使用者反應「剛剛的更新壞了」、「畫面卡死」、「退回上一版」時：
-立刻呼叫 \`rollback_github_deployment\` 工具退回 Git 版本。退回成功後，請深呼吸，重新思考剛剛的邏輯哪裡有問題，並向使用者提出可能的錯誤原因與修正方案。
 
 【📁 安全歸檔模式 (Safe Archive Assistant)】
 當使用者要求「整理資料夾」、「集中歸檔」多個未知檔案時，請呼叫 \`scan_and_prepare_archive\`。取得資料後，請【強制】使用以下 5 個標題回覆使用者（請原封不動使用標題字眼）：
