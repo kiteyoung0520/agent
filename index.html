@@ -51,9 +51,13 @@
         .dock-btn.active { background: #38bdf8; color: #fff; box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); }
         .dock-btn.settings-active { background: #a855f7; color: #fff; box-shadow: 0 0 15px rgba(168, 85, 247, 0.4); }
 
-        #right-panel { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); border-left: 1px solid #333; }
-        .right-panel-open #right-panel { width: 340px; transform: translateX(0); }
-        .right-panel-closed #right-panel { width: 0; transform: translateX(100%); overflow: hidden; }
+        #right-panel { transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); border-left: 1px solid #333; position: relative; }
+        .right-panel-open #right-panel { width: var(--right-panel-width, 340px); }
+        .right-panel-closed #right-panel { width: 0; border-left: none; }
+        
+        #right-panel-resizer { width: 4px; left: -2px; cursor: col-resize; z-index: 50; }
+        #right-panel-resizer::after { content: ""; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 2px; height: 32px; background: #444; border-radius: 1px; transition: background 0.2s; }
+        #right-panel-resizer:hover::after { background: #38bdf8; width: 4px; }
 
         @media (max-width: 1024px) {
             #right-mini-dock { position: fixed; right: 0; top: 0; height: 100%; width: 56px; }
@@ -219,8 +223,8 @@
     </main>
 
     <!-- 📚 Right Knowledge Panel (Sources & Fragments & Settings) -->
-    <aside id="right-panel" class="bg-[#1e1f22] border-l border-[#333] flex flex-col transition-all duration-300 z-40 h-full shadow-2xl overflow-hidden right-panel-closed">
-        <div id="right-panel-resizer" class="hidden md:block absolute top-0 left-0 w-1.5 h-full cursor-col-resize hover:bg-blue-500/50 z-50 transition-colors"></div>
+    <aside id="right-panel" class="bg-[#1e1f22] flex flex-col z-40 h-full shadow-2xl overflow-visible right-panel-closed">
+        <div id="right-panel-resizer" class="hidden md:block absolute top-0 w-1.5 h-full cursor-col-resize hover:bg-blue-500/50 transition-colors"></div>
         <div class="p-5 border-b border-[#333] flex items-center justify-between">
             <div id="right-panel-header" class="flex items-center gap-2">
                 <span class="material-symbols-rounded text-blue-400" id="panel-icon">inventory_2</span>
@@ -358,8 +362,9 @@
                 if (!isResizing) return;
                 const dockWidth = 56;
                 const newWidth = window.innerWidth - e.clientX - dockWidth;
-                if (newWidth > 200 && newWidth < window.innerWidth * 0.6) {
+                if (newWidth > 200 && newWidth < window.innerWidth * 0.7) {
                     panel.style.width = `${newWidth}px`;
+                    document.documentElement.style.setProperty('--right-panel-width', `${newWidth}px`);
                 }
             });
 
@@ -836,7 +841,7 @@
             p.classList.toggle('right-panel-closed');
             
             if (window.innerWidth < 1024) o.classList.toggle('hidden');
-            document.body.classList.toggle('md:pr-[396px]', isOpen); // 340 + 56
+            // 移除原本手動調整 body padding 的邏輯，改由 Flexbox 自動處理
             
             if (isOpen) renderRightPanelContent();
             else document.querySelectorAll('.dock-btn').forEach(b => b.classList.remove('active', 'settings-active'));
