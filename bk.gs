@@ -1240,16 +1240,48 @@ function runAutonomousAgentLoop(config) {
                             } catch(e) { toolResult = { isTerminal: true, reply: `❌ **更新試算表失敗：**\n\n*(請確認您提供的網址、頁籤名稱與範圍格式是否正確。)*\n底層錯誤: ${e.toString()}` }; }
                             break;
 
+                        case "generate_art":
+                            try {
+                                let blob = fetchAIImage(args.prompt, config.apiKey, config.artistModel, args.aspectRatio || "1:1");
+                                if (typeof blob === 'string' && blob.startsWith("ERROR:")) {
+                                    toolResult = { status: "error", error_message: blob.replace("ERROR:", "") };
+                                } else if (blob) {
+                                    finalImage = Utilities.base64Encode(blob.getBytes());
+                                    finalMime = "image/png";
+                                    toolResult = { isTerminal: true, reply: `🎨 **圖像已根據您的要求繪製完成！**\n\n*(提示詞：${args.prompt})*` };
+                                } else {
+                                    throw new Error("生成失敗，未獲取到影像資料。");
+                                }
+                            } catch(e) { toolResult = { status: "error", error_message: `繪圖失敗: ${e.toString()}` }; }
+                            break;
+
                         case "create_presentation":
+                            let themeToUse = PPT_THEMES['modern_blue'];
+                            try {
+                                if (args.customColors) {
+                                    let cleanColors = String(args.customColors).replace(/```json/gi, '').replace(/```/g, '').trim();
+                                    themeToUse = JSON.parse(cleanColors);
+                                }
+                            } catch(e) { console.error("顏色解析失敗", e); }
+                            
                             let safeSlidesData = args.slidesData.replace(/\n/g, ' ').replace(/\r/g, '').replace(/\t/g, ' ');
-                            const pid = createGeometricSlides(args.topic, JSON.parse(safeSlidesData), PPT_THEMES['modern_blue'], args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel);
+                            const pid = createGeometricSlides(args.topic, JSON.parse(safeSlidesData), themeToUse, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel);
                             toolResult = { isTerminal: true, reply: `📊 **專屬簡報生成完畢！**\n🔗 [點擊開啟 Google 簡報](https://docs.google.com/presentation/d/${pid}/edit)` };
                             break;
                         case "update_presentation":
                             let presIdMatch = args.presentationUrl.match(/[-\w]{25,}/);
                             if (!presIdMatch) { toolResult = { status: "error", error_message: "無法辨識的簡報網址" }; break; }
+                            
+                            let updTheme = PPT_THEMES['modern_blue'];
+                            try {
+                                if (args.customColors) {
+                                    let cleanC = String(args.customColors).replace(/```json/gi, '').replace(/```/g, '').trim();
+                                    updTheme = JSON.parse(cleanC);
+                                }
+                            } catch(e) {}
+                            
                             let safeUpdData = args.slidesData.replace(/\n/g, ' ').replace(/\r/g, '').replace(/\t/g, ' ');
-                            updateGeometricSlides(presIdMatch[0], args.action, JSON.parse(safeUpdData), PPT_THEMES['modern_blue'], args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel);
+                            updateGeometricSlides(presIdMatch[0], args.action, JSON.parse(safeUpdData), updTheme, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel);
                             toolResult = { isTerminal: true, reply: `📊 **簡報修改完畢！**\n🔗 [點擊開啟](https://docs.google.com/presentation/d/${presIdMatch[0]}/edit)` };
                             break;
                             
