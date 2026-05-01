@@ -1278,11 +1278,21 @@ function runAutonomousAgentLoop(config) {
                                     let cleanC = String(args.customColors).replace(/```json/gi, '').replace(/```/g, '').trim();
                                     updTheme = JSON.parse(cleanC);
                                 }
-                            } catch(e) {}
+                            } catch(e) { console.warn("更新配色解析失敗", e); }
                             
-                            let safeUpdData = args.slidesData.replace(/\n/g, ' ').replace(/\r/g, '').replace(/\t/g, ' ');
-                            updateGeometricSlides(presIdMatch[0], args.action, JSON.parse(safeUpdData), updTheme, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel);
-                            toolResult = { isTerminal: true, reply: `📊 **簡報修改完畢！**\n🔗 [點擊開啟](https://docs.google.com/presentation/d/${presIdMatch[0]}/edit)` };
+                            let rawUpdData = args.slidesData;
+                            let processedUpdData;
+                            try {
+                                if (typeof rawUpdData === 'string') {
+                                    let cleanS = rawUpdData.replace(/\n/g, ' ').replace(/\r/g, '').replace(/\t/g, ' ');
+                                    processedUpdData = JSON.parse(cleanS);
+                                } else { processedUpdData = rawUpdData; }
+                            } catch(e) { throw new Error("簡報資料格式錯誤，無法解析 JSON"); }
+
+                            updateGeometricSlides(presIdMatch[0], args.action, processedUpdData, updTheme, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel);
+                            
+                            let actionVerb = (String(args.action).toLowerCase().trim() === 'overwrite') ? "覆寫" : "擴充";
+                            toolResult = { isTerminal: true, reply: `📊 **簡報${actionVerb}完畢！**\n\n已成功將 ${processedUpdData.length} 頁內容同步至簡報中。\n🔗 [點擊開啟驗證](https://docs.google.com/presentation/d/${presIdMatch[0]}/edit)` };
                             break;
                             
                         default:
@@ -1881,13 +1891,18 @@ function createGeometricSlides(topic, slidesData, theme, style, enableAutoImage,
 
 function updateGeometricSlides(presentationId, action, slidesData, theme, style, enableAutoImage, apiKey, artistModel) {
     const deck = SlidesApp.openById(presentationId);
-    if (action === 'overwrite') {
+    const safeAction = String(action || "").toLowerCase().trim();
+    console.log(`[SlidesService] Action: ${safeAction}, ID: ${presentationId}, Slides: ${slidesData.length}`);
+    
+    if (safeAction === 'overwrite') {
         const tempSlide = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK); 
         const slides = deck.getSlides();
+        console.log(`[SlidesService] Overwriting... Removing ${slides.length - 1} old slides.`);
         slides.forEach(s => { if (s.getObjectId() !== tempSlide.getObjectId()) s.remove(); });
         appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel);
         tempSlide.remove(); 
     } else {
+        console.log(`[SlidesService] Appending ${slidesData.length} new slides.`);
         appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel);
     }
     deck.saveAndClose();
