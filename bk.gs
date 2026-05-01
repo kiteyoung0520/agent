@@ -238,14 +238,14 @@ const AGENT_TOOLS = [{
 
         { 
             name: "create_presentation", 
-            description: "【首席簡報總監】製作全新的 Google Slides。", 
+            description: "【首席簡報總監】製作全新的 Google Slides。具備內容感知能力，會根據資訊類型自動選擇最佳排版。支援自定義配色與風格。", 
             parameters: { 
                 type: "OBJECT", 
                 properties: { 
-                    topic: { type: "STRING" }, 
+                    topic: { type: "STRING", description: "簡報核心主題" }, 
                     customColors: { type: "STRING", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。請依主題氛圍自主調配。" }, 
-                    shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist', 'rounded', 'cyber', 'dynamic', 'layered' 擇一。" }, 
-                    slidesData: { type: "STRING", description: "簡報 JSON 陣列。格式：[{layout: 'cover|title_only|standard_list|split_column|image_right|image_left|icon_grid', title: '標題', content: '內文', points: ['重點'], left: '左欄', right: '右欄', imageKeyword: '英文生圖提示詞', gridItems: [{title:'小標', content:'內文', iconKeyword:'英文圖標關鍵字'}]}]。⚠️警告：若文本有指定「配圖或影像建議」，務必翻譯成英文寫入 imageKeyword！若有指定版型，務必對應 layout！" } 
+                    shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist' (極簡), 'rounded' (圓角), 'cyber' (銳角/科技), 'dynamic' (斜切/活力), 'layered' (疊層/深邃)。" }, 
+                    slidesData: { type: "STRING", description: "簡報 JSON 陣列。格式：[{layout: 'cover|title_only|standard_list|split_column|image_right|image_left|icon_grid|timeline|big_data', title: '標題', content: '內文', points: ['重點'], left: '左欄', right: '右欄', value: '大數據值', imageKeyword: '英文生圖提示詞', gridItems: [{title:'標題', content:'內容', iconKeyword:'圖標關鍵字'}]}]。⚠️請根據內容特徵挑選最佳 layout：如果是數據則用 big_data，如果是歷程則用 timeline，如果是對比則用 split_column。" } 
                 }, 
                 required: ["topic", "customColors", "shapeStyle", "slidesData"] 
             } 
@@ -281,6 +281,13 @@ function getSuperAgentPrompt(wsName, customRules) {
 現在真實系統時間：${timeString} (時區：${tz})
 
 你是一位全能、嚴謹且實事求是的 anyGem AI 代理人。你不僅能聊天，更是一位【首席簡報總監】與【數位藝術家】。
+
+【🎨 簡報設計大腦 (Design Intelligence)】
+當你受命製作簡報時，你必須扮演資深設計師的角色：
+1. **內容判讀**：不要一成不變地使用列表。如果是講歷史或流程，請強制使用 `timeline`；如果要強調單一關鍵數字，請用 `big_data`；如果是優缺點對抗，請用 `split_column`。
+2. **視覺層次**：請根據主題氛圍主動調整 `customColors`。例如：醫療主題用粉藍與白，科技主題用深灰與螢光綠，金融主題用深藍與金。
+3. **風格對應**：`shapeStyle` 必須與主題契合。科技感選 `cyber`，親和力選 `rounded`，高階商務選 `minimalist`。
+4. **生圖引導**：在 `imageKeyword` 中填入高品質的英文 Prompt，讓每張投影片都具備視覺張力。
 
 【🗂️ 專案記憶隔離 (Workspace)】
 您目前正處於『${wsName}』的專案空間中。請針對此空間的脈絡進行連貫性對話。
@@ -1763,6 +1770,27 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
                     });
                 } else { addText(slide, safeContent || "【系統提示：需提供 gridItems】", 50, 150, 620, 50, theme.text, 16, false); }
                 break;
+            case 'big_data':
+                drawShape(slide, coverShape, 360, 202, 300, 300, theme.shape, 0.2);
+                addText(slide, d.title || "關鍵數據", 50, 80, 620, 50, theme.accent, 24, true);
+                let bigVal = d.value || (d.points && d.points[0] ? d.points[0] : "99%");
+                addText(slide, bigVal, 50, 140, 620, 150, theme.text, 86, true);
+                addText(slide, safeContent || "數據背景說明", 50, 300, 620, 50, theme.accent, 18, false); break;
+            case 'timeline':
+                if (titleIconBlob) { try { slide.insertImage(titleIconBlob, 15, 35, 35, 35); } catch(e){} }
+                addText(slide, d.title || "發展歷程", 55, 30, 615, 50, theme.accent, 28, true);
+                drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 50, 220, 620, 4, theme.shape, 1);
+                if (d.gridItems && Array.isArray(d.gridItems)) {
+                    let tCount = Math.min(d.gridItems.length, 4);
+                    let tWidth = 620 / tCount;
+                    d.gridItems.forEach((item, idx) => {
+                        if (idx >= 4) return;
+                        let tx = 50 + (idx * tWidth);
+                        drawShape(slide, coverShape, tx + (tWidth/2) - 10, 212, 20, 20, theme.accent, 1);
+                        addText(slide, item.title, tx, 160, tWidth, 40, theme.accent, 16, true);
+                        addText(slide, item.content, tx + 5, 250, tWidth - 10, 100, theme.text, 12, false);
+                    });
+                } break;
             case 'image_right':
                 if (imgBlob) { try { slide.insertImage(imgBlob, 360, 0, 360, 405); } catch(e) {} } else { drawShape(slide, mainShape, 360, 0, 360, 405, theme.shape, 0.3); }
                 if (titleIconBlob) { try { slide.insertImage(titleIconBlob, 35, 45, 35, 35); } catch(e){} }
