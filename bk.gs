@@ -429,11 +429,17 @@ function doPost(e) {
             finalSystemInstruction += `\n\n【💎 當前切換的 Gem 角色設定】\n使用者目前已切換為特定的 Gem 角色。請你完全沉浸並遵守以下角色設定與指示：\n<gem_role>\n${actualGemPrompt}\n</gem_role>`;
         }
 
-        // 🤖 智能模型路由：自動依需求選擇最佳模型
-        const userPreferredModel = (selected_model && String(selected_model).trim() !== '') ? String(selected_model).trim()
-            : (gem_model && String(gem_model).trim() !== '') ? String(gem_model).trim() : null;
-        
-        let modelId = selectModelByIntent(message, !!file_data, true, userPreferredModel, CONFIG);
+        let fallbackModel = "gemini-2.5-flash";
+        try {
+            const modelSheet = ss.getSheetByName("Models");
+            if (modelSheet && modelSheet.getLastRow() > 1) {
+                fallbackModel = String(modelSheet.getRange(2, 2).getValue()).trim() || fallbackModel;
+            }
+        } catch(e) {}
+
+        let modelId = file_data ? (CONFIG.MODEL_EDITOR || fallbackModel) : (CONFIG.MODEL_GATHERER || fallbackModel);
+        if (gem_model && String(gem_model).trim() !== "") modelId = String(gem_model).trim();
+        if (selected_model && String(selected_model).trim() !== "") modelId = String(selected_model).trim();
 
         const history = getOptimizedHistoryFB(db, wsName, session_id || "default");
         
@@ -464,7 +470,7 @@ function doPost(e) {
             ss: ss, apiKey: apiKey, prompt: finalMessage, model: modelId,
             systemInstruction: finalSystemInstruction, history: history, tools: finalTools,
             imageData: file_data ? { mimeType: mime_type, data: file_data } : null,
-            artistModel: CONFIG.MODEL_ARTIST || 'imagen-3.0-generate-001',
+            artistModel: CONFIG.MODEL_ARTIST || "gemini-3.1-flash-image-preview",
             configData: { ...CONFIG, autoImageEnabled: auto_image }
         });
 
@@ -525,7 +531,13 @@ function handleLineWebhook(payload, ss, apiKey, lineToken, CONFIG, db) {
                 targetSheet.getRange("A1:B1").setFontColor("red").setFontWeight("bold");
             }
 
-            // 🤖 LINE Bot 也使用智能模型路由
+            let fallbackModel = "gemini-2.5-flash";
+            try {
+                const modelSheet = ss.getSheetByName("Models");
+                if (modelSheet && modelSheet.getLastRow() > 1) {
+                    fallbackModel = String(modelSheet.getRange(2, 2).getValue()).trim() || fallbackModel;
+                }
+            } catch(e) {}
 
             const history = getOptimizedHistoryFB(db, wsName, session_id);
             
@@ -559,10 +571,10 @@ function handleLineWebhook(payload, ss, apiKey, lineToken, CONFIG, db) {
             try {
                 const agentResult = runAutonomousAgentLoop({
                     ss: ss, apiKey: apiKey, prompt: actualMessage, 
-                    model: selectModelByIntent(actualMessage, !!fileData, true, CONFIG.MODEL_LINE, CONFIG),
+                    model: CONFIG.MODEL_LINE || fallbackModel,
                     systemInstruction: finalSystemInstruction, history: history, tools: finalTools,
                     imageData: fileData, 
-                    artistModel: CONFIG.MODEL_ARTIST || 'imagen-3.0-generate-001',
+                    artistModel: CONFIG.MODEL_ARTIST || "gemini-3.1-flash-image-preview",
                     configData: { ...CONFIG, autoImageEnabled: true }
                 });
 
@@ -599,78 +611,6 @@ function handleLineWebhook(payload, ss, apiKey, lineToken, CONFIG, db) {
     return ContentService.createTextOutput("OK");
 }
 
-// ==========================================
-// 🤖 智能模型路由引擎 (Intent-Based Model Router)
-// ==========================================
-function selectModelByIntent(message, hasImage, hasTool, preferredModel, CONFIG) {
-    // 優先級 1：使用者手動指定的模型永遠優先
-    if (preferredModel && String(preferredModel).trim() !== '') {
-        return String(preferredModel).trim();
-    }
-
-    // 優先級 2：依照意圖自動選模
-    const msg = String(message || '').toLowerCase();
-
-    // 意圖偵測規則 (由高優先到低優先)
-    const INTENT_RULES = [
-        {
-            // 🎨 生圖意圖 → 圖像生成模型
-            name: 'image_gen',
-            test: () => /畫圖|生成圖片|幫我畫|繪製|draw|generate image|image of|picture of/.test(msg),
-            model: () => CONFIG.MODEL_ARTIST || 'imagen-3.0-generate-001'
-        },
-        {
-            // 📸 圖片理解 → 高能力視覺模型
-            name: 'vision',
-            test: () => hasImage,
-            model: () => CONFIG.MODEL_VISION || 'gemini-2.5-pro'
-        },
-        {
-            // 🧮 深度分析、規劃、報告 → Pro 推理模型
-            name: 'deep_analysis',
-            test: () => /分析|規劃|策略|體檢|報告|建議|評估|比較|診斷|研究|深度|長文|論文|計畫|proposal|analysis|strategy|report|evaluate|research/.test(msg),
-            model: () => CONFIG.MODEL_PRO || 'gemini-2.5-pro'
-        },
-        {
-            // 📊 簡報與文件生成 → Pro 模型確保品質
-            name: 'presentation',
-            test: () => /簡報|投影片|ppt|slides|文件|報告書|合約|提案|做一份|建立一份/.test(msg),
-            model: () => CONFIG.MODEL_PRO || 'gemini-2.5-pro'
-        },
-        {
-            // 💻 程式碼開發 → Pro 模型確保精準度
-            name: 'coding',
-            test: () => /寫程式|修bug|debug|寫code|程式碼|javascript|python|function|api|deploy|部署/.test(msg),
-            model: () => CONFIG.MODEL_PRO || 'gemini-2.5-pro'
-        },
-        {
-            // 🔧 工具操作 (行事曆、Drive、Sheet) → Flash 足夠快
-            name: 'tool_use',
-            test: () => hasTool && /行事曆|drive|試算表|表單|日程|資料夾|搬移|整理/.test(msg),
-            model: () => CONFIG.MODEL_FLASH || 'gemini-2.5-flash'
-        },
-        {
-            // 🌐 翻譯與語言 → Flash 速度快
-            name: 'translation',
-            test: () => /翻譯|translate|英文|日文|韓文|法文|德文|中文/.test(msg),
-            model: () => CONFIG.MODEL_FLASH || 'gemini-2.5-flash'
-        }
-    ];
-
-    for (const rule of INTENT_RULES) {
-        if (rule.test()) {
-            const chosen = rule.model();
-            console.log(`[ModelRouter] Intent: ${rule.name} → Model: ${chosen}`);
-            return chosen;
-        }
-    }
-
-    // 優先級 3：預設使用 Flash（快速、節省配額）
-    const defaultModel = CONFIG.MODEL_FLASH || 'gemini-2.5-flash';
-    console.log(`[ModelRouter] Intent: general → Model: ${defaultModel}`);
-    return defaultModel;
-}
-
 function performInnerQALoop(text, apiKey, isToolArg = false) {
     if (!text || text.length < 10) return text;
     try {
@@ -686,7 +626,7 @@ function performInnerQALoop(text, apiKey, isToolArg = false) {
                 responseSchema: { type: "OBJECT", properties: { pass: { type: "BOOLEAN" }, auto_fixed_text: { type: "STRING" } } }
             }
         };
-        const res = UrlFetchApp.fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+        const res = UrlFetchApp.fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${apiKey}`, {
             method: "post", contentType: "application/json", payload: JSON.stringify(payload), muteHttpExceptions: true
         });
         const json = JSON.parse(res.getContentText());
