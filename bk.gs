@@ -353,14 +353,15 @@ ${customRules}
 
 階段一：內容消化與大綱提案 (Digest & Proposal Stage)
 1. 讀取來源資料 (Docs/PDF/Web)。
-2. 禁止立刻呼叫 create_presentation。
+2. 檢查目前設定 (Settings) 中是否有符合需求的 \`PPT_TPL_\` 開頭的腳本與 \`THEME_\` 開頭的配色。
 3. 你必須先用文字向使用者回報：
    - **【知識摘要】**：你從中學到了什麼核心觀點。
+   - **【推薦腳本與風格】**：根據內容屬性，推薦使用哪一個 \`PPT_TPL_\` 腳本與 \`style1-10\` 的視覺風格。說明理由。
    - **【投影片大綱】**：預計每一頁的標題、版型、以及預計寫入備忘錄的深度內容摘要。
-4. 詢問使用者：「以上大綱與內容深度是否符合需求？確認後我將開始進行視覺設計。」
+4. 詢問使用者：「以上推薦的腳本、視覺風格與大綱是否符合需求？確認後我將開始進行視覺設計。」
 
 階段二：視覺設計與生成 (Layout & Generation Stage)
-1. 僅在使用者說「好」、「可以」、「確認」或針對大綱給出具體修改建議後，才正式呼叫 \`create_presentation\`。
+1. 僅在使用者說「好」、「可以」、「確認」或針對大綱、風格給出具體修改建議後，才正式呼叫 \`create_presentation\`。
 2. 生成時，務必將第一階段討論的深度內容完整填入 \`speakerNotes\`，不可縮水。`;
 }
 
@@ -1764,8 +1765,20 @@ function fetchIconImage(keyword, colorHex, bgHex) {
 }
 
 function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl) {
-    let mainShape = SlidesApp.ShapeType.RECTANGLE; let coverShape = SlidesApp.ShapeType.ELLIPSE; let isMinimal = (style === 'minimalist'); let alphaMod = (style === 'layered') ? 0.3 : 1;
-    if (style === 'rounded') { mainShape = SlidesApp.ShapeType.ROUND_RECTANGLE; coverShape = SlidesApp.ShapeType.ROUND_RECTANGLE; } else if (style === 'cyber') { mainShape = SlidesApp.ShapeType.RIGHT_TRIANGLE; coverShape = SlidesApp.ShapeType.RIGHT_TRIANGLE; } else if (style === 'dynamic') { mainShape = SlidesApp.ShapeType.PARALLELOGRAM; coverShape = SlidesApp.ShapeType.PARALLELOGRAM; }
+    let mainShape = SlidesApp.ShapeType.RECTANGLE; let coverShape = SlidesApp.ShapeType.ELLIPSE; 
+    let isMinimal = (style === 'minimalist' || style === 'style1'); 
+    let alphaMod = (style === 'layered' || style === 'style8') ? 0.2 : 1;
+    
+    // --- 🎭 視覺風格引擎升級 (Styles 1-10) ---
+    if (style === 'rounded' || style === 'style2') { mainShape = SlidesApp.ShapeType.ROUND_RECTANGLE; coverShape = SlidesApp.ShapeType.ROUND_RECTANGLE; }
+    else if (style === 'cyber' || style === 'style3') { mainShape = SlidesApp.ShapeType.RIGHT_TRIANGLE; coverShape = SlidesApp.ShapeType.RIGHT_TRIANGLE; }
+    else if (style === 'dynamic' || style === 'style4') { mainShape = SlidesApp.ShapeType.PARALLELOGRAM; coverShape = SlidesApp.ShapeType.PARALLELOGRAM; }
+    else if (style === 'hexagon' || style === 'style5') { mainShape = SlidesApp.ShapeType.HEXAGON; coverShape = SlidesApp.ShapeType.HEXAGON; }
+    else if (style === 'elegant' || style === 'style6') { mainShape = SlidesApp.ShapeType.DIAMOND; coverShape = SlidesApp.ShapeType.DIAMOND; }
+    else if (style === 'bauhaus' || style === 'style7') { mainShape = SlidesApp.ShapeType.RECTANGLE; coverShape = SlidesApp.ShapeType.ELLIPSE; }
+    else if (style === 'layered' || style === 'style8') { mainShape = SlidesApp.ShapeType.RECTANGLE; coverShape = SlidesApp.ShapeType.RECTANGLE; }
+    else if (style === 'memphis' || style === 'style9') { mainShape = SlidesApp.ShapeType.ARC; coverShape = SlidesApp.ShapeType.TRIANGLE; }
+    else if (style === 'spotlight' || style === 'style10') { mainShape = SlidesApp.ShapeType.TRAPEZOID; coverShape = SlidesApp.ShapeType.TRAPEZOID; }
 
     let logoBlob = null;
     if (globalLogoUrl) { try { logoBlob = UrlFetchApp.fetch(globalLogoUrl).getBlob(); } catch(e) { console.warn("Logo 下載失敗", e); } }
@@ -1773,17 +1786,31 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
     slidesData.forEach((d, i) => {
         const slide = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK); slide.getBackground().setSolidFill(theme.bg);
         
-        // --- 🎭 繪製裝飾線條與圖案 (Decorative Engine) ---
-        if (style === 'cyber') {
+        // --- 🎭 繪製精緻裝飾 (Decorative Engine v2.0) ---
+        if (style === 'cyber' || style === 'style3') {
             drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 710, 0, 10, 80, theme.accent, 0.8);
             drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 640, 0, 80, 5, theme.accent, 0.8);
             drawShape(slide, SlidesApp.ShapeType.RIGHT_TRIANGLE, 0, 355, 50, 50, theme.shape, 0.3).setRotation(180);
-        } else if (style === 'minimalist') {
+        } else if (style === 'minimalist' || style === 'style1') {
             drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 50, 400, 620, 1, theme.accent, 0.5);
-        } else if (style === 'dynamic') {
+        } else if (style === 'dynamic' || style === 'style4') {
             drawShape(slide, SlidesApp.ShapeType.PARALLELOGRAM, 650, -50, 150, 550, theme.shape, 0.1).setRotation(15);
-        } else if (style === 'layered') {
-            drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 10, 10, 700, 385, theme.shape, 0.05);
+        } else if (style === 'hexagon' || style === 'style5') {
+            drawShape(slide, SlidesApp.ShapeType.HEXAGON, 600, 300, 150, 150, theme.shape, 0.2);
+            drawShape(slide, SlidesApp.ShapeType.HEXAGON, 680, 350, 80, 80, theme.accent, 0.1);
+        } else if (style === 'elegant' || style === 'style6') {
+            const d1 = drawShape(slide, SlidesApp.ShapeType.DIAMOND, 340, 20, 40, 40, theme.accent, 0.1);
+        } else if (style === 'bauhaus' || style === 'style7') {
+            drawShape(slide, SlidesApp.ShapeType.ELLIPSE, -50, -50, 200, 200, theme.accent, 1);
+            drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 600, 300, 150, 150, theme.text, 0.1);
+        } else if (style === 'layered' || style === 'style8') {
+            drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 10, 10, 700, 385, theme.shape, 0.1);
+            drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 30, 30, 660, 345, theme.shape, 0.05);
+        } else if (style === 'memphis' || style === 'style9') {
+            drawShape(slide, SlidesApp.ShapeType.ARC, 600, 50, 80, 80, theme.accent, 0.5).setRotation(45);
+            drawShape(slide, SlidesApp.ShapeType.TRIANGLE, 50, 350, 40, 40, theme.shape, 0.8);
+        } else if (style === 'spotlight' || style === 'style10') {
+            drawShape(slide, SlidesApp.ShapeType.TRAPEZOID, 160, 0, 400, 405, theme.accent, 0.05).setRotation(180);
         }
 
         if (logoBlob) { try { slide.insertImage(logoBlob, 650, 20, 50, 50); } catch(e){} }
