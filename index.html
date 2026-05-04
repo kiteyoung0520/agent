@@ -277,22 +277,41 @@
 
         <div id="right-panel-content" class="flex-1 overflow-hidden flex flex-col">
             <!-- 編輯區 -->
-            <div id="workbench-edit-area" class="flex-1 flex flex-col p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <span id="artifact-type-tag" class="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-md uppercase tracking-wider">Document Draft</span>
+            <div id="workbench-edit-area" class="flex-1 flex flex-col p-6 overflow-hidden">
+                <div class="flex items-center justify-between mb-4 shrink-0">
+                    <div class="flex items-center gap-3">
+                        <span id="artifact-type-tag" class="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-md uppercase tracking-wider">Document Draft</span>
+                        <div class="flex bg-gray-100 p-1 rounded-lg">
+                            <button onclick="switchWorkbenchMode('edit')" id="mode-edit-btn" class="text-[10px] px-3 py-1 rounded-md font-bold transition-all bg-white shadow-sm text-black">編輯</button>
+                            <button onclick="switchWorkbenchMode('split')" id="mode-split-btn" class="text-[10px] px-3 py-1 rounded-md font-bold transition-all text-gray-500 hover:text-black">分屏</button>
+                            <button onclick="switchWorkbenchMode('preview')" id="mode-preview-btn" class="text-[10px] px-3 py-1 rounded-md font-bold transition-all text-gray-500 hover:text-black">預覽</button>
+                        </div>
+                    </div>
                     <div class="flex gap-2">
                         <button onclick="copyWorkbenchContent()" class="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400" title="複製"><span class="material-symbols-rounded text-sm">content_copy</span></button>
                     </div>
                 </div>
-                <textarea id="workbench-editor" class="flex-1 w-full bg-transparent outline-none resize-none text-gray-800 leading-relaxed font-mono text-sm border border-dashed border-gray-100 p-4 rounded-2xl focus:border-blue-200 transition-all" placeholder="這裡將顯示 AI 生成的草稿，您可以直接在此處修改..."></textarea>
+                
+                <div id="workbench-container" class="flex-1 flex gap-4 overflow-hidden mb-6">
+                    <textarea id="workbench-editor" oninput="updateRealtimePreview()" class="flex-1 bg-transparent outline-none resize-none text-gray-800 leading-relaxed font-mono text-xs border border-dashed border-gray-100 p-4 rounded-2xl focus:border-blue-200 transition-all" placeholder="這裡將顯示 AI 生成的草稿..."></textarea>
+                    <div id="workbench-preview" class="hidden flex-1 p-4 overflow-y-auto bg-gray-50/50 rounded-2xl border border-transparent prose prose-sm prose-slate max-w-none">
+                        <!-- 即時預覽內容 -->
+                    </div>
+                </div>
                 
                 <!-- 輸出動作區 -->
-                <div class="mt-6 pt-6 border-t border-gray-50 grid grid-cols-2 gap-3">
-                    <button onclick="exportToGoogleDoc()" class="flex items-center justify-center gap-2 py-3 bg-blue-600 text-white rounded-xl font-bold text-xs hover:bg-blue-700 transition-all shadow-md">
-                        <span class="material-symbols-rounded text-sm">description</span> 格式化輸出文件
+                <div class="pt-6 border-t border-gray-50 grid grid-cols-3 gap-2 shrink-0">
+                    <button onclick="exportToGoogleDoc()" class="flex flex-col items-center gap-2 p-3 bg-blue-50 text-blue-600 rounded-xl font-bold hover:bg-blue-600 hover:text-white transition-all border border-blue-100 group/btn">
+                        <span class="material-symbols-rounded text-[20px]">description</span>
+                        <span class="text-[10px]">Google 文件</span>
                     </button>
-                    <button onclick="exportToSlides()" class="flex items-center justify-center gap-2 py-3 bg-orange-500 text-white rounded-xl font-bold text-xs hover:bg-orange-600 transition-all shadow-md">
-                        <span class="material-symbols-rounded text-sm">present_to_all</span> 生成專業簡報
+                    <button onclick="exportToSheets()" class="flex flex-col items-center gap-2 p-3 bg-green-50 text-green-600 rounded-xl font-bold hover:bg-green-600 hover:text-white transition-all border border-green-100 group/btn">
+                        <span class="material-symbols-rounded text-[20px]">table_chart</span>
+                        <span class="text-[10px]">Google 表格</span>
+                    </button>
+                    <button onclick="exportToSlides()" class="flex flex-col items-center gap-2 p-3 bg-orange-50 text-orange-600 rounded-xl font-bold hover:bg-orange-600 hover:text-white transition-all border border-orange-100 group/btn">
+                        <span class="material-symbols-rounded text-[20px]">present_to_all</span>
+                        <span class="text-[10px]">專業簡報</span>
                     </button>
                 </div>
             </div>
@@ -783,9 +802,53 @@
 
         function renderThoughts(thoughts) {
             const container = document.getElementById('thought-log');
-            container.innerHTML = thoughts.map(t => `<div class="p-2 bg-gray-50 rounded-lg border-l-2 border-blue-200">
-                <span class="text-blue-500 font-bold">●</span> ${t}
-            </div>`).join('');
+            container.innerHTML = '';
+            thoughts.forEach((t, i) => {
+                const div = document.createElement('div');
+                div.className = 'flex items-start gap-3 p-2 bg-gray-50 rounded-lg border-l-2 border-blue-200 animate-in fade-in slide-in-from-left duration-500';
+                div.style.animationDelay = `${i * 200}ms`;
+                div.innerHTML = `<span class="text-blue-500 font-bold">●</span> <div class="text-[11px] text-gray-600">${t}</div>`;
+                container.appendChild(div);
+            });
+        }
+
+        function switchWorkbenchMode(mode) {
+            const editor = document.getElementById('workbench-editor');
+            const preview = document.getElementById('workbench-preview');
+            const container = document.getElementById('workbench-container');
+            const btns = {
+                edit: document.getElementById('mode-edit-btn'),
+                split: document.getElementById('mode-split-btn'),
+                preview: document.getElementById('mode-preview-btn')
+            };
+
+            Object.values(btns).forEach(b => {
+                if (b) b.className = "text-[10px] px-3 py-1 rounded-md font-bold transition-all text-gray-500 hover:text-black";
+            });
+            if (btns[mode]) btns[mode].className = "text-[10px] px-3 py-1 rounded-md font-bold transition-all bg-white shadow-sm text-black";
+
+            if (mode === 'edit') {
+                editor.classList.remove('hidden');
+                preview.classList.add('hidden');
+            } else if (mode === 'preview') {
+                editor.classList.add('hidden');
+                preview.classList.remove('hidden');
+                updateRealtimePreview();
+            } else if (mode === 'split') {
+                editor.classList.remove('hidden');
+                preview.classList.remove('hidden');
+                updateRealtimePreview();
+            }
+        }
+
+        function updateRealtimePreview() {
+            const content = document.getElementById('workbench-editor').value;
+            const preview = document.getElementById('workbench-preview');
+            if (typeof marked !== 'undefined') {
+                preview.innerHTML = marked.parse(content);
+            } else {
+                preview.innerText = content;
+            }
         }
 
         function renderArtifact(content, type) {
@@ -820,6 +883,18 @@
                 if (data.url) window.open(data.url, '_blank');
                 else alert("輸出完成");
             } catch (e) { removeLoading(lid); alert("輸出失敗"); }
+        }
+
+        async function exportToSheets() {
+            const content = document.getElementById('workbench-editor').value;
+            if (!content) return alert("沒有內容可供生成表格");
+            const lid = appendLoading("正在生成 Google 試算表...");
+            try {
+                const data = await fetchGAS('export_to_sheets', { content, workspace: currentWorkspace });
+                removeLoading(lid);
+                if (data.url) window.open(data.url, '_blank');
+                else alert("生成成功");
+            } catch (e) { removeLoading(lid); alert("生成失敗"); }
         }
 
         async function exportToSlides() {
