@@ -557,35 +557,88 @@
             loadSessions();
         }
 
-        // 7. 檔案處理
+        // --- 檔案解析引擎加載器 ---
+        let pdfjsLibLoaded = false, mammothLoaded = false, xlsxLoaded = false, jszipLoaded = false;
+        async function loadPdfJs() { if(pdfjsLibLoaded) return; return new Promise((r, j) => { let s = document.createElement('script'); s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"; s.onload = () => { pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; pdfjsLibLoaded = true; r(); }; s.onerror = j; document.head.appendChild(s); }); }
+        async function loadMammoth() { if(mammothLoaded) return; return new Promise((r, j) => { let s = document.createElement('script'); s.src = "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"; s.onload = () => { mammothLoaded = true; r(); }; s.onerror = j; document.head.appendChild(s); }); }
+        async function loadXlsx() { if(xlsxLoaded) return; return new Promise((r, j) => { let s = document.createElement('script'); s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"; s.onload = () => { xlsxLoaded = true; r(); }; s.onerror = j; document.head.appendChild(s); }); }
+        async function loadJszip() { if(jszipLoaded) return; return new Promise((r, j) => { let s = document.createElement('script'); s.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"; s.onload = () => { jszipLoaded = true; r(); }; s.onerror = j; document.head.appendChild(s); }); }
+
+        // --- 核心檔案處理函數 ---
         async function handleFileUpload(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            
-            if (file.type.startsWith('image/')) {
-                reader.onload = (ev) => {
-                    currentImageData = ev.target.result;
-                    currentMimeType = file.type;
-                    const img = document.getElementById('image-preview');
-                    img.src = currentImageData;
-                    img.classList.remove('hidden');
-                    document.getElementById('doc-preview').classList.add('hidden');
-                    document.getElementById('upload-preview-container').classList.remove('hidden');
-                };
-                reader.readAsDataURL(file);
-            } else {
-                // 文檔處理簡化版，實際執行時會根據副檔名呼叫不同解析引擎
-                currentDocumentName = file.name;
-                document.getElementById('doc-filename').innerText = file.name;
-                document.getElementById('doc-preview').classList.remove('hidden');
-                document.getElementById('image-preview').classList.add('hidden');
-                document.getElementById('upload-preview-container').classList.remove('hidden');
-                
-                // 這裡保留您原本的解析邏輯接口
-                reader.onload = (ev) => { currentDocumentText = ev.target.result; };
-                reader.readAsText(file);
-            }
+            const f = e.target.files[0]; if (!f) return; 
+            const r = new FileReader(), ext = f.name.split('.').pop().toLowerCase();
+            const lid = appendLoading(`正在處理 ${f.name}...`);
+
+            try {
+                if (f.type.startsWith('image/')) { 
+                    removeLoading(lid);
+                    r.onload = (ev) => { 
+                        currentImageData = ev.target.result; currentMimeType = f.type; 
+                        const img = document.getElementById('image-preview');
+                        img.src = currentImageData; img.classList.remove('hidden'); 
+                        document.getElementById('doc-preview').classList.add('hidden'); 
+                        document.getElementById('upload-preview-container').classList.remove('hidden'); 
+                    }; r.readAsDataURL(f); 
+                } 
+                else if (f.type === 'application/pdf' || ext === 'pdf') { 
+                    await loadPdfJs(); 
+                    r.onload = async (ev) => { 
+                        try { 
+                            const pdf = await pdfjsLib.getDocument(new Uint8Array(ev.target.result)).promise; 
+                            let t = ""; for (let i=1; i<=pdf.numPages; i++) t += (await (await pdf.getPage(i)).getTextContent()).items.map(s => s.str).join(' ') + "\n"; 
+                            setDocPayload(f.name, t); 
+                        } catch (err) { alert("PDF 解析失敗"); } finally { removeLoading(lid); } 
+                    }; r.readAsArrayBuffer(f); 
+                } 
+                else if (ext === 'docx') { 
+                    await loadMammoth(); 
+                    r.onload = async (ev) => { 
+                        try { setDocPayload(f.name, (await mammoth.extractRawText({ arrayBuffer: ev.target.result })).value); } catch(err) { alert("Word 解析失敗"); } finally { removeLoading(lid); } 
+                    }; r.readAsArrayBuffer(f); 
+                } 
+                else if (ext === 'xlsx' || ext === 'csv') { 
+                    await loadXlsx(); 
+                    r.onload = (ev) => { 
+                        try { 
+                            const wb = XLSX.read(ev.target.result, { type: 'array' }); 
+                            let t = ""; wb.SheetNames.forEach(n => { t += `\n--- 表單: ${n} ---\n`; let c = XLSX.utils.sheet_to_csv(wb.Sheets[n]); t += c; }); 
+                            setDocPayload(f.name, t); 
+                        } catch(err) { alert("Excel 解析失敗"); } finally { removeLoading(lid); } 
+                    }; r.readAsArrayBuffer(f); 
+                } 
+                else if (ext === 'pptx') { 
+                    r.onload = async (ev) => { 
+                        try { await fallbackJSZipParse(f, ev.target.result, false, lid); } catch (err) { removeLoading(lid); } 
+                    }; r.readAsArrayBuffer(f); 
+                } 
+                else { 
+                    r.onload = (ev) => { setDocPayload(f.name, ev.target.result); removeLoading(lid); }; 
+                    r.readAsText(f); 
+                }
+            } catch (err) { removeLoading(lid); alert("上傳過程發生錯誤"); }
+        }
+
+        async function fallbackJSZipParse(fileObj, fileData, isBase64, loaderId) {
+            try { 
+                await loadJszip(); const zip = await (new JSZip()).loadAsync(fileData, isBase64 ? { base64: true } : {}); 
+                let t = `【系統解析：簡報檔名 ${fileObj.name}】\n\n`; 
+                const sFiles = Object.keys(zip.files).filter(n => n.match(/^ppt\/slides\/slide\d+\.xml$/)).sort((a, b) => parseInt(a.match(/(\d+)\.xml$/)[1]) - parseInt(b.match(/(\d+)\.xml$/)[1]));
+                const parser = new DOMParser(); 
+                for (const p of sFiles) { 
+                    const sn = p.match(/(\d+)\.xml$/)[1]; t += `--- 第 ${sn} 頁 ---\n`; 
+                    const sx = await zip.file(p).async("string"); 
+                    if (sx) { const xmlDoc = parser.parseFromString(sx, "text/xml"); t += Array.from(xmlDoc.getElementsByTagName("a:t")).map(n => n.textContent).join(" ") + "\n"; } 
+                } setDocPayload(fileObj.name, t); 
+            } catch (err) { alert("PPTX 解析失敗"); } finally { removeLoading(loaderId); }
+        }
+
+        function setDocPayload(n, t) { 
+            currentDocumentName = n; currentDocumentText = t; 
+            document.getElementById('doc-filename').innerText = n; 
+            document.getElementById('doc-preview').classList.remove('hidden'); 
+            document.getElementById('image-preview').classList.add('hidden'); 
+            document.getElementById('upload-preview-container').classList.remove('hidden'); 
         }
 
         function clearUpload() {
