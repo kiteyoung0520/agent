@@ -246,7 +246,7 @@ const AGENT_TOOLS = [{
                     customColors: { type: "STRING", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。請依主題氛圍自主調配。" }, 
                     shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist' (極簡), 'rounded' (圓角), 'cyber' (銳角/科技), 'dynamic' (斜切/活力), 'layered' (疊層/深邃)。" }, 
                     globalLogoUrl: { type: "STRING", description: "【標誌】可選。公司或品牌的 Logo 圖片網址。" },
-                    slidesData: { type: "STRING", description: "簡報 JSON 陣列。格式：[{layout: '...', title: '...', content: '...', points: [...], speakerNotes: '【深度導覽】此頁的詳細口語講稿與補充資料', citations: '來源出處或參考網址', titleIconKeyword: '...', imageKeyword: '...', gridItems: [...]}]。⚠️ 務必將深度細節放入 speakerNotes，保持投影片簡潔。" } 
+                    slidesData: { type: "STRING", description: "簡報 JSON 陣列。格式：[{layout: '...', title: '...', content: '...', points: [...], speakerNotes: '【重要】這裡是 NotebookLM 模式的核心。請在此填寫 300-500 字的深度分析、口語講稿、背景數據與細節。投影片上只需放精簡重點。', citations: '參考來源', titleIconKeyword: '...', imageKeyword: '...', gridItems: [...]}]。⚠️ 嚴禁產出過於簡短的內容，備忘錄必須豐富且具備深度。" } 
                 }, 
                 required: ["topic", "customColors", "shapeStyle", "slidesData"] 
             } 
@@ -1778,11 +1778,15 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
             const notesPage = slide.getNotesPage();
             let fullNotes = (d.speakerNotes || "") + (d.citations ? `\n\n📖 [來源溯源]:\n${d.citations}` : "");
             if (fullNotes.trim()) {
-                notesPage.getPlaceholder(SlidesApp.PlaceholderType.BODY).asShape().getText().setText(fullNotes);
+                let notesBody = notesPage.getPlaceholder(SlidesApp.PlaceholderType.BODY);
+                if (!notesBody) {
+                    // 如果找不到佔位符，建立一個新的文字框
+                    notesBody = notesPage.insertShape(SlidesApp.ShapeType.TEXT_BOX, 50, 50, 600, 300);
+                }
+                notesBody.asShape().getText().setText(fullNotes);
             }
             if (d.citations) {
-                // 在投影片右下角加入微小的來源標記
-                addText(slide, `Source: ${d.citations.substring(0, 30)}...`, 500, 385, 200, 20, theme.accent, 8, false);
+                addText(slide, `Source: ${d.citations.substring(0, 40)}`, 480, 385, 230, 20, theme.accent, 8, false);
             }
         } catch(e) { console.warn("備忘錄寫入失敗", e); }
 
@@ -1958,9 +1962,23 @@ function sanitizeJson(str) {
     if (!str) return "[]";
     // 1. 移除 Markdown 程式碼區塊標記
     let clean = str.replace(/```json/gi, '').replace(/```/g, '').trim();
-    // 2. 移除字串以外的非法換行，但保留字串內的換行 (將字串內的實際換行符號轉義為 \n)
-    // 這是一個簡化的啟發式演算法，避免破壞結構
-    return clean;
+    
+    // 2. 🛡️ 深度修復：處理 JSON 字串內部未轉義的換行符號
+    // 這能防止 AI 產出的 speakerNotes 因為包含換行而導致 JSON.parse 失敗
+    let result = "";
+    let inQuotes = false;
+    for (let i = 0; i < clean.length; i++) {
+        let char = clean[i];
+        if (char === '"' && clean[i-1] !== '\\') {
+            inQuotes = !inQuotes;
+        }
+        if (inQuotes && (char === '\n' || char === '\r')) {
+            result += "\\n"; // 將字串內的真實換行轉為 JSON 轉義換行
+        } else {
+            result += char;
+        }
+    }
+    return result;
 }
 
 function forceAuthSetup() {
