@@ -246,7 +246,8 @@ const AGENT_TOOLS = [{
                     customColors: { type: "STRING", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。請依主題氛圍自主調配。" }, 
                     shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist' (極簡), 'rounded' (圓角), 'cyber' (銳角/科技), 'dynamic' (斜切/活力), 'layered' (疊層/深邃)。" }, 
                     globalLogoUrl: { type: "STRING", description: "【標誌】可選。公司或品牌的 Logo 圖片網址。" },
-                    slidesData: { type: "STRING", description: "簡報 JSON 陣列。格式：[{layout: '...', title: '...', content: '...', points: [...], speakerNotes: '【重要】這裡是 NotebookLM 模式的核心。請在此填寫 300-500 字的深度分析、口語講稿、背景數據與細節。投影片上只需放精簡重點。', citations: '參考來源', titleIconKeyword: '...', imageKeyword: '...', gridItems: [...]}]。⚠️ 嚴禁產出過於簡短的內容，備忘錄必須豐富且具備深度。" } 
+                    contentDensity: { type: "STRING", description: "內容密度: 'brief' (簡易/演講用), 'detailed' (詳細/商務用), 'full' (完整/報告用)。" },
+                    slidesData: { type: "STRING", description: "簡報 JSON 陣列。格式：[{layout: '...', title: '...', content: '...', points: [...], speakerNotes: '...', citations: '...', titleIconKeyword: '...', imageKeyword: '...', gridItems: [...]}]。⚠️ 嚴禁產出過於簡短的內容，備忘錄必須豐富且具備深度。" } 
                 }, 
                 required: ["topic", "customColors", "shapeStyle", "slidesData"] 
             } 
@@ -262,6 +263,7 @@ const AGENT_TOOLS = [{
                     customColors: { type: "STRING", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。" }, 
                     shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist', 'rounded', 'cyber', 'dynamic', 'layered' 擇一。" }, 
                     globalLogoUrl: { type: "STRING", description: "【標誌】可選。公司或品牌的 Logo 圖片網址。" },
+                    contentDensity: { type: "STRING", description: "內容密度: 'brief', 'detailed', 'full'。" },
                     slidesData: { type: "STRING", description: "要新增或覆寫的簡報 JSON 陣列。⚠️ 嚴禁省略：必須包含所有頁面的完整內容。此工具應在「大綱確認階段」之後才執行。" } 
                 }, 
                 required: ["presentationUrl", "action", "slidesData"] 
@@ -353,16 +355,22 @@ ${customRules}
 
 階段一：內容消化與大綱提案 (Digest & Proposal Stage)
 1. 讀取來源資料 (Docs/PDF/Web)。
-2. 檢查目前設定 (Settings) 中是否有符合需求的 \`PPT_TPL_\` 開頭的腳本與 \`THEME_\` 開頭的配色。
+2. 檢查目前設定 (Settings) 中是否有符合需求的 `PPT_TPL_` 開頭的腳本與 `THEME_` 開頭的配色。
 3. 你必須先用文字向使用者回報：
    - **【知識摘要】**：你從中學到了什麼核心觀點。
-   - **【推薦腳本與風格】**：根據內容屬性，推薦使用哪一個 \`PPT_TPL_\` 腳本與 \`style1-10\` 的視覺風格。說明理由。
+   - **【內容密度建議】**：根據資訊用途（演講/閱覽/存檔），推薦使用 **Brief (簡易)**、**Detailed (詳細)** 或 **Full (完整)** 模式。
+   - **【推薦腳本與風格】**：推薦使用哪一個 `PPT_TPL_` 腳本與 `style1-10` 視覺風格。
    - **【投影片大綱】**：預計每一頁的標題、版型、以及預計寫入備忘錄的深度內容摘要。
-4. 詢問使用者：「以上推薦的腳本、視覺風格與大綱是否符合需求？確認後我將開始進行視覺設計。」
+4. 詢問使用者：「以上推薦的模式、腳本、視覺風格與大綱是否符合需求？確認後我將開始進行視覺設計。」
+
+【📏 內容密度定義 (Content Density)】
+- **Brief (簡易)**：每頁點列不超過 3 項，字級極大 (18pt+)，強調 Icon 與大圖。適合：TED、CEO 演講。
+- **Detailed (詳細)**：標準圖文並茂排版。適合：業務開發、工作匯報。
+- **Full (完整)**：資訊密集，多使用雙欄 (split_column)，備忘錄字數必須達 500 字以上。適合：研究報告、教育訓練。
 
 階段二：視覺設計與生成 (Layout & Generation Stage)
-1. 僅在使用者說「好」、「可以」、「確認」或針對大綱、風格給出具體修改建議後，才正式呼叫 \`create_presentation\`。
-2. 生成時，務必將第一階段討論的深度內容完整填入 \`speakerNotes\`，不可縮水。`;
+1. 僅在使用者說「好」、「可以」、「確認」或針對大綱、風格給出具體修改建議後，才正式呼叫 `create_presentation`。
+2. 生成時，務必將第一階段討論的深度內容完整填入 `speakerNotes`，不可縮水。`;
 }
 
 
@@ -1283,7 +1291,7 @@ function runAutonomousAgentLoop(config) {
                             } catch(e) { console.error("顏色解析失敗", e); }
                             
                             let safeSlidesData = sanitizeJson(args.slidesData);
-                            const pid = createGeometricSlides(args.topic, JSON.parse(safeSlidesData), themeToUse, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel, args.globalLogoUrl);
+                            const pid = createGeometricSlides(args.topic, JSON.parse(safeSlidesData), themeToUse, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel, args.globalLogoUrl, args.contentDensity || 'detailed');
                             toolResult = { isTerminal: true, reply: `📊 **專屬簡報生成完畢！**\n🔗 [點擊開啟 Google 簡報](https://docs.google.com/presentation/d/${pid}/edit)` };
                             break;
                         case "update_presentation":
@@ -1306,7 +1314,7 @@ function runAutonomousAgentLoop(config) {
                                 } else { processedUpdData = rawUpdData; }
                             } catch(e) { throw new Error("簡報資料格式錯誤，無法解析 JSON：" + e.toString()); }
 
-                            updateGeometricSlides(presIdMatch[0], args.action, processedUpdData, updTheme, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel, args.globalLogoUrl);
+                            updateGeometricSlides(presIdMatch[0], args.action, processedUpdData, updTheme, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel, args.globalLogoUrl, args.contentDensity || 'detailed');
                             
                             let actionVerb = (String(args.action).toLowerCase().trim() === 'overwrite') ? "覆寫" : "擴充";
                             toolResult = { isTerminal: true, reply: `📊 **簡報${actionVerb}完畢！**\n\n已成功將 ${processedUpdData.length} 頁內容同步至簡報中。\n🔗 [點擊開啟驗證](https://docs.google.com/presentation/d/${presIdMatch[0]}/edit)` };
@@ -1764,9 +1772,10 @@ function fetchIconImage(keyword, colorHex, bgHex) {
     try { let cleanColor = colorHex.replace('#', ''); let bgClean = bgHex.replace('#', ''); let safeKeyword = encodeURIComponent(keyword.trim().split(' ')[0] || "star"); let url = `https://img.icons8.com/ios-filled/100/${cleanColor}/${safeKeyword}.png`; let res = UrlFetchApp.fetch(url, {muteHttpExceptions: true}); if(res.getResponseCode() === 200) return res.getBlob(); let fallbackUrl = `https://ui-avatars.com/api/?name=${safeKeyword}&background=${cleanColor}&color=${bgClean}&size=128&rounded=true&font-size=0.4`; let res2 = UrlFetchApp.fetch(fallbackUrl, {muteHttpExceptions: true}); if(res2.getResponseCode() === 200) return res2.getBlob(); } catch(e) {} return null;
 }
 
-function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl) {
+function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl, contentDensity) {
     let mainShape = SlidesApp.ShapeType.RECTANGLE; let coverShape = SlidesApp.ShapeType.ELLIPSE; 
     let isMinimal = (style === 'minimalist' || style === 'style1'); 
+    let isBrief = (contentDensity === 'brief');
     let alphaMod = (style === 'layered' || style === 'style8') ? 0.2 : 1;
     
     // --- 🎭 視覺風格引擎升級 (Styles 1-10) ---
@@ -1959,16 +1968,16 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
     });
 }
 
-function createGeometricSlides(topic, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl) {
+function createGeometricSlides(topic, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl, contentDensity) {
     const deck = SlidesApp.create(`PPT: ${topic}`); 
     const slides = deck.getSlides(); if (slides.length > 0) slides[0].remove();
-    appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl);
+    appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl, contentDensity);
     deck.saveAndClose(); 
     try { DriveApp.getFileById(deck.getId()).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.EDIT); } catch(e) { console.error("權限設定失敗", e); }
     return deck.getId();
 }
 
-function updateGeometricSlides(presentationId, action, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl) {
+function updateGeometricSlides(presentationId, action, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl, contentDensity) {
     const deck = SlidesApp.openById(presentationId);
     const safeAction = String(action || "").toLowerCase().trim();
     console.log(`[SlidesService] Action: ${safeAction}, ID: ${presentationId}, Slides: ${slidesData.length}`);
@@ -1978,11 +1987,11 @@ function updateGeometricSlides(presentationId, action, slidesData, theme, style,
         const slides = deck.getSlides();
         console.log(`[SlidesService] Overwriting... Removing ${slides.length - 1} old slides.`);
         slides.forEach(s => { if (s.getObjectId() !== tempSlide.getObjectId()) s.remove(); });
-        appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl);
+        appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl, contentDensity);
         tempSlide.remove(); 
     } else {
         console.log(`[SlidesService] Appending ${slidesData.length} new slides.`);
-        appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl);
+        appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl, contentDensity);
     }
     deck.saveAndClose();
 }
