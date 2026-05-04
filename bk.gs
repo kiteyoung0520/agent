@@ -92,13 +92,60 @@ function sendMessageToLine(token, replyToken, text) {
 
 function handleSystemMode(payload, ss, wsName, db) {
     const action = payload.action;
-    if (action === 'get_session_list') {
-        const list = db.querySessions(wsName).map(x => ({ id: x.session_id, title: x.customTitle || x.title, date: x.updated_at, pinned: x.pinned }));
-        return response({ sessions: list });
-    }
-    if (action === 'load_session') return response({ logs: db.get("sessions", payload.session_id).history_json || [] });
-    if (action === 'delete_session') { db.delete("sessions", payload.session_id); return response({status:"success"}); }
-    return response({status: "error", message: "Unknown action"});
+    
+    const routeHandlers = {
+        'get_workspaces': () => {
+            const excluded = [BASE_CONFIG.SETTING_SHEET_NAME, "Gems", "Models"];
+            const workspaces = ss.getSheets().map(sh => sh.getName()).filter(name => !excluded.includes(name));
+            return response({ workspaces: workspaces });
+        },
+        'get_session_list': () => {
+            const list = db.querySessions(wsName).map(x => ({ id: x.session_id, title: x.customTitle || x.title, date: x.updated_at, pinned: x.pinned }));
+            return response({ sessions: list });
+        },
+        'load_session': () => {
+            const session = db.get("sessions", payload.session_id);
+            return response({ logs: (session && session.history_json) ? session.history_json : [] });
+        },
+        'delete_session': () => {
+            db.delete("sessions", payload.session_id);
+            CacheService.getScriptCache().remove(`history_${wsName}_${payload.session_id}`);
+            return response({ status: "success" });
+        },
+        'get_gems': () => {
+            const gemSheet = ss.getSheetByName("Gems"); if(!gemSheet) return response({gems: []});
+            const data = gemSheet.getDataRange().getValues(); let gems = []; let currentGem = null;
+            for(let i = 0; i < data.length; i++) {
+                let name = String(data[i][0] || "").trim(); let promptText = String(data[i][1] || "").trim(); let model = data[i].length > 2 ? String(data[i][2] || "").trim() : "";
+                if (name) { if (currentGem) gems.push(currentGem); currentGem = { name: name, prompt: promptText, model: model }; } else if (currentGem && promptText) { currentGem.prompt += "\n" + promptText; }
+            } if (currentGem) gems.push(currentGem); return response({gems: gems});
+        },
+        'get_models': () => {
+            const modelSheet = ss.getSheetByName("Models"); let models = [];
+            if(modelSheet) { 
+                const data = modelSheet.getDataRange().getValues(); 
+                for(let i = 1; i < data.length; i++) { 
+                    let name = String(data[i][0] || "").trim(); let id = String(data[i][1] || "").trim(); 
+                    if (name && id) models.push({ name: name, id: id }); 
+                } 
+            }
+            if(models.length === 0) { models = [{name: "⚡ 閃電 (2.5 Flash)", id: "gemini-2.5-flash"}, {name: "🧠 專家 (2.5 Pro)", id: "gemini-2.5-pro"}]; }
+            return response({models: models});
+        },
+        'rename_session': () => {
+            const session = db.get("sessions", payload.session_id);
+            if (session) { session.customTitle = payload.new_title; db.write("sessions", payload.session_id, session); }
+            return response({status: "success"});
+        },
+        'pin_session': () => {
+            const session = db.get("sessions", payload.session_id);
+            if (session) { session.pinned = payload.is_pinned; db.write("sessions", payload.session_id, session); }
+            return response({status: "success"});
+        }
+    };
+
+    if (routeHandlers[action]) return routeHandlers[action]();
+    return response({status: "error", message: "Unknown action: " + action});
 }
 
 function forceAuthSetup() {
