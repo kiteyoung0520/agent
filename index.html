@@ -494,8 +494,10 @@
 
         function changeWorkspace() {
             currentWorkspace = document.getElementById('workspace-selector').value;
-            document.getElementById('current-workspace-name').innerText = currentWorkspace;
+            console.log("📁 Workspace switched to:", currentWorkspace);
             startNewSession();
+            loadGems();
+            loadModels();
         }
 
         function createNewWorkspace() {
@@ -535,7 +537,7 @@
         async function switchSession(id, title) {
             currentSessionId = id;
             document.getElementById('chat-container').innerHTML = '';
-            const lid = appendLoading();
+            const lid = appendLoading("正在載入對話...");
             try {
                 const data = await fetchGAS('load_session', { mode: 'system', session_id: id, workspace: currentWorkspace });
                 removeLoading(lid);
@@ -549,9 +551,10 @@
         function startNewSession() {
             currentSessionId = generateUUID();
             document.getElementById('chat-container').innerHTML = `
-                <div class="message-block ai-message text-center">
+                <div class="message-block ai-message text-center pt-24">
                     <h1 class="text-4xl font-bold tracking-tight mb-4">今天想聊些什麼？</h1>
-                    <p class="text-gray-400 text-lg">您已切換至 **${currentWorkspace}** 空間。</p>
+                    <p class="text-gray-400 text-lg">您已進入 **${currentWorkspace || "預設"}** 專案空間</p>
+                    <p class="text-gray-300 text-sm mt-2">歷史對話與記憶已隔離。請開始新的討論。</p>
                 </div>
             `;
             loadSessions();
