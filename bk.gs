@@ -245,8 +245,8 @@ const AGENT_TOOLS = [{
                     topic: { type: "STRING", description: "簡報核心主題" }, 
                     customColors: { type: "STRING", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。請依主題氛圍自主調配。" }, 
                     shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist' (極簡), 'rounded' (圓角), 'cyber' (銳角/科技), 'dynamic' (斜切/活力), 'layered' (疊層/深邃)。" }, 
-                    globalLogoUrl: { type: "STRING", description: "【標誌】可選。公司或品牌的 Logo 圖片網址，若提供則會出現在每頁角落。" },
-                    slidesData: { type: "STRING", description: "簡報 JSON 陣列。格式：[{layout: 'cover|title_only|standard_list|split_column|image_right|image_left|icon_grid|timeline|big_data', title: '標題', content: '內文', points: ['重點'], titleIconKeyword: '標題旁的小圖標關鍵字(英文)', imageKeyword: '背景/主圖生圖提示詞(英文)', gridItems: [{title:'標題', content:'內容', iconKeyword:'圖標關鍵字'}]}]。⚠️請務必為每一頁產出 titleIconKeyword 以增加視覺層次感。" } 
+                    globalLogoUrl: { type: "STRING", description: "【標誌】可選。公司或品牌的 Logo 圖片網址。" },
+                    slidesData: { type: "STRING", description: "簡報 JSON 陣列。格式：[{layout: '...', title: '...', content: '...', points: [...], speakerNotes: '【深度導覽】此頁的詳細口語講稿與補充資料', citations: '來源出處或參考網址', titleIconKeyword: '...', imageKeyword: '...', gridItems: [...]}]。⚠️ 務必將深度細節放入 speakerNotes，保持投影片簡潔。" } 
                 }, 
                 required: ["topic", "customColors", "shapeStyle", "slidesData"] 
             } 
@@ -1772,6 +1772,19 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
         }
 
         if (logoBlob) { try { slide.insertImage(logoBlob, 650, 20, 50, 50); } catch(e){} }
+
+        // --- 📒 寫入講者備忘錄與來源溯源 (NotebookLM Style) ---
+        try {
+            const notesPage = slide.getNotesPage();
+            let fullNotes = (d.speakerNotes || "") + (d.citations ? `\n\n📖 [來源溯源]:\n${d.citations}` : "");
+            if (fullNotes.trim()) {
+                notesPage.getPlaceholder(SlidesApp.PlaceholderType.BODY).asShape().getText().setText(fullNotes);
+            }
+            if (d.citations) {
+                // 在投影片右下角加入微小的來源標記
+                addText(slide, `Source: ${d.citations.substring(0, 30)}...`, 500, 385, 200, 20, theme.accent, 8, false);
+            }
+        } catch(e) { console.warn("備忘錄寫入失敗", e); }
 
         let layoutType = (deck.getSlides().length === 1 && i === 0) ? 'cover' : (d.layout || 'standard_list');
         let imgBlob = null; let titleIconBlob = null; let keyword = d.imageKeyword || d.title || "presentation";
