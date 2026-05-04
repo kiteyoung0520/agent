@@ -262,7 +262,7 @@ const AGENT_TOOLS = [{
                     customColors: { type: "STRING", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。" }, 
                     shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist', 'rounded', 'cyber', 'dynamic', 'layered' 擇一。" }, 
                     globalLogoUrl: { type: "STRING", description: "【標誌】可選。公司或品牌的 Logo 圖片網址。" },
-                    slidesData: { type: "STRING", description: "要新增或覆寫的簡報 JSON 陣列。⚠️ 嚴禁省略：必須包含所有頁面的完整內容，禁止自行截斷或使用摘要。" } 
+                    slidesData: { type: "STRING", description: "要新增或覆寫的簡報 JSON 陣列。⚠️ 嚴禁省略：必須包含所有頁面的完整內容。此工具應在「大綱確認階段」之後才執行。" } 
                 }, 
                 required: ["presentationUrl", "action", "slidesData"] 
             } 
@@ -346,7 +346,22 @@ ${customRules}
    - 禁止連續兩張投影片使用相同 Layout。
    - 每一頁的文字量不可超過 100 字，其餘內容請放入「講者備忘錄」。
    - customColors 必須根據主題情感（商務、熱情、科技）挑選對比鮮明的 HEX 色碼。
-   - imageKeyword 必須包含 'high quality', 'cinematic lighting', 'professional photography' 等修飾詞。`;
+   - imageKeyword 必須包含 'high quality', 'cinematic lighting', 'professional photography' 等修飾詞。
+
+【📊 簡報產出標準作業程序 (Standard Operating Procedure)】
+當使用者要求「製作簡報」或「根據某文件做簡報」時，你必須【強制執行】以下兩階段流程：
+
+階段一：內容消化與大綱提案 (Digest & Proposal Stage)
+1. 讀取來源資料 (Docs/PDF/Web)。
+2. 禁止立刻呼叫 create_presentation。
+3. 你必須先用文字向使用者回報：
+   - **【知識摘要】**：你從中學到了什麼核心觀點。
+   - **【投影片大綱】**：預計每一頁的標題、版型、以及預計寫入備忘錄的深度內容摘要。
+4. 詢問使用者：「以上大綱與內容深度是否符合需求？確認後我將開始進行視覺設計。」
+
+階段二：視覺設計與生成 (Layout & Generation Stage)
+1. 僅在使用者說「好」、「可以」、「確認」或針對大綱給出具體修改建議後，才正式呼叫 \`create_presentation\`。
+2. 生成時，務必將第一階段討論的深度內容完整填入 \`speakerNotes\`，不可縮水。`;
 }
 
 
