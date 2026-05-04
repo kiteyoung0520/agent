@@ -531,14 +531,16 @@
                 list.innerHTML = '';
                 if (data.sessions) {
                     data.sessions.forEach(s => {
-                        const item = document.createElement('button');
-                        const active = s.id === currentSessionId;
-                        item.className = `w-full flex items-center gap-4 p-3 rounded-2xl transition-all group/session ${active ? 'bg-gray-100' : 'hover:bg-gray-50'}`;
+                        item.className = `w-full flex items-center justify-between p-3 rounded-2xl transition-all group/session ${active ? 'bg-gray-100' : 'hover:bg-gray-50'}`;
                         item.innerHTML = `
-                            <span class="material-symbols-rounded text-gray-400 ${active ? 'text-black' : ''} text-[20px]">${s.pinned ? 'push_pin' : 'chat'}</span>
-                            <span class="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap overflow-hidden text-ellipsis text-xs font-semibold ${active ? 'text-black' : 'text-gray-500'}">${s.title}</span>
+                            <div class="flex items-center gap-4 min-w-0" onclick="switchSession('${s.id}', '${s.title}')">
+                                <span class="material-symbols-rounded text-gray-400 ${active ? 'text-black' : ''} text-[20px] shrink-0">${s.pinned ? 'push_pin' : 'chat'}</span>
+                                <span class="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap overflow-hidden text-ellipsis text-xs font-semibold ${active ? 'text-black' : 'text-gray-500'}">${s.title}</span>
+                            </div>
+                            <button onclick="event.stopPropagation(); deleteSession('${s.id}')" class="opacity-0 group-hover/session:opacity-100 p-1.5 text-gray-400 hover:text-red-500 transition-opacity" title="刪除對話">
+                                <span class="material-symbols-rounded text-[16px]">delete</span>
+                            </button>
                         `;
-                        item.onclick = () => switchSession(s.id, s.title);
                         list.appendChild(item);
                     });
                 }
@@ -857,6 +859,16 @@
                 appendMessage('ai', `❌ 重新生成失敗：\n${err.message}`);
             } finally {
                 toggleSendButton(false);
+            }
+        }
+
+        async function deleteSession(id) {
+            if (confirm("確定要永久刪除這段對話嗎？")) {
+                try {
+                    await fetchGAS('delete_session', { mode: 'system', session_id: id, workspace: currentWorkspace });
+                    if (id === currentSessionId) startNewSession();
+                    loadSessions();
+                } catch (e) { alert("刪除失敗"); }
             }
         }
 
