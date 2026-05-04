@@ -133,6 +133,10 @@
 
         /* Artifact 預覽 */
         #preview-modal { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #D1D5DB; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -256,75 +260,6 @@
         </div>
     </main>
 
-    <!-- 4. anyGem Workbench (右側工作台) -->
-    <aside id="right-panel" class="fixed right-0 top-0 h-full w-[500px] bg-white border-l border-gray-100 shadow-2xl transform translate-x-full transition-transform duration-300 z-50 flex flex-col">
-        <div class="p-6 border-b border-gray-50 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
-            <div class="flex items-center gap-3">
-                <div id="workbench-status-dot" class="w-2 h-2 rounded-full bg-green-500"></div>
-                <h3 class="font-bold text-lg" id="panel-title">Workbench</h3>
-            </div>
-            <div class="flex items-center gap-2">
-                <button onclick="toggleRightPanel()" class="p-2 hover:bg-gray-100 rounded-full text-gray-400 transition-colors"><span class="material-symbols-rounded">close</span></button>
-            </div>
-        </div>
-
-        <!-- 標籤導航 -->
-        <div class="flex border-b border-gray-50 bg-gray-50/50">
-            <button onclick="switchWorkbenchTab('edit')" id="tab-edit" class="flex-1 py-3 text-xs font-bold border-b-2 border-black">編輯內容</button>
-            <button onclick="switchWorkbenchTab('thought')" id="tab-thought" class="flex-1 py-3 text-xs font-bold text-gray-400 border-b-2 border-transparent">思考過程</button>
-            <button onclick="switchWorkbenchTab('library')" id="tab-library" class="flex-1 py-3 text-xs font-bold text-gray-400 border-b-2 border-transparent">專案資源</button>
-        </div>
-
-        <div id="right-panel-content" class="flex-1 overflow-hidden flex flex-col">
-            <!-- 編輯區 -->
-            <div id="workbench-edit-area" class="flex-1 flex flex-col p-6 overflow-hidden">
-                <div class="flex items-center justify-between mb-4 shrink-0">
-                    <div class="flex items-center gap-3">
-                        <span id="artifact-type-tag" class="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-md uppercase tracking-wider">Document Draft</span>
-                        <div class="flex bg-gray-100 p-1 rounded-lg">
-                            <button onclick="switchWorkbenchMode('edit')" id="mode-edit-btn" class="text-[10px] px-3 py-1 rounded-md font-bold transition-all bg-white shadow-sm text-black">編輯</button>
-                            <button onclick="switchWorkbenchMode('split')" id="mode-split-btn" class="text-[10px] px-3 py-1 rounded-md font-bold transition-all text-gray-500 hover:text-black">分屏</button>
-                            <button onclick="switchWorkbenchMode('preview')" id="mode-preview-btn" class="text-[10px] px-3 py-1 rounded-md font-bold transition-all text-gray-500 hover:text-black">預覽</button>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="copyWorkbenchContent()" class="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400" title="複製"><span class="material-symbols-rounded text-sm">content_copy</span></button>
-                    </div>
-                </div>
-                
-                <div id="workbench-container" class="flex-1 flex gap-4 overflow-hidden mb-6">
-                    <textarea id="workbench-editor" oninput="updateRealtimePreview()" class="flex-1 bg-transparent outline-none resize-none text-gray-800 leading-relaxed font-mono text-xs border border-dashed border-gray-100 p-4 rounded-2xl focus:border-blue-200 transition-all" placeholder="這裡將顯示 AI 生成的草稿..."></textarea>
-                    <div id="workbench-preview" class="hidden flex-1 p-4 overflow-y-auto bg-gray-50/50 rounded-2xl border border-transparent prose prose-sm prose-slate max-w-none">
-                        <!-- 即時預覽內容 -->
-                    </div>
-                </div>
-                
-                <!-- 輸出動作區 -->
-                <div class="pt-6 border-t border-gray-50 grid grid-cols-3 gap-2 shrink-0">
-                    <button onclick="exportToGoogleDoc()" class="flex flex-col items-center gap-2 p-3 bg-blue-50 text-blue-600 rounded-xl font-bold hover:bg-blue-600 hover:text-white transition-all border border-blue-100 group/btn">
-                        <span class="material-symbols-rounded text-[20px]">description</span>
-                        <span class="text-[10px]">Google 文件</span>
-                    </button>
-                    <button onclick="exportToSheets()" class="flex flex-col items-center gap-2 p-3 bg-green-50 text-green-600 rounded-xl font-bold hover:bg-green-600 hover:text-white transition-all border border-green-100 group/btn">
-                        <span class="material-symbols-rounded text-[20px]">table_chart</span>
-                        <span class="text-[10px]">Google 表格</span>
-                    </button>
-                    <button onclick="exportToSlides()" class="flex flex-col items-center gap-2 p-3 bg-orange-50 text-orange-600 rounded-xl font-bold hover:bg-orange-600 hover:text-white transition-all border border-orange-100 group/btn">
-                        <span class="material-symbols-rounded text-[20px]">present_to_all</span>
-                        <span class="text-[10px]">專業簡報</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- 思考區 -->
-            <div id="workbench-thought-area" class="hidden flex-1 overflow-y-auto p-6 space-y-4">
-                <div class="flex items-center gap-3 text-blue-500 mb-4">
-                    <span class="material-symbols-rounded animate-spin">sync</span>
-                    <span class="text-sm font-bold">代理人正在思考中...</span>
-                </div>
-                <div id="thought-log" class="space-y-3 font-mono text-[11px] text-gray-500">
-                    <!-- 思考日誌將在這裡動態插入 -->
-                </div>
             </div>
 
             <!-- 圖書館 -->
