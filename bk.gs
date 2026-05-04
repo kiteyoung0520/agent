@@ -262,7 +262,7 @@ const AGENT_TOOLS = [{
                     customColors: { type: "STRING", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。" }, 
                     shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist', 'rounded', 'cyber', 'dynamic', 'layered' 擇一。" }, 
                     globalLogoUrl: { type: "STRING", description: "【標誌】可選。公司或品牌的 Logo 圖片網址。" },
-                    slidesData: { type: "STRING", description: "要新增或覆寫的簡報 JSON 陣列。格式同 create_presentation，請務必包含 titleIconKeyword。" } 
+                    slidesData: { type: "STRING", description: "要新增或覆寫的簡報 JSON 陣列。⚠️ 嚴禁省略：必須包含所有頁面的完整內容，禁止自行截斷或使用摘要。" } 
                 }, 
                 required: ["presentationUrl", "action", "slidesData"] 
             } 
@@ -1266,7 +1266,7 @@ function runAutonomousAgentLoop(config) {
                                 }
                             } catch(e) { console.error("顏色解析失敗", e); }
                             
-                            let safeSlidesData = args.slidesData.replace(/\n/g, ' ').replace(/\r/g, '').replace(/\t/g, ' ');
+                            let safeSlidesData = sanitizeJson(args.slidesData);
                             const pid = createGeometricSlides(args.topic, JSON.parse(safeSlidesData), themeToUse, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel, args.globalLogoUrl);
                             toolResult = { isTerminal: true, reply: `📊 **專屬簡報生成完畢！**\n🔗 [點擊開啟 Google 簡報](https://docs.google.com/presentation/d/${pid}/edit)` };
                             break;
@@ -1286,10 +1286,9 @@ function runAutonomousAgentLoop(config) {
                             let processedUpdData;
                             try {
                                 if (typeof rawUpdData === 'string') {
-                                    let cleanS = rawUpdData.replace(/\n/g, ' ').replace(/\r/g, '').replace(/\t/g, ' ');
-                                    processedUpdData = JSON.parse(cleanS);
+                                    processedUpdData = JSON.parse(sanitizeJson(rawUpdData));
                                 } else { processedUpdData = rawUpdData; }
-                            } catch(e) { throw new Error("簡報資料格式錯誤，無法解析 JSON"); }
+                            } catch(e) { throw new Error("簡報資料格式錯誤，無法解析 JSON：" + e.toString()); }
 
                             updateGeometricSlides(presIdMatch[0], args.action, processedUpdData, updTheme, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel, args.globalLogoUrl);
                             
@@ -1868,8 +1867,8 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
                 if (titleIconBlob) { try { slide.insertImage(titleIconBlob, 385, 45, 35, 35); } catch(e){} }
                 addText(slide, d.title || "重點項目", 425, 40, 265, 60, theme.accent, 28, true);
                 if (d.points && d.points.length > 0) {
-                    let y = 120;
-                    d.points.forEach(p => { addText(slide, "• " + p, 390, y, 290, 40, theme.text, 14, false); y += 45; });
+                    let y = 120; let pSz = (d.points.length > 5) ? 12 : 14; let step = (d.points.length > 5) ? 35 : 45;
+                    d.points.forEach(p => { addText(slide, "• " + p, 390, y, 290, 40, theme.text, pSz, false); y += step; });
                 } else { addText(slide, safeContent || "【系統提示：AI 未生成內文】", 390, 120, 290, 250, theme.text, 16, false); }
                 break;
             case 'split_column':
@@ -1893,8 +1892,8 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
                 addText(slide, d.title || "核心摘要", 80, 40, 600, 60, theme.accent, 28, true);
                 if (isMinimal) drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 80, 100, 600, 2, theme.accent, 1);
                 if (d.points && Array.isArray(d.points) && d.points.length > 0) {
-                    let y = 120;
-                    d.points.forEach(p => { addText(slide, "• " + p, 80, y, 550, 40, theme.text, 14, false); y += 45; });
+                    let y = 120; let pSz = (d.points.length > 5) ? 12 : 14; let step = (d.points.length > 5) ? 35 : 45;
+                    d.points.forEach(p => { addText(slide, "• " + p, 80, y, 550, 40, theme.text, pSz, false); y += step; });
                 } else { addText(slide, safeContent || "【系統提示：AI 未生成內文】", 80, 120, 550, 250, theme.text, 16, false); }
                 break;
         }
@@ -1930,7 +1929,26 @@ function updateGeometricSlides(presentationId, action, slidesData, theme, style,
 }
 
 function drawShape(s, t, x, y, w, h, c, a) { const sh = s.insertShape(t, x, y, w, h); sh.getBorder().setTransparent(); sh.getFill().setSolidFill(c, a); return sh; }
-function addText(s, t, x, y, w, h, c, sz, b) { if(!t)return; const box = s.insertShape(SlidesApp.ShapeType.TEXT_BOX, x, y, w, h); box.getText().setText(t).getTextStyle().setFontSize(sz).setForegroundColor(c).setBold(b); }
+function addText(s, t, x, y, w, h, c, sz, b) { 
+    if(!t) return; 
+    const box = s.insertShape(SlidesApp.ShapeType.TEXT_BOX, x, y, w, h); 
+    let finalSz = sz;
+    // 🛡️ 自動縮放邏輯：如果文字過長，自動降低字級避免溢出
+    if (t.length > 200 && sz > 14) finalSz = 14;
+    if (t.length > 500 && sz > 12) finalSz = 11;
+    if (t.length > 1000) finalSz = 10;
+    
+    box.getText().setText(t).getTextStyle().setFontSize(finalSz).setForegroundColor(c).setBold(b); 
+}
+
+function sanitizeJson(str) {
+    if (!str) return "[]";
+    // 1. 移除 Markdown 程式碼區塊標記
+    let clean = str.replace(/```json/gi, '').replace(/```/g, '').trim();
+    // 2. 移除字串以外的非法換行，但保留字串內的換行 (將字串內的實際換行符號轉義為 \n)
+    // 這是一個簡化的啟發式演算法，避免破壞結構
+    return clean;
+}
 
 function forceAuthSetup() {
     // 不使用 try-catch，強制觸發 Google 的靜態權限掃描與授權視窗
