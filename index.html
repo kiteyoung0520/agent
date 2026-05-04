@@ -116,7 +116,7 @@
             </button>
         </div>
         
-        <div id="session-list" class="flex-1 overflow-y-auto px-3 space-y-1 pb-4"></div>
+        <div id="session-list" class="flex-1 overflow-y-auto px-3 space-y-1 pb-4 min-h-0"></div>
         
         <div class="px-3 pb-4 border-t border-[#333] pt-4 shrink-0">
             <button onclick="toggleBookmarks()" class="w-full flex items-center justify-between px-3 mb-1 group cursor-pointer outline-none hover:bg-[#2a2b2f] p-2 rounded-lg transition-colors">
@@ -290,6 +290,16 @@
         let currentWorkspace = ""; 
         let currentImageData = null, currentMimeType = null, currentDocumentText = null, currentDocumentName = null, currentYouTubeId = null;
         let isWaiting = false, currentRenderCode = "", abortController = null, silenceTimer = null, currentGemsList = []; 
+        window.sharedKnowledgeSet = new Set();
+
+        // ⚙️ 全域設定狀態 (Persistent Settings)
+        const settings = {
+            drawMode: localStorage.getItem('drawMode') === 'true',
+            webSearch: localStorage.getItem('webSearch') === 'true',
+            autoImage: localStorage.getItem('autoImage') === 'true',
+            voiceOutput: localStorage.getItem('voiceOutput') === 'true',
+            continuousMode: localStorage.getItem('continuousMode') === 'true'
+        };
 
         const chatContainer = document.getElementById('chat-container'), 
               userInput = document.getElementById('user-input'), 
@@ -447,9 +457,9 @@
                 mode: 'edit_and_regenerate',
                 old_text: oldText, message: newText, session_id: currentSessionId, workspace: currentWorkspace,
                 file_data: null, mime_type: null, 
-                web_search: document.getElementById('web-search-toggle').checked, 
-                auto_image: document.getElementById('auto-image-toggle').checked, 
-                draw_mode: document.getElementById('draw-mode-toggle').checked, 
+                web_search: settings.webSearch, 
+                auto_image: settings.autoImage, 
+                draw_mode: settings.drawMode, 
                 youtube_id: null, 
                 gem_prompt: agp, gem_model: agm, selected_model: ms.value 
             };
@@ -496,9 +506,9 @@
             const payload = { 
                 message: pText, session_id: currentSessionId, workspace: currentWorkspace,
                 file_data: currentImageData ? currentImageData.split(',')[1] : null, mime_type: currentMimeType, 
-                web_search: document.getElementById('web-search-toggle').checked, 
-                auto_image: document.getElementById('auto-image-toggle').checked, 
-                draw_mode: document.getElementById('draw-mode-toggle').checked, 
+                web_search: settings.webSearch, 
+                auto_image: settings.autoImage, 
+                draw_mode: settings.drawMode, 
                 youtube_id: currentYouTubeId, 
                 gem_prompt: agp, gem_model: agm, selected_model: ms.value 
             };
@@ -844,17 +854,62 @@
                     </div>
                 `;
                 // 恢復 Checkbox 狀態
-                document.getElementById('draw-mode-toggle').checked = localStorage.getItem('drawMode') === 'true';
-                document.getElementById('web-search-toggle').checked = localStorage.getItem('webSearch') === 'true';
-                document.getElementById('auto-image-toggle').checked = localStorage.getItem('autoImage') === 'true';
-                document.getElementById('voice-output-toggle').checked = localStorage.getItem('voiceOutput') === 'true';
-                document.getElementById('continuous-mode-toggle').checked = localStorage.getItem('continuousMode') === 'true';
+                document.getElementById('draw-mode-toggle').checked = settings.drawMode;
+                document.getElementById('web-search-toggle').checked = settings.webSearch;
+                document.getElementById('auto-image-toggle').checked = settings.autoImage;
+                document.getElementById('voice-output-toggle').checked = settings.voiceOutput;
+                document.getElementById('continuous-mode-toggle').checked = settings.continuousMode;
 
                 // 綁定事件
-                ['draw-mode-toggle','web-search-toggle','auto-image-toggle','voice-output-toggle','continuous-mode-toggle'].forEach(id => {
-                    document.getElementById(id).onchange = (e) => localStorage.setItem(id.replace('-toggle',''), e.target.checked);
+                ['drawMode','webSearch','autoImage','voiceOutput','continuousMode'].forEach(key => {
+                    const id = key.replace(/[A-Z]/g, m => '-' + m.toLowerCase()) + '-toggle';
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.onchange = (e) => {
+                            settings[key] = e.target.checked;
+                            localStorage.setItem(key, e.target.checked);
+                        };
+                    }
                 });
             }
+        }
+
+        async function handleAddSource() {
+            const input = document.getElementById('source-input');
+            const url = input.value.trim();
+            if (!url) return;
+            const lid = appendLoading("正在抓取並分析來源...");
+            try {
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'add_source', workspace: currentWorkspace, url: url, title: url, type: url.includes('youtube.com') ? 'youtube' : 'web' }) });
+                const d = await res.json();
+                if (d.status === 'success') { input.value = ''; loadSources(); }
+            } catch (e) {} finally { removeLoading(lid); }
+        }
+
+        async function removeSource(id) {
+            if (!confirm("確定要移除此來源嗎？")) return;
+            try { await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'remove_source', workspace: currentWorkspace, source_id: id }) }); loadSources(); } catch (e) {}
+        }
+
+        async function toggleMessageSharing(text, element, isFromChat = true) {
+            try {
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'toggle_message_sharing', workspace: currentWorkspace, text: text }) });
+                const d = await res.json();
+                if (d.status === 'success') {
+                    if (isFromChat && element) {
+                        const prose = element.querySelector('.prose');
+                        if (d.shared) {
+                            prose.classList.add('shared-message');
+                            if (!prose.querySelector('.shared-badge')) prose.innerHTML += '<span class="shared-badge">專案共用</span>';
+                        } else {
+                            prose.classList.remove('shared-message');
+                            const badge = prose.querySelector('.shared-badge');
+                            if (badge) badge.remove();
+                        }
+                    }
+                    loadWorkspaceContext();
+                }
+            } catch (e) {}
         }
 
         function toggleRightPanel() {
