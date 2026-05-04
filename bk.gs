@@ -1805,7 +1805,8 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
             drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 640, 0, 80, 5, theme.accent, 0.8);
             drawShape(slide, SlidesApp.ShapeType.RIGHT_TRIANGLE, 0, 355, 50, 50, theme.shape, 0.3).setRotation(180);
         } else if (style === 'minimalist' || style === 'style1') {
-            drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 50, 400, 620, 1, theme.accent, 0.5);
+            // 修正：裝飾線移至標題下方，增加高級感
+            drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 80, 105, 560, 1, theme.accent, 0.5);
         } else if (style === 'dynamic' || style === 'style4') {
             drawShape(slide, SlidesApp.ShapeType.PARALLELOGRAM, 650, -50, 150, 550, theme.shape, 0.1).setRotation(15);
         } else if (style === 'hexagon' || style === 'style5') {
@@ -1839,18 +1840,19 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
             if (fullNotes.trim()) {
                 let targetShape = notesPage.getPlaceholder(SlidesApp.PlaceholderType.BODY);
                 if (!targetShape) {
-                    // 如果找不到 BODY 佔位符，尋找頁面上第一個形狀
                     let shapes = notesPage.getShapes();
                     if (shapes.length > 0) targetShape = shapes[0];
                 }
                 if (!targetShape) {
-                    // 最終手段：強制插入新文字框
                     targetShape = notesPage.insertShape(SlidesApp.ShapeType.TEXT_BOX, 50, 50, 600, 300);
                 }
                 
-                if (targetShape && targetShape.getText) {
-                    targetShape.getText().setText(fullNotes);
-                } else if (targetShape && targetShape.asShape) {
+                // 強制清空並重新寫入，確保內容不會累加或遺失
+                try {
+                    let textRange = targetShape.asShape().getText();
+                    textRange.setText(fullNotes);
+                } catch(e) {
+                    console.warn("備忘錄寫入重試", e);
                     targetShape.asShape().getText().setText(fullNotes);
                 }
             }
@@ -1960,16 +1962,31 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
             case 'split_column':
                 if (!isMinimal) drawShape(slide, mainShape, 0, 0, 50, 450, theme.accent, 1 * alphaMod);
                 if (titleIconBlob) { try { slide.insertImage(titleIconBlob, 40, 45, 35, 35); } catch(e){} }
-                addText(slide, d.title || "深度對比", 80, 40, 600, 60, theme.accent, 28, true);
-                if (isMinimal) drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 80, 100, 600, 2, theme.accent, 1);
-                if (!isMinimal) {
-                    drawShape(slide, mainShape, 80, 120, 280, 250, theme.shape, 0.2 * alphaMod);
-                    drawShape(slide, mainShape, 380, 120, 280, 250, theme.shape, 0.2 * alphaMod);
+                addText(slide, d.title || "深度對比", 80, 40, 560, 60, theme.accent, 26, true);
+                if (isMinimal) drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 80, 105, 560, 1, theme.accent, 0.5);
+                
+                // 智慧型切分邏輯
+                let leftTitle = "現況/左側", leftContent = "", rightTitle = "預期/右側", rightContent = "";
+                if (d.gridItems && d.gridItems.length >= 2) {
+                    leftTitle = d.gridItems[0].title || "左側"; leftContent = d.gridItems[0].content || "";
+                    rightTitle = d.gridItems[1].title || "右側"; rightContent = d.gridItems[1].content || "";
+                } else if (d.left || d.right) {
+                    leftContent = d.left || ""; rightContent = d.right || "";
+                } else if (d.content && d.content.includes('\n')) {
+                    let parts = d.content.split(/\n\n| v\.s\. | vs | VS /);
+                    if (parts.length >= 2) {
+                        leftContent = parts[0]; rightContent = parts[1];
+                    } else {
+                        leftContent = d.content; rightContent = "補充資料請見備忘錄";
+                    }
+                } else {
+                    leftContent = d.content || ""; rightContent = "更多細節請見備忘錄";
                 }
-                let leftText = d.left || (d.points && d.points[0] ? d.points[0] : (d.content ? d.content : "【左側內容】"));
-                let rightText = d.right || (d.points && d.points[1] ? d.points[1] : "【右側內容】");
-                addText(slide, leftText, 95, 135, 250, 220, theme.text, 16, false);
-                addText(slide, rightText, 395, 135, 250, 220, theme.text, 16, false);
+                
+                addText(slide, leftTitle, 95, 120, 260, 40, theme.accent, 18, true);
+                addText(slide, leftContent, 95, 170, 260, 200, theme.text, 14, false);
+                addText(slide, rightTitle, 385, 120, 260, 40, theme.accent, 18, true);
+                addText(slide, rightContent, 385, 170, 260, 200, theme.text, 14, false);
                 break;
             case 'standard_list':
             default:
