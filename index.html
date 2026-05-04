@@ -142,16 +142,16 @@
 <body class="flex h-screen overflow-hidden">
 
     <!-- 1. 極簡側邊欄 (anygen.io 模式) -->
-    <aside id="sidebar" class="group flex flex-col items-center py-6 shrink-0 z-40 overflow-hidden">
-        <div class="mb-8 flex items-center justify-center">
+    <aside id="sidebar" class="group flex flex-col items-center py-6 shrink-0 z-40 overflow-hidden bg-[#FAFAFA] border-r border-gray-100 w-16 hover:w-64 transition-all duration-300 h-full">
+        <div class="mb-8 flex items-center justify-center shrink-0">
             <div onclick="startNewSession()" class="w-10 h-10 rounded-2xl bg-black flex items-center justify-center group-hover:scale-110 transition-transform cursor-pointer shadow-lg active:scale-95" title="回到首頁">
                 <span class="material-symbols-rounded text-white">bolt</span>
             </div>
         </div>
 
-        <nav class="flex-1 flex flex-col gap-4 w-full px-3">
+        <nav class="flex-1 flex flex-col gap-2 w-full px-3 overflow-hidden">
             <!-- 🗂️ 專案空間切換 (Workspace) -->
-            <div class="px-3 mb-4 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div class="px-3 mb-4 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                 <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 block">專案記憶空間</label>
                 <div class="relative flex items-center mb-2">
                     <select id="workspace-selector" onchange="changeWorkspace()" class="w-full pl-3 pr-8 py-2 bg-white hover:bg-gray-50 text-black text-xs font-bold rounded-xl border border-gray-200 outline-none focus:border-black transition-all appearance-none cursor-pointer truncate">
@@ -164,20 +164,24 @@
                 </button>
             </div>
 
-            <button onclick="startNewSession()" class="flex items-center gap-4 p-3 rounded-2xl hover:bg-gray-100 transition-colors w-full group/item" title="新對話">
+            <button onclick="startNewSession()" class="flex items-center gap-4 p-3 rounded-2xl hover:bg-gray-100 transition-colors w-full group/item shrink-0" title="新對話">
                 <span class="material-symbols-rounded text-gray-500 group-hover/item:text-black">add</span>
                 <span class="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap font-medium text-sm">開啟新對話</span>
             </button>
-            <div class="h-px bg-gray-200 mx-3 my-2"></div>
-            <div id="session-list" class="flex-1 overflow-y-auto hide-scrollbar space-y-1"></div>
+            <div class="h-px bg-gray-200 mx-3 my-2 shrink-0"></div>
+            
+            <!-- 歷史對話列表 (The Scrollable Area) -->
+            <div id="session-list" class="flex-1 overflow-y-auto custom-scrollbar space-y-1 min-h-0 pr-1">
+                <!-- Session items will be inserted here -->
+            </div>
         </nav>
 
-        <div class="mt-auto flex flex-col gap-4 w-full px-3">
-            <button onclick="switchRightPanel('settings')" class="flex items-center gap-4 p-3 rounded-2xl hover:bg-gray-100 transition-colors w-full group/item" title="設定">
+        <div class="mt-auto flex flex-col gap-2 w-full px-3 shrink-0">
+            <button onclick="switchRightPanel('settings')" class="flex items-center gap-4 p-3 rounded-2xl hover:bg-gray-100 transition-colors w-full group/item" title="系統設定">
                 <span class="material-symbols-rounded text-gray-500 group-hover/item:text-black">settings</span>
                 <span class="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap font-medium text-sm">系統設定</span>
             </button>
-        </nav>
+        </div>
     </aside>
 
     <!-- 2. 主對話區 -->
