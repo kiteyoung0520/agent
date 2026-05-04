@@ -1131,10 +1131,11 @@
 
         // 偵測 AI 回覆中的 OUTLINE_DATA 標記 (注入到 appendMessage)
         function checkForOutlineData(text) {
-            const match = text.match(/<!--OUTLINE_DATA:(.*?)-->/);
+            // 使用 [\s\S]*? 以支援跨行 JSON 偵測
+            const match = text.match(/<!--OUTLINE_DATA:([\s\S]*?)-->/);
             if (match) {
                 try {
-                    const slides = JSON.parse(match[1]);
+                    const slides = JSON.parse(match[1].trim());
                     if (Array.isArray(slides) && slides.length > 0) {
                         setTimeout(() => openOutlineEditor(slides), 600);
                     }
