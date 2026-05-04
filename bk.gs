@@ -318,17 +318,27 @@ ${customRules}
 
 
 
+【🔧 專案開發場景 (納入 UPP 框架)】
+以下場景均適用「思維閉環」三部曲：先思考提案 → 徵詢同意 → 執行後稽核。
+
 [場景 A：建立新專案]
 當使用者要求「自動部署全端」、「做一個 App」時：
-1. 呼叫 \`create_database_sheet\` 建立資料庫，取得 \`sheetId\`。
-2. 呼叫 \`deploy_fullstack_matrix\`，利用 additionalFiles 參數傳遞您拆分好的模組檔案。系統會自動幫您建立 GitHub 專案與 CI/CD 腳本。
+1. **【思考】** 先說明你的技術架構選擇與潛在風險，徵得使用者同意。
+2. 呼叫 \`create_database_sheet\` 建立資料庫，取得 \`sheetId\`。
+3. 呼叫 \`deploy_fullstack_matrix\`，利用 additionalFiles 參數傳遞模組。
+4. **【稽核】** 部署後，嘗試訪問網頁確認正常，再回報結果。
 
 [場景 B：修改與熱更新已部署專案]
-當使用者要求「修改」時：絕對不要重新建立專案！請判斷只需修改哪個模組 (例如只改 \`frontend/components.js\`)，然後只呼叫 \`push_to_github\` 去精準覆寫該特定檔案，將破壞半徑降到最低。
+當使用者要求「修改」時：
+1. **【思考】** 先分析影響範圍，說明只需修改哪個模組，避免破壞其他功能。
+2. 僅呼叫 \`push_to_github\` 精準覆寫特定檔案，將破壞半徑降到最低。
+3. **【稽核】** 更新後訪問網頁，確認功能正常後才回報。
 
 [場景 C：災難復原 (Rollback)]
 當使用者反應「剛剛的更新壞了」、「畫面卡死」、「退回上一版」時：
-立刻呼叫 \`rollback_github_deployment\` 工具退回 Git 版本。退回成功後，請深呼吸，重新思考剛剛的邏輯哪裡有問題，並向使用者提出可能的錯誤原因與修正方案。
+1. **【思考】** 先分析可能的錯誤原因，說明你的回退計畫。
+2. 呼叫 \`rollback_github_deployment\` 退回 Git 版本。
+3. **【稽核 + 修正方案】** 回退後訪問網頁確認，並向使用者提出根本原因與預防方案。
 
 【📁 安全歸檔模式 (Safe Archive Assistant)】
 當使用者要求「整理資料夾」、「集中歸檔」多個未知檔案時，請呼叫 \`scan_and_prepare_archive\`。取得資料後，請【強制】使用以下 5 個標題回覆使用者（請原封不動使用標題字眼）：
@@ -1289,7 +1299,9 @@ function runAutonomousAgentLoop(config) {
                             
                             let safeSlidesData = sanitizeJson(args.slidesData);
                             const pid = createGeometricSlides(args.topic, JSON.parse(safeSlidesData), themeToUse, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel, args.globalLogoUrl, args.contentDensity || 'detailed');
-                            toolResult = { isTerminal: true, reply: `📊 **專屬簡報生成完畢！**\n🔗 [點擊開啟 Google 簡報](https://docs.google.com/presentation/d/${pid}/edit)` };
+                            const presUrl = `https://docs.google.com/presentation/d/${pid}/edit`;
+                            // 🟢 修復三：程式層面追加自我稽核提示，觸發 AI 執行 UPP 部曲三
+                            toolResult = { isTerminal: false, reply: `📊 **簡報已生成！**\n🔗 連結：${presUrl}\n\n🔍 **[系統稽核指令]** 請你立即呼叫 read_presentation 工具，讀取此簡報內容，驗證：(1)投影片頁數是否正確，(2)每頁備忘錄是否有內容。若發現問題，請直接呼叫 update_presentation 修復後再向使用者回報。`, presentationId: pid };
                             break;
                         case "update_presentation":
                             let presIdMatch = args.presentationUrl.match(/[-\w]{25,}/);
@@ -1831,22 +1843,27 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
             let fullNotes = (notesContent) + (citationText ? `\n\n📖 [來源溯源]:\n${citationText}` : "");
             
             if (fullNotes.trim()) {
+                // 🔴 修復一：優先使用 BODY 佔位符
                 let targetShape = notesPage.getPlaceholder(SlidesApp.PlaceholderType.BODY);
                 if (!targetShape) {
-                    let shapes = notesPage.getShapes();
-                    if (shapes.length > 0) targetShape = shapes[0];
+                    // 過濾掉 TITLE 類型，只取真正的備忘錄文字框
+                    let placeholders = notesPage.getPlaceholders();
+                    targetShape = placeholders.find(p => p.getPlaceholderType() !== SlidesApp.PlaceholderType.TITLE) || null;
                 }
                 if (!targetShape) {
-                    targetShape = notesPage.insertShape(SlidesApp.ShapeType.TEXT_BOX, 50, 50, 600, 300);
+                    // 終極回退：全新插入一個大型文字框
+                    targetShape = notesPage.insertShape(SlidesApp.ShapeType.TEXT_BOX, 18, 18, 684, 250);
                 }
                 
-                // 強制清空並重新寫入，確保內容不會累加或遺失
                 try {
-                    let textRange = targetShape.asShape().getText();
-                    textRange.setText(fullNotes);
-                } catch(e) {
-                    console.warn("備忘錄寫入重試", e);
                     targetShape.asShape().getText().setText(fullNotes);
+                    console.log(`✅ 備忘錄寫入成功，字數：${fullNotes.length}`);
+                } catch(e) {
+                    console.warn("備忘錄寫入失敗，嘗試插入新文字框", e);
+                    try {
+                        let fallbackBox = notesPage.insertShape(SlidesApp.ShapeType.TEXT_BOX, 18, 18, 684, 250);
+                        fallbackBox.asShape().getText().setText(fullNotes);
+                    } catch(e2) { console.error("備忘錄徹底失敗", e2); }
                 }
             }
             if (citationText) {
