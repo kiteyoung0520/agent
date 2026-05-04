@@ -256,16 +256,63 @@
         </div>
     </main>
 
-    <!-- 4. 右側圖書館面板 -->
-    <aside id="right-panel" class="fixed right-0 top-0 h-full w-[400px] bg-white border-l border-gray-100 shadow-2xl transform translate-x-full transition-transform duration-300 z-50 flex flex-col">
-        <div class="p-6 border-b border-gray-50 flex items-center justify-between">
+    <!-- 4. anyGem Workbench (右側工作台) -->
+    <aside id="right-panel" class="fixed right-0 top-0 h-full w-[500px] bg-white border-l border-gray-100 shadow-2xl transform translate-x-full transition-transform duration-300 z-50 flex flex-col">
+        <div class="p-6 border-b border-gray-50 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
             <div class="flex items-center gap-3">
-                <span class="material-symbols-rounded text-blue-500" id="panel-icon">inventory_2</span>
-                <h3 class="font-bold text-lg" id="panel-title">專案圖書館</h3>
+                <div id="workbench-status-dot" class="w-2 h-2 rounded-full bg-green-500"></div>
+                <h3 class="font-bold text-lg" id="panel-title">Workbench</h3>
             </div>
-            <button onclick="toggleRightPanel()" class="p-2 hover:bg-gray-100 rounded-full text-gray-400 transition-colors"><span class="material-symbols-rounded">close</span></button>
+            <div class="flex items-center gap-2">
+                <button onclick="toggleRightPanel()" class="p-2 hover:bg-gray-100 rounded-full text-gray-400 transition-colors"><span class="material-symbols-rounded">close</span></button>
+            </div>
         </div>
-        <div id="right-panel-content" class="flex-1 overflow-y-auto p-6 space-y-8"></div>
+
+        <!-- 標籤導航 -->
+        <div class="flex border-b border-gray-50 bg-gray-50/50">
+            <button onclick="switchWorkbenchTab('edit')" id="tab-edit" class="flex-1 py-3 text-xs font-bold border-b-2 border-black">編輯內容</button>
+            <button onclick="switchWorkbenchTab('thought')" id="tab-thought" class="flex-1 py-3 text-xs font-bold text-gray-400 border-b-2 border-transparent">思考過程</button>
+            <button onclick="switchWorkbenchTab('library')" id="tab-library" class="flex-1 py-3 text-xs font-bold text-gray-400 border-b-2 border-transparent">專案資源</button>
+        </div>
+
+        <div id="right-panel-content" class="flex-1 overflow-hidden flex flex-col">
+            <!-- 編輯區 -->
+            <div id="workbench-edit-area" class="flex-1 flex flex-col p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <span id="artifact-type-tag" class="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-md uppercase tracking-wider">Document Draft</span>
+                    <div class="flex gap-2">
+                        <button onclick="copyWorkbenchContent()" class="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400" title="複製"><span class="material-symbols-rounded text-sm">content_copy</span></button>
+                    </div>
+                </div>
+                <textarea id="workbench-editor" class="flex-1 w-full bg-transparent outline-none resize-none text-gray-800 leading-relaxed font-mono text-sm border border-dashed border-gray-100 p-4 rounded-2xl focus:border-blue-200 transition-all" placeholder="這裡將顯示 AI 生成的草稿，您可以直接在此處修改..."></textarea>
+                
+                <!-- 輸出動作區 -->
+                <div class="mt-6 pt-6 border-t border-gray-50 grid grid-cols-2 gap-3">
+                    <button onclick="exportToGoogleDoc()" class="flex items-center justify-center gap-2 py-3 bg-blue-600 text-white rounded-xl font-bold text-xs hover:bg-blue-700 transition-all shadow-md">
+                        <span class="material-symbols-rounded text-sm">description</span> 格式化輸出文件
+                    </button>
+                    <button onclick="exportToSlides()" class="flex items-center justify-center gap-2 py-3 bg-orange-500 text-white rounded-xl font-bold text-xs hover:bg-orange-600 transition-all shadow-md">
+                        <span class="material-symbols-rounded text-sm">present_to_all</span> 生成專業簡報
+                    </button>
+                </div>
+            </div>
+
+            <!-- 思考區 -->
+            <div id="workbench-thought-area" class="hidden flex-1 overflow-y-auto p-6 space-y-4">
+                <div class="flex items-center gap-3 text-blue-500 mb-4">
+                    <span class="material-symbols-rounded animate-spin">sync</span>
+                    <span class="text-sm font-bold">代理人正在思考中...</span>
+                </div>
+                <div id="thought-log" class="space-y-3 font-mono text-[11px] text-gray-500">
+                    <!-- 思考日誌將在這裡動態插入 -->
+                </div>
+            </div>
+
+            <!-- 圖書館 -->
+            <div id="workbench-library-area" class="hidden flex-1 overflow-y-auto p-6">
+                <div id="library-content" class="space-y-4"></div>
+            </div>
+        </div>
     </aside>
 
     <!-- 5. Artifact 預覽視窗 -->
@@ -370,6 +417,10 @@
             const lid = appendLoading();
             abortController = new AbortController();
 
+            // 開啟工作台並切換至思考區
+            openWorkbench('thought');
+            document.getElementById('thought-log').innerHTML = '<div class="text-blue-600">>>> 初始化代理人工作流...</div>';
+
             try {
                 const gemSelector = document.getElementById('gem-selector');
                 const modelSelector = document.getElementById('model-selector');
@@ -395,6 +446,16 @@
 
                 removeLoading(lid);
                 if (data.status === "error") throw new Error(data.error || "伺服器錯誤");
+                
+                // 處理思考過程
+                if (data.thoughts) {
+                    renderThoughts(data.thoughts);
+                }
+
+                // 處理 Artifact (工作台草稿)
+                if (data.artifact) {
+                    renderArtifact(data.artifact, data.artifact_type);
+                }
                 
                 if (data.reply) {
                     appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model);
@@ -531,11 +592,13 @@
                 list.innerHTML = '';
                 if (data.sessions) {
                     data.sessions.forEach(s => {
-                        item.className = `w-full flex items-center justify-between p-3 rounded-2xl transition-all group/session ${active ? 'bg-gray-100' : 'hover:bg-gray-50'}`;
+                        const item = document.createElement('div');
+                        const active = s.id === currentSessionId;
+                        item.className = `w-full flex items-center justify-between p-3 rounded-2xl transition-all group/session cursor-pointer ${active ? 'bg-gray-100' : 'hover:bg-gray-50'}`;
                         item.innerHTML = `
-                            <div class="flex items-center gap-4 min-w-0" onclick="switchSession('${s.id}', '${s.title}')">
+                            <div class="flex items-center gap-4 min-w-0 flex-1" onclick="switchSession('${s.id}', '${s.title}')">
                                 <span class="material-symbols-rounded text-gray-400 ${active ? 'text-black' : ''} text-[20px] shrink-0">${s.pinned ? 'push_pin' : 'chat'}</span>
-                                <span class="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap overflow-hidden text-ellipsis text-xs font-semibold ${active ? 'text-black' : 'text-gray-500'}">${s.title}</span>
+                                <span class="whitespace-nowrap overflow-hidden text-ellipsis text-xs font-semibold ${active ? 'text-black' : 'text-gray-500'}">${s.title}</span>
                             </div>
                             <button onclick="event.stopPropagation(); deleteSession('${s.id}')" class="opacity-0 group-hover/session:opacity-100 p-1.5 text-gray-400 hover:text-red-500 transition-opacity" title="刪除對話">
                                 <span class="material-symbols-rounded text-[16px]">delete</span>
@@ -693,59 +756,83 @@
             setTimeout(() => icon.innerText = 'content_copy', 2000);
         }
 
-        // 9. 右側面板控制
-        let currentRightTab = 'library';
+        // --- Workbench (工作台) 核心邏輯 ---
+        function openWorkbench(tab = 'edit') {
+            const panel = document.getElementById('right-panel');
+            panel.classList.remove('translate-x-full');
+            switchWorkbenchTab(tab);
+        }
+
         function toggleRightPanel() {
             const panel = document.getElementById('right-panel');
             panel.classList.toggle('translate-x-full');
         }
 
-        function switchRightPanel(tab) {
-            currentRightTab = tab;
-            const title = document.getElementById('panel-title');
-            const icon = document.getElementById('panel-icon');
-            const content = document.getElementById('right-panel-content');
+        function switchWorkbenchTab(tab) {
+            const tabs = ['edit', 'thought', 'library'];
+            tabs.forEach(t => {
+                document.getElementById(`workbench-${t}-area`).classList.add('hidden');
+                document.getElementById(`tab-${t}`).classList.replace('text-black', 'text-gray-400');
+                document.getElementById(`tab-${t}`).classList.replace('border-black', 'border-transparent');
+            });
+            document.getElementById(`workbench-${tab}-area`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).classList.replace('text-gray-400', 'text-black');
+            document.getElementById(`tab-${tab}`).classList.replace('border-transparent', 'border-black');
             
-            if (tab === 'library') {
-                title.innerText = '專案圖書館';
-                icon.innerText = 'inventory_2';
-                content.innerHTML = `<div class="p-8 text-center text-gray-400 italic">正在載入專案資料來源...</div>`;
-                loadSources();
-            } else {
-                title.innerText = '偏好設定';
-                icon.innerText = 'tune';
-                content.innerHTML = `
-                    <div class="space-y-6">
-                        <section>
-                            <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">核心模式</h4>
-                            <div class="space-y-3">
-                                <label class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl cursor-pointer hover:bg-gray-100 transition-colors">
-                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-blue-500">language</span><span class="text-sm font-bold">聯網搜尋模式</span></div>
-                                    <input type="checkbox" id="web-search-toggle" class="w-5 h-5 accent-black">
-                                </label>
-                                <label class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl cursor-pointer hover:bg-gray-100 transition-colors">
-                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-purple-500">palette</span><span class="text-sm font-bold">純繪圖模式</span></div>
-                                    <input type="checkbox" id="draw-mode-toggle" class="w-5 h-5 accent-black">
-                                </label>
-                            </div>
-                        </section>
-                        <section>
-                            <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">自動化工具</h4>
-                            <div class="space-y-3">
-                                <label class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl cursor-pointer hover:bg-gray-100 transition-colors">
-                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-pink-500">imagesmode</span><span class="text-sm font-bold">自動簡報配圖</span></div>
-                                    <input type="checkbox" id="auto-image-toggle" class="w-5 h-5 accent-black">
-                                </label>
-                                <label class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl cursor-pointer hover:bg-gray-100 transition-colors">
-                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-green-500">volume_up</span><span class="text-sm font-bold">語音自動播報</span></div>
-                                    <input type="checkbox" id="voice-output-toggle" class="w-5 h-5 accent-black">
-                                </label>
-                            </div>
-                        </section>
-                    </div>
-                `;
-            }
-            toggleRightPanel();
+            if (tab === 'library') loadSources();
+        }
+
+        function renderThoughts(thoughts) {
+            const container = document.getElementById('thought-log');
+            container.innerHTML = thoughts.map(t => `<div class="p-2 bg-gray-50 rounded-lg border-l-2 border-blue-200">
+                <span class="text-blue-500 font-bold">●</span> ${t}
+            </div>`).join('');
+        }
+
+        function renderArtifact(content, type) {
+            document.getElementById('workbench-editor').value = content;
+            document.getElementById('artifact-type-tag').innerText = type || 'Document Draft';
+            switchWorkbenchTab('edit');
+            
+            // 狀態點閃爍動畫
+            const dot = document.getElementById('workbench-status-dot');
+            dot.classList.add('animate-pulse');
+            setTimeout(() => dot.classList.remove('animate-pulse'), 3000);
+        }
+
+        function copyWorkbenchContent() {
+            const content = document.getElementById('workbench-editor').value;
+            navigator.clipboard.writeText(content);
+            alert("已複製工作台內容");
+        }
+
+        async function exportToGoogleDoc() {
+            const content = document.getElementById('workbench-editor').value;
+            if (!content) return alert("沒有內容可供輸出");
+            const lid = appendLoading("正在排版並更新至 Google 文件...");
+            try {
+                const data = await fetchGAS('export_to_doc', { content, workspace: currentWorkspace });
+                removeLoading(lid);
+                if (data.url) window.open(data.url, '_blank');
+                else alert("輸出完成");
+            } catch (e) { removeLoading(lid); alert("輸出失敗"); }
+        }
+
+        async function exportToSlides() {
+            const content = document.getElementById('workbench-editor').value;
+            if (!content) return alert("沒有內容可供生成簡報");
+            const lid = appendLoading("正在生成專業簡報...");
+            try {
+                const data = await fetchGAS('export_to_slides', { content, workspace: currentWorkspace });
+                removeLoading(lid);
+                if (data.url) window.open(data.url, '_blank');
+                else alert("簡報生成完成");
+            } catch (e) { removeLoading(lid); alert("生成失敗"); }
+        }
+
+        // 修改原本的 switchRightPanel 相容工作台
+        function switchRightPanel(tab) {
+            openWorkbench(tab);
         }
 
         async function loadSources() {
