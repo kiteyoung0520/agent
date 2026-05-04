@@ -222,7 +222,7 @@ const AGENT_TOOLS = [{
         { name: "update_google_sheet", description: "【修改資料】修改或更新指定的 Google Sheet 試算表特定範圍內的資料。當使用者要求「更新」、「修改」某特定欄位或整行資料時呼叫此工具。", parameters: { type: "OBJECT", properties: { sheetUrl: { type: "STRING", description: "要修改的試算表完整網址。" }, sheetName: { type: "STRING", description: "工作表(頁籤)名稱" }, range: { type: "STRING", description: "要更新的起始儲存格範圍，例如 'A2' 或 'B5:D5'" }, content: { type: "STRING", description: "要更新的新資料，請強制輸出符合標準的 JSON 陣列字串，務必使用「雙引號」。例如: [[\"已修改的A\", \"已修改的B\"]]" } }, required: ["sheetUrl", "sheetName", "range", "content"] } },
 
         { name: "generate_art", description: "【強制呼叫】當使用者要求「畫圖」、「生成圖片」時，請務必呼叫此工具。", parameters: { type: "OBJECT", properties: { prompt: { type: "STRING", description: "詳細的英文畫面描述" }, aspectRatio: { type: "STRING", description: "比例: 1:1, 16:9, 4:3, 3:4 之一" } }, required: ["prompt"] } },
-        { name: "query_knowledge_base", description: "搜尋專屬知識庫 (NotebookLM)。", parameters: { type: "OBJECT", properties: { query: { type: "STRING" } }, required: ["query"] } },
+        { name: "query_knowledge_base", description: "【深度知識檢索】搜尋專案專屬知識庫資料夾中的文件。當需要引用專業文獻、公司手冊或特定專案背景資料時，請呼叫此工具。系統將自動在 Settings 中指定的 KNOWLEDGE_BASE_FOLDER_ID 資料夾內進行全文檢索。", parameters: { type: "OBJECT", properties: { query: { type: "STRING", description: "搜尋關鍵字，例如 '咖啡沖煮標準' 或 '專案時程表'" } }, required: ["query"] } },
         
         { 
             name: "read_presentation", 
@@ -295,6 +295,11 @@ function getSuperAgentPrompt(wsName, customRules) {
 
 【🗂️ 專案記憶隔離 (Workspace)】
 您目前正處於『${wsName}』的專案空間中。請針對此空間的脈絡進行連貫性對話。
+
+【📚 知識庫引用規範 (Citations)】
+1. 當你受命製作專業簡報或撰寫文件時，在「部曲一：互動提案」之前，你必須先呼叫 \`query_knowledge_base\` 工具。
+2. 你必須將從知識庫中搜尋到的真實文件標題，填入簡報 JSON (slidesData) 的 \`citations\` 欄位中。
+3. 嚴禁編造虛假引用，若知識庫中無相關內容，請在提案中誠實說明。
 
 【🌟 全格式讀取能力宣告 (Anti-Refusal Protocol)】
 你已獲得系統底層的「最高讀取授權」！當使用者貼上任何網址（包含 Google Drive、Google Docs、Google Slides、一般網頁）並要求閱讀、總結或搜尋時，你「絕對具備」讀取權限。
@@ -984,7 +989,37 @@ function runAutonomousAgentLoop(config) {
                                 };
                             } catch(e) { toolResult = { status: "error", error_message: `搜尋失敗: ${e.toString()}` }; }
                             break;
-                            
+
+                        case "query_knowledge_base":
+                            try {
+                                const kbFolderId = config.configData.KNOWLEDGE_BASE_FOLDER_ID;
+                                if (!kbFolderId) {
+                                    toolResult = { status: "warning", reply: "⚠️ 尚未在 Settings 中設定 KNOWLEDGE_BASE_FOLDER_ID。請先設定資料夾 ID 以啟用知識庫檢索。" };
+                                    break;
+                                }
+                                
+                                let kbFolder;
+                                try { kbFolder = DriveApp.getFolderById(kbFolderId); } catch(e) { throw new Error("無效的資料夾 ID，請確認權限與 ID 正確性。"); }
+                                
+                                let safeQuery = args.query.replace(/'/g, "\\'");
+                                let filesIter = kbFolder.searchFiles(`fullText contains '${safeQuery}' and trashed = false`);
+                                let kbResults = [];
+                                let kbLimit = 3; // 僅讀取前 3 個最相關的文件以節省 Tokens
+                                
+                                while (filesIter.hasNext() && kbResults.length < kbLimit) {
+                                    let f = filesIter.next();
+                                    let contentSnippet = extractTextFromAnyFile(f, config.apiKey).substring(0, 5000);
+                                    kbResults.push(`[文件名稱: ${f.getName()}]\n[內容摘要]: ${contentSnippet}`);
+                                }
+                                
+                                if (kbResults.length === 0) {
+                                    toolResult = { status: "success", reply: "在指定知識庫中未找到與關鍵字相關的文件。", data: [] };
+                                } else {
+                                    toolResult = { status: "success", data: kbResults.join("\n\n---\n\n") };
+                                }
+                            } catch(e) { toolResult = { status: "error", error_message: `知識庫查詢失敗: ${e.toString()}` }; }
+                            break;
+                             
                         case "scan_and_prepare_archive":
                             try {
                                 let safeKw = args.keyword.replace(/'/g, "\\'");
