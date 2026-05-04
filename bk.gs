@@ -264,7 +264,7 @@ const AGENT_TOOLS = [{
                     shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist', 'rounded', 'cyber', 'dynamic', 'layered' 擇一。" }, 
                     globalLogoUrl: { type: "STRING", description: "【標誌】可選。公司或品牌的 Logo 圖片網址。" },
                     contentDensity: { type: "STRING", description: "內容密度: 'brief', 'detailed', 'full'。" },
-                    slidesData: { type: "STRING", description: "要新增或覆寫的簡報 JSON 陣列。⚠️ 嚴禁省略：必須包含所有頁面的完整內容。此工具應在「大綱確認階段」之後才執行。" } 
+                    slidesData: { type: "STRING", description: "要新增或覆寫的簡報 JSON 陣列。⚠️ 嚴禁省略：必須包含所有頁面的完整內容。" } 
                 }, 
                 required: ["presentationUrl", "action", "slidesData"] 
             } 
@@ -369,8 +369,12 @@ ${customRules}
 - **Full (完整)**：資訊密集，多使用雙欄 (split_column)，備忘錄字數必須達 500 字以上。適合：研究報告、教育訓練。
 
 階段二：視覺設計與生成 (Layout & Generation Stage)
-1. 僅在使用者說「好」、「可以」、「確認」或針對大綱、風格給出具體修改建議後，才正式呼叫 'create_presentation'。
-2. 生成時，務必將第一階段討論的深度內容完整填入 'speakerNotes'，不可縮水。`;
+1. 僅在使用者說「好」、「可以」、「確認」或針對大綱、風格給出具體修改建議後，你必須【先進行內部校對】，確認產出的參數完全符合第一階段討論的：
+   - 頁數與大綱邏輯。
+   - 內容密度 (字級與備忘錄深度)。
+   - 腳本 (PPT_TPL_) 與視覺風格 (Style)。
+2. 你應在回覆中簡短告知使用者：「已完成最終校對，確認符合討論格式，開始生成...」
+3. 正式呼叫 'create_presentation'，務必將第一階段討論的深度內容完整填入 'speakerNotes'，不可縮水。`;
 }
 
 
