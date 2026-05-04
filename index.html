@@ -177,7 +177,7 @@
         </nav>
 
         <div class="mt-auto flex flex-col gap-2 w-full px-3 shrink-0">
-            <button onclick="openSettingsModal()" class="flex items-center gap-4 p-3 rounded-2xl hover:bg-gray-100 transition-colors w-full group/item" title="系統設定">
+            <button onclick="switchRightPanel('settings')" class="flex items-center gap-4 p-3 rounded-2xl hover:bg-gray-100 transition-colors w-full group/item" title="系統設定">
                 <span class="material-symbols-rounded text-gray-500 group-hover/item:text-black">settings</span>
                 <span class="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap font-medium text-sm">系統設定</span>
             </button>
@@ -264,42 +264,6 @@
         </div>
     </main>
 
-    <!-- 4. 系統設定彈窗 (Settings Modal) -->
-    <div id="settings-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center bg-black/20 backdrop-blur-sm animate-in fade-in duration-300">
-        <div class="bg-white w-[500px] max-h-[80vh] rounded-[32px] shadow-2xl flex flex-col overflow-hidden border border-gray-100 scale-in-center">
-            <div class="p-6 border-b border-gray-50 flex items-center justify-between">
-                <h3 class="font-bold text-lg">系統設定</h3>
-                <button onclick="closeSettingsModal()" class="p-2 hover:bg-gray-100 rounded-full text-gray-400 transition-colors"><span class="material-symbols-rounded">close</span></button>
-            </div>
-            <div class="flex-1 overflow-y-auto p-8 space-y-6">
-                <!-- 設定內容 (從原本的工作台移入) -->
-                <div>
-                    <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Google Apps Script 網址</label>
-                    <input id="gas-url" type="text" class="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-100 focus:bg-white focus:border-black outline-none transition-all text-sm font-mono" placeholder="https://script.google.com/macros/s/...">
-                    <p class="mt-2 text-[10px] text-gray-400">請填入您部署的 Web App URL</p>
-                </div>
-                
-                <div class="pt-4 border-t border-gray-50">
-                    <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">模型偏好</label>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="p-3 rounded-xl border border-black bg-black text-white text-center cursor-pointer">
-                            <div class="text-xs font-bold">Gemini 1.5 Pro</div>
-                            <div class="text-[9px] opacity-70">高智慧 / 複雜任務</div>
-                        </div>
-                        <div class="p-3 rounded-xl border border-gray-100 text-center cursor-pointer hover:bg-gray-50 transition-all">
-                            <div class="text-xs font-bold">Gemini 1.5 Flash</div>
-                            <div class="text-[9px] text-gray-400">極速 / 簡單問答</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="pt-6">
-                    <button onclick="saveSettings()" class="w-full py-4 bg-black text-white rounded-2xl font-bold text-sm shadow-xl hover:scale-[1.02] active:scale-95 transition-all">儲存所有設定</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
             </div>
 
             <!-- 圖書館 -->
@@ -309,8 +273,57 @@
         </div>
     </aside>
 
-    <!-- 5. Artifact 預覽視窗 -->
-    <div id="preview-modal" class="fixed inset-0 z-[60] hidden flex-col">
+    <!-- 3. 系統設定彈窗 (Classic Mode Settings) -->
+    <div id="settings-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center bg-black/20 backdrop-blur-sm transition-all">
+        <div class="bg-white w-[400px] rounded-3xl shadow-2xl overflow-hidden border border-gray-100 animate-in fade-in zoom-in duration-300">
+            <div class="p-6 border-b border-gray-50 flex items-center justify-between">
+                <h3 class="font-bold text-lg flex items-center gap-2">
+                    <span class="material-symbols-rounded text-blue-500">settings</span> 系統偏好設定
+                </h3>
+                <button onclick="closeSettings()" class="p-2 hover:bg-gray-100 rounded-full text-gray-400 transition-colors"><span class="material-symbols-rounded">close</span></button>
+            </div>
+            
+            <div class="p-8 space-y-6">
+                <!-- 1. 聯網功能 -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="font-bold text-sm">聯網搜尋功能</div>
+                        <div class="text-[10px] text-gray-400">開啟後 AI 將具備即時網頁搜尋能力</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="setting-web-search" class="sr-only peer" onchange="saveSettings()">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <!-- 2. 簡報配圖模式 -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="font-bold text-sm">簡報自動配圖</div>
+                        <div class="text-[10px] text-gray-400">生成簡報時自動匹配高質感圖片</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="setting-slide-image" class="sr-only peer" checked onchange="saveSettings()">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                    </label>
+                </div>
+
+                <!-- 3. 對話風格 -->
+                <div>
+                    <label class="font-bold text-sm mb-2 block">對話回應風格</label>
+                    <select id="setting-chat-style" onchange="saveSettings()" class="w-full p-3 bg-gray-50 rounded-xl border border-transparent focus:bg-white focus:border-blue-500 text-xs font-bold outline-none transition-all">
+                        <option value="balanced">平衡模式 (建議)</option>
+                        <option value="creative">創意豐富 (較長)</option>
+                        <option value="precise">精簡精確 (短小)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="p-6 bg-gray-50 flex justify-center">
+                <button onclick="closeSettings()" class="px-8 py-2 bg-black text-white text-xs font-bold rounded-full hover:scale-105 active:scale-95 transition-all">完成設定</button>
+            </div>
+        </div>
+    </div>
         <div class="h-16 flex items-center justify-between px-8 border-b border-gray-100 bg-white/80 backdrop-blur-md">
             <div class="flex items-center gap-3">
                 <span class="material-symbols-rounded text-blue-500">deployed_code</span>
@@ -411,10 +424,6 @@
             const lid = appendLoading();
             abortController = new AbortController();
 
-            // 開啟工作台並切換至思考區
-            openWorkbench('thought');
-            document.getElementById('thought-log').innerHTML = '<div class="text-blue-600">>>> 初始化代理人工作流...</div>';
-
             try {
                 const gemSelector = document.getElementById('gem-selector');
                 const modelSelector = document.getElementById('model-selector');
@@ -433,23 +442,13 @@
                     selected_model: modelSelector.value,
                     gem_prompt: gemPrompt,
                     gem_model: gemModel,
-                    web_search: document.getElementById('web-search-toggle')?.checked || false,
-                    auto_image: document.getElementById('auto-image-toggle')?.checked || false,
-                    draw_mode: document.getElementById('draw-mode-toggle')?.checked || false
+                    web_search: userSettings.webSearch,
+                    auto_image: userSettings.slideImage,
+                    chat_style: userSettings.chatStyle
                 });
 
                 removeLoading(lid);
                 if (data.status === "error") throw new Error(data.error || "伺服器錯誤");
-                
-                // 處理思考過程
-                if (data.thoughts) {
-                    renderThoughts(data.thoughts);
-                }
-
-                // 處理 Artifact (工作台草稿)
-                if (data.artifact) {
-                    renderArtifact(data.artifact, data.artifact_type);
-                }
                 
                 if (data.reply) {
                     appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model);
@@ -756,27 +755,9 @@
             switchWorkbenchTab(tab);
         }
 
-        function openSettingsModal() {
-            document.getElementById('settings-modal').classList.remove('hidden');
-            document.getElementById('settings-modal').classList.add('flex');
-            // 讀取現有設定
-            const url = localStorage.getItem('gas_url');
-            if (url) document.getElementById('gas-url').value = url;
-        }
-
-        function closeSettingsModal() {
-            document.getElementById('settings-modal').classList.add('hidden');
-            document.getElementById('settings-modal').classList.remove('flex');
-        }
-
-        function saveSettings() {
-            const url = document.getElementById('gas-url').value;
-            if (!url) return alert("請輸入網址");
-            localStorage.setItem('gas_url', url);
-            GAS_URL = url;
-            alert("設定已儲存");
-            closeSettingsModal();
-            location.reload(); // 重新載入以套用設定
+        function toggleRightPanel() {
+            const panel = document.getElementById('right-panel');
+            panel.classList.toggle('translate-x-full');
         }
 
         function switchWorkbenchTab(tab) {
@@ -844,27 +825,41 @@
             }
         }
 
-        function renderArtifact(content, type) {
-            console.log("🎨 Rendering Artifact...");
-            document.getElementById('workbench-editor').value = content;
-            document.getElementById('artifact-type-tag').innerText = type || 'Workspace Draft';
-            
-            // 強制開啟工作台並切換至編輯區
-            const panel = document.getElementById('right-panel');
-            panel.classList.remove('translate-x-full');
-            switchWorkbenchTab('edit');
-            
-            // 狀態點閃爍動畫
-            const dot = document.getElementById('workbench-status-dot');
-            dot.classList.add('animate-pulse');
-            setTimeout(() => dot.classList.remove('animate-pulse'), 3000);
+        // --- 系統設定邏輯 (Modal Mode) ---
+        let userSettings = {
+            webSearch: false,
+            slideImage: true,
+            chatStyle: 'balanced'
+        };
+
+        function switchRightPanel(tab) {
+            if (tab === 'settings') {
+                document.getElementById('settings-modal').classList.remove('hidden');
+                // 同步 UI 狀態
+                document.getElementById('setting-web-search').checked = userSettings.webSearch;
+                document.getElementById('setting-slide-image').checked = userSettings.slideImage;
+                document.getElementById('setting-chat-style').value = userSettings.chatStyle;
+            }
         }
 
-        function copyWorkbenchContent() {
-            const content = document.getElementById('workbench-editor').value;
-            navigator.clipboard.writeText(content);
-            alert("已複製工作台內容");
+        function closeSettings() {
+            document.getElementById('settings-modal').classList.add('hidden');
         }
+
+        function saveSettings() {
+            userSettings.webSearch = document.getElementById('setting-web-search').checked;
+            userSettings.slideImage = document.getElementById('setting-slide-image').checked;
+            userSettings.chatStyle = document.getElementById('setting-chat-style').value;
+            console.log("⚙️ Settings saved:", userSettings);
+            // 可以在此透過 fetchGAS 同步到後端或 LocalStorage
+            localStorage.setItem('anyGem_Settings', JSON.stringify(userSettings));
+        }
+
+        // 初始化載入設定
+        window.addEventListener('load', () => {
+            const saved = localStorage.getItem('anyGem_Settings');
+            if (saved) userSettings = JSON.parse(saved);
+        });
 
         async function exportToGoogleDoc() {
             const content = document.getElementById('workbench-editor').value;
