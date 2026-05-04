@@ -448,6 +448,7 @@
             } else {
                 contentHtml += `
                     <div class="flex items-center gap-3 mt-4 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
+                        <button onclick="editMessage(this, \`${text.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)" class="p-2 text-gray-400 hover:text-blue-500 transition-colors" title="編輯"><span class="material-symbols-rounded text-[18px]">edit</span></button>
                         <button onclick="deleteMessage(this, '${role}', \`${text.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)" class="p-2 text-gray-400 hover:text-red-500 transition-colors" title="刪除"><span class="material-symbols-rounded text-[18px]">delete</span></button>
                     </div>
                 `;
@@ -783,6 +784,79 @@
                         target_role: role === 'ai' ? 'ai' : 'user' 
                     });
                 } catch (e) { console.error("Delete failed", e); }
+            }
+        }
+
+        function editMessage(btn, text) {
+            const block = btn.closest('.message-block');
+            const prose = block.querySelector('.prose');
+            const actions = block.querySelector('.flex.justify-end');
+            
+            prose.classList.add('hidden');
+            actions.classList.add('hidden');
+
+            const editContainer = document.createElement('div');
+            editContainer.className = "w-full mt-2 flex flex-col gap-3";
+            editContainer.innerHTML = `
+                <textarea class="w-full p-4 bg-white border-2 border-blue-500 rounded-2xl outline-none text-lg min-h-[100px] shadow-inner">${text}</textarea>
+                <div class="flex justify-end gap-2">
+                    <button class="px-4 py-2 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-all" onclick="cancelEdit(this)">取消</button>
+                    <button class="px-6 py-2 text-sm font-bold bg-black text-white rounded-xl shadow-lg hover:scale-105 active:scale-95 transition-all" onclick="saveAndRegenerate(this, \`${text.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">儲存並重新發送</button>
+                </div>
+            `;
+            block.appendChild(editContainer);
+        }
+
+        function cancelEdit(btn) {
+            const block = btn.closest('.message-block');
+            block.querySelector('.prose').classList.remove('hidden');
+            block.querySelector('.flex.justify-end').classList.remove('hidden');
+            btn.closest('div.flex-col').remove();
+        }
+
+        async function saveAndRegenerate(btn, oldText) {
+            const block = btn.closest('.message-block');
+            const newText = block.querySelector('textarea').value.trim();
+            if (!newText) return;
+
+            // 刪除此訊息之後的所有訊息
+            let curr = block;
+            while (curr.nextElementSibling) {
+                curr.nextElementSibling.remove();
+            }
+            block.remove();
+
+            // 呼叫後端進行編輯與重新生成
+            await sendEditAndRegenerate(oldText, newText);
+        }
+
+        async function sendEditAndRegenerate(oldText, newText) {
+            appendMessage('user', newText);
+            toggleSendButton(true);
+            const lid = appendLoading("正在重新生成...");
+            
+            try {
+                const modelSelector = document.getElementById('model-selector');
+                const data = await fetchGAS('edit_and_regenerate', {
+                    old_text: oldText,
+                    message: newText,
+                    session_id: currentSessionId,
+                    workspace: currentWorkspace,
+                    selected_model: modelSelector.value
+                });
+
+                removeLoading(lid);
+                if (data.status === "error") throw new Error(data.error || "伺服器錯誤");
+                if (data.reply) {
+                    appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model);
+                    speakText(data.reply, true);
+                }
+                loadSessions();
+            } catch (err) {
+                removeLoading(lid);
+                appendMessage('ai', `❌ 重新生成失敗：\n${err.message}`);
+            } finally {
+                toggleSendButton(false);
             }
         }
 
