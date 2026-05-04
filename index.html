@@ -387,7 +387,10 @@
                     mime_type: currentMimeType,
                     selected_model: modelSelector.value,
                     gem_prompt: gemPrompt,
-                    gem_model: gemModel
+                    gem_model: gemModel,
+                    web_search: document.getElementById('web-search-toggle')?.checked || false,
+                    auto_image: document.getElementById('auto-image-toggle')?.checked || false,
+                    draw_mode: document.getElementById('draw-mode-toggle')?.checked || false
                 });
 
                 removeLoading(lid);
@@ -439,6 +442,13 @@
                     <div class="flex items-center gap-3 mt-6 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onclick="copyText(this)" class="p-2 text-gray-400 hover:text-black transition-colors" title="複製"><span class="material-symbols-rounded text-[18px]">content_copy</span></button>
                         <button onclick="speakMessage(this)" class="p-2 text-gray-400 hover:text-green-500 transition-colors" title="朗讀"><span class="material-symbols-rounded text-[18px]">volume_up</span></button>
+                        <button onclick="deleteMessage(this, '${role}', \`${text.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)" class="p-2 text-gray-400 hover:text-red-500 transition-colors" title="刪除"><span class="material-symbols-rounded text-[18px]">delete</span></button>
+                    </div>
+                `;
+            } else {
+                contentHtml += `
+                    <div class="flex items-center gap-3 mt-4 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
+                        <button onclick="deleteMessage(this, '${role}', \`${text.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)" class="p-2 text-gray-400 hover:text-red-500 transition-colors" title="刪除"><span class="material-symbols-rounded text-[18px]">delete</span></button>
                     </div>
                 `;
             }
@@ -703,14 +713,32 @@
                 icon.innerText = 'tune';
                 content.innerHTML = `
                     <div class="space-y-6">
-                        <label class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl cursor-pointer">
-                            <span class="text-sm font-bold">自動簡報配圖</span>
-                            <input type="checkbox" id="auto-image-toggle" class="w-5 h-5 accent-black">
-                        </label>
-                        <label class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl cursor-pointer">
-                            <span class="text-sm font-bold">語音自動播報</span>
-                            <input type="checkbox" id="voice-output-toggle" class="w-5 h-5 accent-black">
-                        </label>
+                        <section>
+                            <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">核心模式</h4>
+                            <div class="space-y-3">
+                                <label class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl cursor-pointer hover:bg-gray-100 transition-colors">
+                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-blue-500">language</span><span class="text-sm font-bold">聯網搜尋模式</span></div>
+                                    <input type="checkbox" id="web-search-toggle" class="w-5 h-5 accent-black">
+                                </label>
+                                <label class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl cursor-pointer hover:bg-gray-100 transition-colors">
+                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-purple-500">palette</span><span class="text-sm font-bold">純繪圖模式</span></div>
+                                    <input type="checkbox" id="draw-mode-toggle" class="w-5 h-5 accent-black">
+                                </label>
+                            </div>
+                        </section>
+                        <section>
+                            <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">自動化工具</h4>
+                            <div class="space-y-3">
+                                <label class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl cursor-pointer hover:bg-gray-100 transition-colors">
+                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-pink-500">imagesmode</span><span class="text-sm font-bold">自動簡報配圖</span></div>
+                                    <input type="checkbox" id="auto-image-toggle" class="w-5 h-5 accent-black">
+                                </label>
+                                <label class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl cursor-pointer hover:bg-gray-100 transition-colors">
+                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-green-500">volume_up</span><span class="text-sm font-bold">語音自動播報</span></div>
+                                    <input type="checkbox" id="voice-output-toggle" class="w-5 h-5 accent-black">
+                                </label>
+                            </div>
+                        </section>
                     </div>
                 `;
             }
@@ -742,6 +770,21 @@
         }
         function closePreview() { document.getElementById('preview-modal').classList.add('hidden'); }
         function refreshPreview() { document.getElementById('preview-iframe').contentWindow.location.reload(); }
+
+        async function deleteMessage(btn, role, text) {
+            if (confirm("確定要刪除這則訊息嗎？\n(刪除後系統將徹底忘記這段對話)")) {
+                const block = btn.closest('.message-block');
+                block.remove();
+                try {
+                    await fetchGAS('delete_message', { 
+                        session_id: currentSessionId, 
+                        workspace: currentWorkspace, 
+                        target_text: text, 
+                        target_role: role === 'ai' ? 'ai' : 'user' 
+                    });
+                } catch (e) { console.error("Delete failed", e); }
+            }
+        }
 
         // 語音播放簡化
         function speakText(text, auto = false) {
