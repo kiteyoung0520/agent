@@ -140,7 +140,7 @@
     <!-- 1. 極簡側邊欄 (anygen.io 模式) -->
     <aside id="sidebar" class="group flex flex-col items-center py-6 shrink-0 z-40 overflow-hidden">
         <div class="mb-8 flex items-center justify-center">
-            <div class="w-10 h-10 rounded-2xl bg-black flex items-center justify-center group-hover:scale-110 transition-transform cursor-pointer">
+            <div onclick="startNewSession()" class="w-10 h-10 rounded-2xl bg-black flex items-center justify-center group-hover:scale-110 transition-transform cursor-pointer shadow-lg active:scale-95" title="回到首頁">
                 <span class="material-symbols-rounded text-white">bolt</span>
             </div>
         </div>
@@ -590,23 +590,22 @@
                 const data = await fetchGAS('get_session_list', { mode: 'system', workspace: currentWorkspace });
                 const list = document.getElementById('session-list');
                 list.innerHTML = '';
-                if (data.sessions) {
                     data.sessions.forEach(s => {
                         const item = document.createElement('div');
                         const active = s.id === currentSessionId;
                         item.className = `w-full flex items-center justify-between p-3 rounded-2xl transition-all group/session cursor-pointer ${active ? 'bg-gray-100' : 'hover:bg-gray-50'}`;
+                        item.onclick = () => switchSession(s.id, s.title);
                         item.innerHTML = `
-                            <div class="flex items-center gap-4 min-w-0 flex-1" onclick="switchSession('${s.id}', '${s.title}')">
+                            <div class="flex items-center gap-4 min-w-0 flex-1 pointer-events-none">
                                 <span class="material-symbols-rounded text-gray-400 ${active ? 'text-black' : ''} text-[20px] shrink-0">${s.pinned ? 'push_pin' : 'chat'}</span>
                                 <span class="whitespace-nowrap overflow-hidden text-ellipsis text-xs font-semibold ${active ? 'text-black' : 'text-gray-500'}">${s.title}</span>
                             </div>
-                            <button onclick="event.stopPropagation(); deleteSession('${s.id}')" class="opacity-0 group-hover/session:opacity-100 p-1.5 text-gray-400 hover:text-red-500 transition-opacity" title="刪除對話">
+                            <button onclick="event.stopPropagation(); deleteSession('${s.id}')" class="opacity-0 group-hover/session:opacity-100 p-1.5 text-gray-400 hover:text-red-500 transition-opacity z-20" title="刪除對話">
                                 <span class="material-symbols-rounded text-[16px]">delete</span>
                             </button>
                         `;
                         list.appendChild(item);
                     });
-                }
             } catch (e) {}
         }
 
@@ -790,8 +789,13 @@
         }
 
         function renderArtifact(content, type) {
+            console.log("🎨 Rendering Artifact...");
             document.getElementById('workbench-editor').value = content;
-            document.getElementById('artifact-type-tag').innerText = type || 'Document Draft';
+            document.getElementById('artifact-type-tag').innerText = type || 'Workspace Draft';
+            
+            // 強制開啟工作台並切換至編輯區
+            const panel = document.getElementById('right-panel');
+            panel.classList.remove('translate-x-full');
             switchWorkbenchTab('edit');
             
             // 狀態點閃爍動畫
