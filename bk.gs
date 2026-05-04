@@ -245,7 +245,8 @@ const AGENT_TOOLS = [{
                     topic: { type: "STRING", description: "簡報核心主題" }, 
                     customColors: { type: "STRING", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。請依主題氛圍自主調配。" }, 
                     shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist' (極簡), 'rounded' (圓角), 'cyber' (銳角/科技), 'dynamic' (斜切/活力), 'layered' (疊層/深邃)。" }, 
-                    slidesData: { type: "STRING", description: "簡報 JSON 陣列。格式：[{layout: 'cover|title_only|standard_list|split_column|image_right|image_left|icon_grid|timeline|big_data', title: '標題', content: '內文', points: ['重點'], left: '左欄', right: '右欄', value: '大數據值', imageKeyword: '英文生圖提示詞', gridItems: [{title:'標題', content:'內容', iconKeyword:'圖標關鍵字'}]}]。⚠️請根據內容特徵挑選最佳 layout：如果是數據則用 big_data，如果是歷程則用 timeline，如果是對比則用 split_column。" } 
+                    globalLogoUrl: { type: "STRING", description: "【標誌】可選。公司或品牌的 Logo 圖片網址，若提供則會出現在每頁角落。" },
+                    slidesData: { type: "STRING", description: "簡報 JSON 陣列。格式：[{layout: 'cover|title_only|standard_list|split_column|image_right|image_left|icon_grid|timeline|big_data', title: '標題', content: '內文', points: ['重點'], titleIconKeyword: '標題旁的小圖標關鍵字(英文)', imageKeyword: '背景/主圖生圖提示詞(英文)', gridItems: [{title:'標題', content:'內容', iconKeyword:'圖標關鍵字'}]}]。⚠️請務必為每一頁產出 titleIconKeyword 以增加視覺層次感。" } 
                 }, 
                 required: ["topic", "customColors", "shapeStyle", "slidesData"] 
             } 
@@ -260,7 +261,8 @@ const AGENT_TOOLS = [{
                     action: { type: "STRING", description: "'append' (附加投影片到最後) 或 'overwrite' (清空並重新繪製整份簡報)" }, 
                     customColors: { type: "STRING", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。" }, 
                     shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist', 'rounded', 'cyber', 'dynamic', 'layered' 擇一。" }, 
-                    slidesData: { type: "STRING", description: "要新增或覆寫的簡報 JSON 陣列。格式同 create_presentation。" } 
+                    globalLogoUrl: { type: "STRING", description: "【標誌】可選。公司或品牌的 Logo 圖片網址。" },
+                    slidesData: { type: "STRING", description: "要新增或覆寫的簡報 JSON 陣列。格式同 create_presentation，請務必包含 titleIconKeyword。" } 
                 }, 
                 required: ["presentationUrl", "action", "slidesData"] 
             } 
@@ -1265,7 +1267,7 @@ function runAutonomousAgentLoop(config) {
                             } catch(e) { console.error("顏色解析失敗", e); }
                             
                             let safeSlidesData = args.slidesData.replace(/\n/g, ' ').replace(/\r/g, '').replace(/\t/g, ' ');
-                            const pid = createGeometricSlides(args.topic, JSON.parse(safeSlidesData), themeToUse, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel);
+                            const pid = createGeometricSlides(args.topic, JSON.parse(safeSlidesData), themeToUse, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel, args.globalLogoUrl);
                             toolResult = { isTerminal: true, reply: `📊 **專屬簡報生成完畢！**\n🔗 [點擊開啟 Google 簡報](https://docs.google.com/presentation/d/${pid}/edit)` };
                             break;
                         case "update_presentation":
@@ -1289,7 +1291,7 @@ function runAutonomousAgentLoop(config) {
                                 } else { processedUpdData = rawUpdData; }
                             } catch(e) { throw new Error("簡報資料格式錯誤，無法解析 JSON"); }
 
-                            updateGeometricSlides(presIdMatch[0], args.action, processedUpdData, updTheme, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel);
+                            updateGeometricSlides(presIdMatch[0], args.action, processedUpdData, updTheme, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel, args.globalLogoUrl);
                             
                             let actionVerb = (String(args.action).toLowerCase().trim() === 'overwrite') ? "覆寫" : "擴充";
                             toolResult = { isTerminal: true, reply: `📊 **簡報${actionVerb}完畢！**\n\n已成功將 ${processedUpdData.length} 頁內容同步至簡報中。\n🔗 [點擊開啟驗證](https://docs.google.com/presentation/d/${presIdMatch[0]}/edit)` };
@@ -1747,12 +1749,31 @@ function fetchIconImage(keyword, colorHex, bgHex) {
     try { let cleanColor = colorHex.replace('#', ''); let bgClean = bgHex.replace('#', ''); let safeKeyword = encodeURIComponent(keyword.trim().split(' ')[0] || "star"); let url = `https://img.icons8.com/ios-filled/100/${cleanColor}/${safeKeyword}.png`; let res = UrlFetchApp.fetch(url, {muteHttpExceptions: true}); if(res.getResponseCode() === 200) return res.getBlob(); let fallbackUrl = `https://ui-avatars.com/api/?name=${safeKeyword}&background=${cleanColor}&color=${bgClean}&size=128&rounded=true&font-size=0.4`; let res2 = UrlFetchApp.fetch(fallbackUrl, {muteHttpExceptions: true}); if(res2.getResponseCode() === 200) return res2.getBlob(); } catch(e) {} return null;
 }
 
-function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel) {
+function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl) {
     let mainShape = SlidesApp.ShapeType.RECTANGLE; let coverShape = SlidesApp.ShapeType.ELLIPSE; let isMinimal = (style === 'minimalist'); let alphaMod = (style === 'layered') ? 0.3 : 1;
     if (style === 'rounded') { mainShape = SlidesApp.ShapeType.ROUND_RECTANGLE; coverShape = SlidesApp.ShapeType.ROUND_RECTANGLE; } else if (style === 'cyber') { mainShape = SlidesApp.ShapeType.RIGHT_TRIANGLE; coverShape = SlidesApp.ShapeType.RIGHT_TRIANGLE; } else if (style === 'dynamic') { mainShape = SlidesApp.ShapeType.PARALLELOGRAM; coverShape = SlidesApp.ShapeType.PARALLELOGRAM; }
 
+    let logoBlob = null;
+    if (globalLogoUrl) { try { logoBlob = UrlFetchApp.fetch(globalLogoUrl).getBlob(); } catch(e) { console.warn("Logo 下載失敗", e); } }
+
     slidesData.forEach((d, i) => {
         const slide = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK); slide.getBackground().setSolidFill(theme.bg);
+        
+        // --- 🎭 繪製裝飾線條與圖案 (Decorative Engine) ---
+        if (style === 'cyber') {
+            drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 710, 0, 10, 80, theme.accent, 0.8);
+            drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 640, 0, 80, 5, theme.accent, 0.8);
+            drawShape(slide, SlidesApp.ShapeType.RIGHT_TRIANGLE, 0, 355, 50, 50, theme.shape, 0.3).setRotation(180);
+        } else if (style === 'minimalist') {
+            drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 50, 400, 620, 1, theme.accent, 0.5);
+        } else if (style === 'dynamic') {
+            drawShape(slide, SlidesApp.ShapeType.PARALLELOGRAM, 650, -50, 150, 550, theme.shape, 0.1).setRotation(15);
+        } else if (style === 'layered') {
+            drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 10, 10, 700, 385, theme.shape, 0.05);
+        }
+
+        if (logoBlob) { try { slide.insertImage(logoBlob, 650, 20, 50, 50); } catch(e){} }
+
         let layoutType = (deck.getSlides().length === 1 && i === 0) ? 'cover' : (d.layout || 'standard_list');
         let imgBlob = null; let titleIconBlob = null; let keyword = d.imageKeyword || d.title || "presentation";
         const needsLargeImage = ['cover', 'image_right', 'image_left', 'image_top', 'image_bottom', 'profile_quote'].includes(layoutType);
@@ -1880,16 +1901,16 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
     });
 }
 
-function createGeometricSlides(topic, slidesData, theme, style, enableAutoImage, apiKey, artistModel) {
+function createGeometricSlides(topic, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl) {
     const deck = SlidesApp.create(`PPT: ${topic}`); 
     const slides = deck.getSlides(); if (slides.length > 0) slides[0].remove();
-    appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel);
+    appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl);
     deck.saveAndClose(); 
     try { DriveApp.getFileById(deck.getId()).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.EDIT); } catch(e) { console.error("權限設定失敗", e); }
     return deck.getId();
 }
 
-function updateGeometricSlides(presentationId, action, slidesData, theme, style, enableAutoImage, apiKey, artistModel) {
+function updateGeometricSlides(presentationId, action, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl) {
     const deck = SlidesApp.openById(presentationId);
     const safeAction = String(action || "").toLowerCase().trim();
     console.log(`[SlidesService] Action: ${safeAction}, ID: ${presentationId}, Slides: ${slidesData.length}`);
@@ -1899,11 +1920,11 @@ function updateGeometricSlides(presentationId, action, slidesData, theme, style,
         const slides = deck.getSlides();
         console.log(`[SlidesService] Overwriting... Removing ${slides.length - 1} old slides.`);
         slides.forEach(s => { if (s.getObjectId() !== tempSlide.getObjectId()) s.remove(); });
-        appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel);
+        appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl);
         tempSlide.remove(); 
     } else {
         console.log(`[SlidesService] Appending ${slidesData.length} new slides.`);
-        appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel);
+        appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl);
     }
     deck.saveAndClose();
 }
