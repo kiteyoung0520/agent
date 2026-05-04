@@ -1831,17 +1831,31 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
         // --- 📒 寫入講者備忘錄與來源溯源 (NotebookLM Style) ---
         try {
             const notesPage = slide.getNotesPage();
-            let fullNotes = (d.speakerNotes || "") + (d.citations ? `\n\n📖 [來源溯源]:\n${d.citations}` : "");
+            // 🛡️ 欄位自動相容處理
+            let notesContent = d.speakerNotes || d.speaker_notes || d.notes || "";
+            let citationText = d.citations || d.source || "";
+            let fullNotes = (notesContent) + (citationText ? `\n\n📖 [來源溯源]:\n${citationText}` : "");
+            
             if (fullNotes.trim()) {
-                let notesBody = notesPage.getPlaceholder(SlidesApp.PlaceholderType.BODY);
-                if (!notesBody) {
-                    // 如果找不到佔位符，建立一個新的文字框
-                    notesBody = notesPage.insertShape(SlidesApp.ShapeType.TEXT_BOX, 50, 50, 600, 300);
+                let targetShape = notesPage.getPlaceholder(SlidesApp.PlaceholderType.BODY);
+                if (!targetShape) {
+                    // 如果找不到 BODY 佔位符，尋找頁面上第一個形狀
+                    let shapes = notesPage.getShapes();
+                    if (shapes.length > 0) targetShape = shapes[0];
                 }
-                notesBody.asShape().getText().setText(fullNotes);
+                if (!targetShape) {
+                    // 最終手段：強制插入新文字框
+                    targetShape = notesPage.insertShape(SlidesApp.ShapeType.TEXT_BOX, 50, 50, 600, 300);
+                }
+                
+                if (targetShape && targetShape.getText) {
+                    targetShape.getText().setText(fullNotes);
+                } else if (targetShape && targetShape.asShape) {
+                    targetShape.asShape().getText().setText(fullNotes);
+                }
             }
-            if (d.citations) {
-                addText(slide, `Source: ${d.citations.substring(0, 40)}`, 480, 385, 230, 20, theme.accent, 8, false);
+            if (citationText) {
+                addText(slide, `Source: ${citationText.substring(0, 40)}`, 480, 385, 230, 20, theme.accent, 8, false);
             }
         } catch(e) { console.warn("備忘錄寫入失敗", e); }
 
@@ -2018,17 +2032,24 @@ function sanitizeJson(str) {
     // 1. 移除 Markdown 程式碼區塊標記
     let clean = str.replace(/```json/gi, '').replace(/```/g, '').trim();
     
-    // 2. 🛡️ 深度修復：處理 JSON 字串內部未轉義的換行符號
-    // 這能防止 AI 產出的 speakerNotes 因為包含換行而導致 JSON.parse 失敗
+    // 2. 🛡️ 深度修復：處理 JSON 字串內部未轉義的換行符號與特殊字元
     let result = "";
     let inQuotes = false;
     for (let i = 0; i < clean.length; i++) {
         let char = clean[i];
-        if (char === '"' && clean[i-1] !== '\\') {
+        // 偵測是否在引號內 (且非轉義引號)
+        if (char === '"' && (i === 0 || clean[i-1] !== '\\')) {
             inQuotes = !inQuotes;
         }
-        if (inQuotes && (char === '\n' || char === '\r')) {
-            result += "\\n"; // 將字串內的真實換行轉為 JSON 轉義換行
+        
+        if (inQuotes) {
+            if (char === '\n' || char === '\r') {
+                result += "\\n"; // 將實體換行轉為 JSON 轉義換行
+            } else if (char === '\t') {
+                result += "  ";
+            } else {
+                result += char;
+            }
         } else {
             result += char;
         }
