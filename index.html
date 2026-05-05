@@ -104,6 +104,17 @@
             
             header h1 { font-size: 1rem; }
             #mobile-title { font-size: 0.85rem; }
+
+            header {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 40;
+            }
+            #chat-container {
+                padding-top: calc(4.5rem + env(safe-area-inset-top)) !important;
+            }
         }
 
         /* Source Peek Overlay */
