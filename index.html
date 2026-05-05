@@ -3,347 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>anyGem Agent - Intelligence Redefined</title>
+    <title>anyGem - Super Agent (Ultimate Edition)</title>
     
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+    
     <style>
-        :root {
-            --sidebar-bg: #FAFAFA;
-            --chat-bg: #FFFFFF;
-            --text-primary: #1A1A1A;
-            --text-secondary: #5D5D5D;
-            --accent-blue: #007AFF;
-            --border-light: rgba(26, 26, 26, 0.1);
+        body { background-color: #131314; color: #e3e3e3; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #444; }
+        
+        .prose { max-width: 100%; word-break: break-word; overflow-wrap: break-word; }
+        .prose pre { background-color: #1e1e20; border-radius: 12px; padding: 1.25rem; overflow-x: auto; border: 1px solid #333; margin: 1.25rem 0; position: relative; max-width: 100%; }
+        .prose code { color: #f87171; background-color: rgba(255,255,255,0.1); padding: 0.2rem 0.4rem; border-radius: 6px; font-size: 0.85em; font-family: 'Fira Code', monospace; }
+        .prose a { color: #8ab4f8; text-decoration: underline; text-underline-offset: 4px; transition: color 0.2s; }
+        .prose h1, .prose h2, .prose h3 { color: #fff; margin-top: 1.75rem; margin-bottom: 0.75rem; font-weight: 600; line-height: 1.4; }
+        .prose h1 { font-size: 1.6em; }
+        .prose h2 { font-size: 1.4em; }
+        .prose h3 { font-size: 1.2em; }
+        .prose p, .prose ul, .prose ol { margin-bottom: 1.25rem; line-height: 1.8; }
+        .prose li { margin-bottom: 0.5rem; }
+        .prose img { max-width: 100%; border-radius: 0.75rem; height: auto; margin: 1rem 0; }
+
+        .typing-indicator span { animation: blink 1.4s infinite both; height: 5px; width: 5px; background-color: #888; border-radius: 50%; display: inline-block; margin: 0 2px; }
+        @keyframes blink { 0% { opacity: 0.2; } 20% { opacity: 1; } 100% { opacity: 0.2; } }
+
+        .active-session { background-color: #33353a; color: white; border-left: 4px solid #8ab4f8; }
+        .pinned-icon { transform: rotate(-45deg); color: #8ab4f8; }
+
+        thought_process { display: none; }
+        .shared-message { border-left: 4px solid #facc15 !important; background-color: rgba(250, 204, 21, 0.05) !important; }
+        .shared-badge { background: #facc15; color: #000; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-left: 8px; vertical-align: middle; }
+        .citation { color: #38bdf8; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+        .citation:hover { color: #7dd3fc; }
+
+        /* Right Panel & Resizer & Bottom Sheet for Mobile */
+        #right-panel { 
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s ease; 
+            border-left: 1px solid #333; 
+            position: relative; 
+            background: #1e1f22;
+        }
+        .right-panel-open #right-panel { transform: translateX(0); width: var(--right-panel-width, 340px); }
+        .right-panel-closed #right-panel { transform: translateX(100%); width: 0; border-left: none; }
+        
+        #right-panel-resizer { width: 4px; left: -2px; cursor: col-resize; z-index: 50; }
+        #right-panel-resizer::after { content: ""; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 2px; height: 32px; background: #444; border-radius: 1px; transition: background 0.2s; }
+        #right-panel-resizer:hover::after { background: #38bdf8; width: 4px; }
+
+        @media (max-width: 768px) {
+            #right-panel {
+                position: fixed;
+                bottom: 0;
+                right: 0;
+                left: 0;
+                width: 100% !important;
+                height: 85vh;
+                z-index: 100;
+                border-left: none;
+                border-top: 1px solid #333;
+                border-radius: 24px 24px 0 0;
+                transform: translateY(100%);
+            }
+            .right-panel-open #right-panel { transform: translateY(0); }
+            .right-panel-closed #right-panel { transform: translateY(100%); }
+            
+            #right-panel::before {
+                content: "";
+                position: absolute;
+                top: 8px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 40px;
+                height: 4px;
+                background: #444;
+                border-radius: 2px;
+            }
+
+            #chat-container { padding-left: 1rem; padding-right: 1rem; padding-top: 1rem; }
+            .prose { font-size: 0.95rem; }
+            
+            .message-bubble { max-width: 95% !important; }
+            
+            /* Compact Input for Mobile */
+            #user-input { font-size: 1rem; padding-top: 0.5rem; padding-bottom: 0.5rem; }
+            .input-tool-btn { padding: 0.5rem; }
+            
+            header h1 { font-size: 1rem; }
+            #mobile-title { font-size: 0.85rem; }
         }
 
-        body { 
-            background-color: var(--chat-bg); 
-            color: var(--text-primary); 
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            -webkit-font-smoothing: antialiased;
-        }
+        /* Source Peek Overlay */
+        #source-peek { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; background: #2a2b2f; border: 1px solid #444; border-radius: 16px; padding: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); z-index: 60; display: none; animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        @keyframes slideUp { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+        .peek-header { display: flex; items: center; gap: 10px; margin-bottom: 12px; }
+        .peek-title { font-size: 14px; font-weight: 700; color: #fff; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .peek-content { font-size: 12px; color: #aaa; line-height: 1.6; margin-bottom: 15px; max-height: 100px; overflow-y: auto; }
+        .peek-action { display: flex; justify-content: flex-end; gap: 10px; }
 
-        /* 側邊欄窄化設計 */
-        #sidebar {
-            width: 72px;
-            background-color: var(--sidebar-bg);
-            border-right: 1px solid var(--border-light);
-            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        @media (max-width: 1024px) {
+            .right-panel-open #right-panel { width: 100vw; position: absolute; right: 0; top: 0; height: 100%; z-index: 50; }
         }
-        #sidebar:hover { width: 280px; }
-        .sidebar-expanded #sidebar { width: 280px; }
-
-        /* 對話內容區塊 */
-        .message-block {
-            padding: 2rem 1.5rem;
-            max-width: 800px;
-            margin: 0 auto;
-            width: 100%;
-        }
-        .ai-message { background-color: transparent; }
-        .user-message { background-color: #F7F7F7; border-radius: 24px; }
-
-        /* Markdown 樣式 */
-        .prose { 
-            font-size: 16px; 
-            line-height: 1.625; 
-            color: var(--text-primary);
-        }
-        .prose h1, .prose h2, .prose h3 { font-weight: 700; margin-top: 1.5em; }
-        .prose code { 
-            background: #F0F0F0; 
-            padding: 0.2em 0.4em; 
-            border-radius: 6px; 
-            font-size: 0.9em; 
-            font-family: 'Fira Code', monospace; 
-        }
-        .prose pre {
-            background: #1A1A1A;
-            color: #E3E3E3;
-            padding: 1.25rem;
-            border-radius: 16px;
-            margin: 1.5rem 0;
-            position: relative;
-            overflow-x: auto;
-        }
-
-        /* 浮動輸入框 */
-        #input-container {
-            position: fixed;
-            bottom: 2rem;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 90%;
-            max-width: 800px;
-            background: white;
-            border: 1px solid var(--border-light);
-            border-radius: 28px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
-            z-index: 50;
-            transition: all 0.2s ease;
-        }
-        #input-container:focus-within {
-            border-color: var(--accent-blue);
-            box-shadow: 0 10px 40px rgba(0, 122, 255, 0.1);
-        }
-
-        /* 自定義按鈕 */
-        .action-chip {
-            padding: 6px 12px;
-            border: 1px solid var(--border-light);
-            border-radius: 100px;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            transition: all 0.2s;
-            display: flex;
-            items-center: center;
-            gap: 6px;
-        }
-        .action-chip:hover {
-            background: #F0F0F0;
-            color: var(--text-primary);
-        }
-
-        /* 隱藏滾動條 */
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-
-        /* 加載動畫 */
-        .dot-flashing {
-            position: relative;
-            width: 6px;
-            height: 6px;
-            border-radius: 5px;
-            background-color: var(--accent-blue);
-            animation: dot-flashing 1s infinite linear alternate;
-            animation-delay: 0.5s;
-        }
-        .dot-flashing::before, .dot-flashing::after {
-            content: ""; display: inline-block; position: absolute; top: 0;
-            width: 6px; height: 6px; border-radius: 5px; background-color: var(--accent-blue);
-            animation: dot-flashing 1s infinite linear alternate;
-        }
-        .dot-flashing::before { left: -12px; animation-delay: 0s; }
-        .dot-flashing::after { left: 12px; animation-delay: 1s; }
-        @keyframes dot-flashing { 0% { background-color: var(--accent-blue); } 50%, 100% { background-color: #EBEBEB; } }
-
-        /* Artifact 預覽 */
-        #preview-modal { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); }
     </style>
 </head>
-<body class="flex h-screen overflow-hidden">
+<body class="h-screen flex overflow-hidden">
 
-    <!-- 1. 極簡側邊欄 (anygen.io 模式) -->
-    <aside id="sidebar" class="group flex flex-col items-center py-6 shrink-0 z-40 overflow-hidden">
-        <div class="mb-8 flex items-center justify-center">
-            <div onclick="startNewSession()" class="w-10 h-10 rounded-2xl bg-black flex items-center justify-center group-hover:scale-110 transition-transform cursor-pointer shadow-lg active:scale-95" title="回到首頁">
-                <span class="material-symbols-rounded text-white">bolt</span>
+    <!-- Artifacts Preview Modal -->
+    <div id="preview-modal" class="fixed inset-0 z-50 hidden bg-black/90 backdrop-blur-md flex-col">
+        <div class="h-14 bg-[#1e1f22] border-b border-[#333] flex items-center justify-between px-4 sm:px-6">
+            <div class="flex items-center gap-2 sm:gap-3">
+                <span class="material-symbols-rounded text-blue-400">deployed_code</span>
+                <span class="font-semibold text-xs sm:text-sm tracking-wide text-white truncate">Artifact Preview</span>
             </div>
-        </div>
-
-        <nav class="flex-1 flex flex-col gap-4 w-full px-3">
-            <!-- 🗂️ 專案空間切換 (Workspace) -->
-            <div class="px-3 mb-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 block">專案記憶空間</label>
-                <div class="relative flex items-center mb-2">
-                    <select id="workspace-selector" onchange="changeWorkspace()" class="w-full pl-3 pr-8 py-2 bg-white hover:bg-gray-50 text-black text-xs font-bold rounded-xl border border-gray-200 outline-none focus:border-black transition-all appearance-none cursor-pointer truncate">
-                        <option value="">載入中...</option>
-                    </select>
-                    <span class="absolute right-2 text-gray-400 material-symbols-rounded text-[18px] pointer-events-none">expand_more</span>
-                </div>
-                <button onclick="createNewWorkspace()" class="text-[10px] text-blue-500 font-bold hover:underline flex items-center gap-1">
-                    <span class="material-symbols-rounded text-[14px]">add_circle</span> 建立新空間
-                </button>
-            </div>
-
-            <button onclick="startNewSession()" class="flex items-center gap-4 p-3 rounded-2xl hover:bg-gray-100 transition-colors w-full group/item" title="新對話">
-                <span class="material-symbols-rounded text-gray-500 group-hover/item:text-black">add</span>
-                <span class="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap font-medium text-sm">開啟新對話</span>
-            </button>
-            <div class="h-px bg-gray-200 mx-3 my-2"></div>
-            <div id="session-list" class="flex-1 overflow-y-auto hide-scrollbar space-y-1"></div>
-        </nav>
-
-        <div class="mt-auto flex flex-col gap-4 w-full px-3">
-            <button onclick="switchRightPanel('settings')" class="flex items-center gap-4 p-3 rounded-2xl hover:bg-gray-100 transition-colors w-full group/item" title="設定">
-                <span class="material-symbols-rounded text-gray-500 group-hover/item:text-black">settings</span>
-                <span class="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap font-medium text-sm">系統設定</span>
-            </button>
-        </nav>
-    </aside>
-
-    <!-- 2. 主對話區 -->
-    <main class="flex-1 flex flex-col relative bg-white overflow-hidden">
-        
-        <!-- 頂部導航 -->
-        <header class="h-16 flex items-center justify-between px-8 bg-white/80 backdrop-blur-md z-30 shrink-0">
-            <div class="flex items-center gap-6">
-                <span class="text-lg font-bold tracking-tight">anyGem</span>
-            </div>
-            
-            <div class="flex items-center gap-4">
-                <div class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full border border-gray-200">
-                    <span class="material-symbols-rounded text-blue-500 text-sm">diamond</span>
-                    <select id="gem-selector" class="bg-transparent text-xs font-bold outline-none cursor-pointer">
-                        <option value="">全能助理</option>
-                    </select>
-                </div>
-                <button onclick="switchRightPanel('library')" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors border border-gray-200" title="專案圖書館">
-                    <span class="material-symbols-rounded text-gray-600">book</span>
-                </button>
-            </div>
-        </header>
-
-        <!-- 對話內容區 -->
-        <div id="chat-container" class="flex-1 overflow-y-auto px-4 pt-12 pb-64 space-y-2 scroll-smooth">
-            <!-- 歡迎訊息 -->
-            <div class="message-block ai-message text-center">
-                <h1 class="text-4xl font-bold tracking-tight mb-4">今天想聊些什麼？</h1>
-                <p class="text-gray-400 text-lg">您的 anyGem 代理人已就緒，支援文件分析、簡報生成與視覺化思考。</p>
-            </div>
-        </div>
-
-        <!-- 3. 浮動輸入區域 -->
-        <div id="input-container" class="flex flex-col p-4">
-            
-            <!-- 上傳預覽區 -->
-            <div id="upload-preview-container" class="hidden flex flex-wrap gap-2 mb-3">
-                <div class="relative group">
-                    <img id="image-preview" class="hidden h-20 w-20 object-cover rounded-2xl border border-gray-200 shadow-md">
-                    <div id="doc-preview" class="hidden flex items-center gap-3 bg-gray-50 p-4 rounded-2xl border border-gray-200 shadow-sm">
-                        <span class="material-symbols-rounded text-blue-500">description</span>
-                        <span id="doc-filename" class="text-sm font-bold text-gray-700"></span>
-                    </div>
-                    <button onclick="clearUpload()" class="absolute -top-2 -right-2 bg-black text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"><span class="material-symbols-rounded text-xs block">close</span></button>
-                </div>
-            </div>
-
-            <!-- 文字輸入區 -->
-            <div class="flex items-end gap-2">
-                <button onclick="document.getElementById('file-upload').click()" class="p-2 text-gray-400 hover:text-black transition-colors rounded-full" title="上傳檔案 (PDF, Docx, Pptx)">
-                    <span class="material-symbols-rounded">attach_file</span>
-                </button>
-                <input type="file" id="file-upload" class="hidden" onchange="handleFileUpload(event)">
-                
-                <textarea id="user-input" rows="1" placeholder="輸入指令或拖放檔案..." class="flex-1 py-3 px-2 bg-transparent outline-none resize-none text-lg text-gray-800 placeholder-gray-300 min-h-[50px] max-h-60" oninput="autoResize(this)"></textarea>
-                
-                <div class="flex items-center gap-1 mb-1">
-                    <button id="mic-btn" onclick="toggleRecording()" class="p-2 text-gray-400 hover:text-red-500 transition-colors rounded-full">
-                        <span class="material-symbols-rounded">mic</span>
-                    </button>
-                    <button id="send-btn" onclick="sendMessage()" class="w-10 h-10 flex items-center justify-center bg-black text-white rounded-full hover:scale-105 active:scale-95 transition-all shadow-lg">
-                        <span class="material-symbols-rounded" id="send-icon">arrow_upward</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- 底部動作按鈕 -->
-            <div class="flex items-center gap-2 mt-3 pt-3 border-t border-gray-50">
-                <div class="relative flex items-center shrink-0">
-                    <select id="model-selector" class="appearance-none action-chip outline-none cursor-pointer pr-8">
-                        <option value="">🧠 預設模型 (自動)</option>
-                    </select>
-                    <span class="absolute right-3 text-gray-400 material-symbols-rounded text-[14px] pointer-events-none">expand_more</span>
-                </div>
-                <div class="h-4 w-px bg-gray-200 mx-1"></div>
-                <button onclick="switchRightPanel('settings')" class="action-chip"><span class="material-symbols-rounded text-[14px]">tune</span> 偏好設定</button>
-                <button onclick="createNewWorkspace()" class="action-chip"><span class="material-symbols-rounded text-[14px]">add_circle</span> 新建空間</button>
-            </div>
-        </div>
-    </main>
-
-    <!-- 4. anyGem Workbench (右側工作台) -->
-    <aside id="right-panel" class="fixed right-0 top-0 h-full w-[500px] bg-white border-l border-gray-100 shadow-2xl transform translate-x-full transition-transform duration-300 z-50 flex flex-col">
-        <div class="p-6 border-b border-gray-50 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
-            <div class="flex items-center gap-3">
-                <div id="workbench-status-dot" class="w-2 h-2 rounded-full bg-green-500"></div>
-                <h3 class="font-bold text-lg" id="panel-title">Workbench</h3>
-            </div>
-            <div class="flex items-center gap-2">
-                <button onclick="toggleRightPanel()" class="p-2 hover:bg-gray-100 rounded-full text-gray-400 transition-colors"><span class="material-symbols-rounded">close</span></button>
-            </div>
-        </div>
-
-        <!-- 標籤導航 -->
-        <div class="flex border-b border-gray-50 bg-gray-50/50">
-            <button onclick="switchWorkbenchTab('edit')" id="tab-edit" class="flex-1 py-3 text-xs font-bold border-b-2 border-black">編輯內容</button>
-            <button onclick="switchWorkbenchTab('thought')" id="tab-thought" class="flex-1 py-3 text-xs font-bold text-gray-400 border-b-2 border-transparent">思考過程</button>
-            <button onclick="switchWorkbenchTab('library')" id="tab-library" class="flex-1 py-3 text-xs font-bold text-gray-400 border-b-2 border-transparent">專案資源</button>
-        </div>
-
-        <div id="right-panel-content" class="flex-1 overflow-hidden flex flex-col">
-            <!-- 編輯區 -->
-            <div id="workbench-edit-area" class="flex-1 flex flex-col p-6 overflow-hidden">
-                <div class="flex items-center justify-between mb-4 shrink-0">
-                    <div class="flex items-center gap-3">
-                        <span id="artifact-type-tag" class="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-md uppercase tracking-wider">Document Draft</span>
-                        <div class="flex bg-gray-100 p-1 rounded-lg">
-                            <button onclick="switchWorkbenchMode('edit')" id="mode-edit-btn" class="text-[10px] px-3 py-1 rounded-md font-bold transition-all bg-white shadow-sm text-black">編輯</button>
-                            <button onclick="switchWorkbenchMode('split')" id="mode-split-btn" class="text-[10px] px-3 py-1 rounded-md font-bold transition-all text-gray-500 hover:text-black">分屏</button>
-                            <button onclick="switchWorkbenchMode('preview')" id="mode-preview-btn" class="text-[10px] px-3 py-1 rounded-md font-bold transition-all text-gray-500 hover:text-black">預覽</button>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="copyWorkbenchContent()" class="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400" title="複製"><span class="material-symbols-rounded text-sm">content_copy</span></button>
-                    </div>
-                </div>
-                
-                <div id="workbench-container" class="flex-1 flex gap-4 overflow-hidden mb-6">
-                    <textarea id="workbench-editor" oninput="updateRealtimePreview()" class="flex-1 bg-transparent outline-none resize-none text-gray-800 leading-relaxed font-mono text-xs border border-dashed border-gray-100 p-4 rounded-2xl focus:border-blue-200 transition-all" placeholder="這裡將顯示 AI 生成的草稿..."></textarea>
-                    <div id="workbench-preview" class="hidden flex-1 p-4 overflow-y-auto bg-gray-50/50 rounded-2xl border border-transparent prose prose-sm prose-slate max-w-none">
-                        <!-- 即時預覽內容 -->
-                    </div>
-                </div>
-                
-                <!-- 輸出動作區 -->
-                <div class="pt-6 border-t border-gray-50 grid grid-cols-3 gap-2 shrink-0">
-                    <button onclick="exportToGoogleDoc()" class="flex flex-col items-center gap-2 p-3 bg-blue-50 text-blue-600 rounded-xl font-bold hover:bg-blue-600 hover:text-white transition-all border border-blue-100 group/btn">
-                        <span class="material-symbols-rounded text-[20px]">description</span>
-                        <span class="text-[10px]">Google 文件</span>
-                    </button>
-                    <button onclick="exportToSheets()" class="flex flex-col items-center gap-2 p-3 bg-green-50 text-green-600 rounded-xl font-bold hover:bg-green-600 hover:text-white transition-all border border-green-100 group/btn">
-                        <span class="material-symbols-rounded text-[20px]">table_chart</span>
-                        <span class="text-[10px]">Google 表格</span>
-                    </button>
-                    <button onclick="exportToSlides()" class="flex flex-col items-center gap-2 p-3 bg-orange-50 text-orange-600 rounded-xl font-bold hover:bg-orange-600 hover:text-white transition-all border border-orange-100 group/btn">
-                        <span class="material-symbols-rounded text-[20px]">present_to_all</span>
-                        <span class="text-[10px]">專業簡報</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- 思考區 -->
-            <div id="workbench-thought-area" class="hidden flex-1 overflow-y-auto p-6 space-y-4">
-                <div class="flex items-center gap-3 text-blue-500 mb-4">
-                    <span class="material-symbols-rounded animate-spin">sync</span>
-                    <span class="text-sm font-bold">代理人正在思考中...</span>
-                </div>
-                <div id="thought-log" class="space-y-3 font-mono text-[11px] text-gray-500">
-                    <!-- 思考日誌將在這裡動態插入 -->
-                </div>
-            </div>
-
-            <!-- 圖書館 -->
-            <div id="workbench-library-area" class="hidden flex-1 overflow-y-auto p-6">
-                <div id="library-content" class="space-y-4"></div>
-            </div>
-        </div>
-    </aside>
-
-    <!-- 5. Artifact 預覽視窗 -->
-    <div id="preview-modal" class="fixed inset-0 z-[60] hidden flex-col">
-        <div class="h-16 flex items-center justify-between px-8 border-b border-gray-100 bg-white/80 backdrop-blur-md">
-            <div class="flex items-center gap-3">
-                <span class="material-symbols-rounded text-blue-500">deployed_code</span>
-                <span class="font-bold">Artifact Preview</span>
-            </div>
-            <div class="flex items-center gap-4">
-                <button onclick="refreshPreview()" class="p-2 text-gray-400 hover:text-black"><span class="material-symbols-rounded">refresh</span></button>
-                <button onclick="closePreview()" class="w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-red-500 hover:text-white rounded-full transition-all"><span class="material-symbols-rounded">close</span></button>
+            <div class="flex items-center gap-2 sm:gap-4 shrink-0">
+                <button onclick="refreshPreview()" class="p-2 text-gray-400 hover:text-white transition-colors"><span class="material-symbols-rounded">refresh</span></button>
+                <button onclick="closePreview()" class="p-2 text-gray-400 hover:text-red-400 bg-[#333] hover:bg-red-500/10 rounded-full transition-all"><span class="material-symbols-rounded">close</span></button>
             </div>
         </div>
         <div class="flex-1 bg-white relative">
@@ -351,701 +132,966 @@
         </div>
     </div>
 
-    <!-- 診斷對話框 (隱藏，出錯時彈出) -->
-    <div id="diagnostic-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/20 backdrop-blur-sm p-4">
-        <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-red-50">
-            <div class="flex items-center gap-3 text-red-500 mb-4">
-                <span class="material-symbols-rounded text-3xl">report_problem</span>
-                <h3 class="text-xl font-bold">連線失敗診斷</h3>
+    <!-- Sidebar -->
+    <aside id="sidebar" class="bg-[#1e1f22] border-r border-[#333] flex flex-col transition-transform duration-300 z-30 absolute md:relative h-full -translate-x-full md:translate-x-0 w-[85vw] max-w-[340px] md:w-[288px] md:max-w-none shadow-2xl md:shadow-none" style="min-width: 200px;">
+        <div id="sidebar-resizer" class="hidden md:block absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-blue-500/50 z-40 transition-colors"></div>
+
+        <div class="p-6 pb-2">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
+                    <span class="material-symbols-rounded text-white text-xl">auto_awesome</span>
+                </div>
+                <h1 class="text-xl font-bold tracking-tight text-white">anyGem Agent</h1>
             </div>
-            <p class="text-gray-500 mb-6 text-sm leading-relaxed" id="diagnostic-msg"></p>
-            <div class="bg-gray-50 p-4 rounded-2xl mb-6 font-mono text-[10px] break-all border border-gray-100" id="diagnostic-details"></div>
-            <button onclick="location.reload()" class="w-full py-4 bg-black text-white rounded-2xl font-bold hover:scale-[1.02] active:scale-[0.98] transition-all">重新載入</button>
+            
+            <!-- ✨ Workspace 專案隔離選擇器 -->
+            <div class="mb-4">
+                <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wider pl-1 mb-1 block">🗂️ 專案記憶空間 (Workspace)</label>
+                <div class="relative flex items-center mb-2">
+                    <select id="workspace-selector" onchange="changeWorkspace()" class="w-full pl-3 pr-8 py-2 bg-[#2a2b2f] hover:bg-[#333] text-indigo-200 text-sm font-semibold rounded-lg border border-[#444] outline-none focus:border-indigo-500 transition-all appearance-none cursor-pointer shadow-sm truncate">
+                        <option value="">載入中...</option>
+                    </select>
+                    <span class="absolute right-2 text-gray-400 material-symbols-rounded text-[18px] pointer-events-none">expand_more</span>
+                </div>
+                <button onclick="createNewWorkspace()" class="w-full text-xs text-gray-400 hover:text-indigo-400 text-left pl-1 transition-colors flex items-center gap-1">
+                    <span class="material-symbols-rounded text-[14px]">add_circle</span> 建立新專案空間
+                </button>
+            </div>
+
+            <button onclick="startNewSession()" class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-all shadow-lg mt-2">
+                <span class="material-symbols-rounded">add</span> 新對話
+            </button>
         </div>
-    </div>
+        
+        <div id="session-list" class="flex-1 overflow-y-auto px-3 space-y-1 pb-4 min-h-0"></div>
+        
+        <div class="px-3 pb-4 border-t border-[#333] pt-4 shrink-0">
+            <button onclick="toggleBookmarks()" class="w-full flex items-center justify-between px-3 mb-1 group cursor-pointer outline-none hover:bg-[#2a2b2f] p-2 rounded-lg transition-colors">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-rounded text-gray-500 text-[16px] group-hover:text-blue-400 transition-colors">bookmarks</span>
+                    <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider group-hover:text-white transition-colors">外部工具 (Tools)</span>
+                </div>
+                <span id="bookmark-chevron" class="material-symbols-rounded text-gray-500 text-sm transition-transform duration-200">expand_more</span>
+            </button>
+            <div id="bookmark-list" class="space-y-1 hidden mt-2">
+                <a href="https://ppt-azure.vercel.app/" target="_blank" class="flex items-center gap-3 p-3 rounded-xl text-gray-400 hover:bg-[#2a2b2f] hover:text-white transition-all group">
+                    <span class="material-symbols-rounded text-lg shrink-0 group-hover:text-blue-400 transition-colors">style</span><span class="truncate text-sm">智慧圖卡</span>
+                </a>
+                <a href="https://kiteyoung0520.github.io/p/" target="_blank" class="flex items-center gap-3 p-3 rounded-xl text-gray-400 hover:bg-[#2a2b2f] hover:text-white transition-all group">
+                    <span class="material-symbols-rounded text-lg shrink-0 group-hover:text-amber-400 transition-colors">slideshow</span><span class="truncate text-sm">魔法簡報師</span>
+                </a>
+            </div>
+        </div>
+        <div class="p-4 border-t border-[#333] text-xs text-gray-500 text-center font-mono shrink-0">v87.5 Full Functional</div>
+    </aside>
+
+    <!-- Main Chat Area -->
+    <main class="flex-1 flex flex-col relative bg-[#131314] overflow-hidden w-full">
+        <header class="h-14 flex items-center justify-between px-4 border-b border-[#333] bg-[#1e1f22] shrink-0 z-20">
+            <div class="flex items-center gap-2">
+                <button onclick="toggleSidebar()" class="p-2 text-gray-400 md:hidden"><span class="material-symbols-rounded">menu</span></button>
+                <span class="font-semibold text-sm truncate md:text-base text-gray-200" id="mobile-title">新對話</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="switchRightPanel('settings')" class="flex items-center gap-2 px-3 py-1.5 bg-[#2a2b2f] hover:bg-[#333] text-purple-400 rounded-lg border border-[#444] transition-all group">
+                    <span class="material-symbols-rounded text-[20px]">tune</span>
+                    <span class="text-xs font-bold hidden sm:inline">功能設定</span>
+                </button>
+                <button onclick="switchRightPanel('library')" class="flex items-center gap-2 px-3 py-1.5 bg-[#2a2b2f] hover:bg-[#333] text-blue-400 rounded-lg border border-[#444] transition-all group">
+                    <span class="material-symbols-rounded text-[20px]">library_books</span>
+                    <span class="text-xs font-bold hidden sm:inline">專案圖書館</span>
+                </button>
+            </div>
+        </header>
+
+        <div id="chat-container" class="flex-1 overflow-y-auto overflow-x-hidden px-4 py-6 md:px-12 space-y-6 pb-48 md:pb-40 w-full relative scroll-smooth">
+            <div class="max-w-3xl mx-auto flex gap-4 sm:gap-6 w-full">
+                <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center shadow-lg shrink-0"><span class="material-symbols-rounded text-white">smart_toy</span></div>
+                <div class="flex-1">
+                    <h2 class="text-2xl sm:text-3xl font-bold text-white mb-2">我是您的 anyGem 代理人</h2>
+                    <p class="text-gray-400 text-base sm:text-lg leading-relaxed">我們已開啟 <strong>內部品管 (Inner QA)</strong> 防護網！介面按鈕已修復，您可以順利傳送指令了。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🕵️ Source Peek Overlay -->
+        <div id="source-peek" class="hidden">
+            <div class="peek-header">
+                <span id="peek-icon" class="material-symbols-rounded text-blue-400">description</span>
+                <span id="peek-title" class="peek-title">來源標題載入中...</span>
+                <button onclick="closePeek()" class="text-gray-500 hover:text-white"><span class="material-symbols-rounded text-[18px]">close</span></button>
+            </div>
+            <div id="peek-content" class="peek-content text-gray-300">
+                正在抓取內容摘錄...
+            </div>
+            <div class="peek-action">
+                <a id="peek-link" href="#" target="_blank" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg flex items-center gap-1 transition-all">
+                    <span class="material-symbols-rounded text-[14px]">open_in_new</span> 開啟原始檔案
+                </a>
+            </div>
+        </div>
+
+        <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-[#131314] via-[#131314] to-transparent pt-12 pb-4 sm:pb-8 px-2 sm:px-4 md:px-12 z-20 pointer-events-none">
+            <div class="max-w-3xl mx-auto w-full pointer-events-auto">
+                
+                <!-- Upload Previews -->
+                <div id="upload-preview-container" class="hidden flex gap-3 mb-3 px-2">
+                    <div class="relative group">
+                        <img id="image-preview" class="hidden h-16 w-16 sm:h-20 sm:w-20 object-cover rounded-xl border-2 border-blue-500/50 shadow-lg">
+                        <div id="doc-preview" class="hidden flex items-center gap-2 sm:gap-3 bg-[#2a2b2f] p-3 sm:p-4 rounded-xl border border-[#444] shadow-lg">
+                            <span class="material-symbols-rounded text-blue-400 text-xl sm:text-2xl">description</span>
+                            <span id="doc-filename" class="text-xs sm:text-sm font-medium truncate max-w-[120px] sm:max-w-[150px]"></span>
+                        </div>
+                        <div id="youtube-preview" class="hidden flex items-center gap-2 sm:gap-3 bg-[#2a2b2f] p-2 pr-4 rounded-xl border border-[#444] shadow-lg">
+                            <img id="yt-thumbnail" src="" class="h-10 w-16 sm:h-12 sm:w-20 object-cover rounded-lg border border-[#444]">
+                            <div class="flex flex-col">
+                                <span class="text-[10px] text-red-400 font-bold uppercase tracking-wider">YouTube</span>
+                                <span class="text-xs sm:text-sm font-medium text-gray-200">影片連結已載入</span>
+                            </div>
+                        </div>
+                        <button onclick="clearUpload()" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md"><span class="material-symbols-rounded text-[14px] block">close</span></button>
+                    </div>
+                </div>
+
+                <!-- Input Area -->
+                <div class="bg-[#1e1f22] rounded-2xl border border-[#333] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] focus-within:border-blue-500 transition-all p-1.5 sm:p-2 mx-1 sm:mx-0">
+                    <div class="flex items-center flex-wrap gap-2 sm:gap-3 px-2 sm:px-3 mb-1 pt-1 border-b border-[#333] pb-1.5">
+                        
+                        <div class="relative flex items-center shrink-0">
+                            <span class="absolute left-2 text-blue-400 material-symbols-rounded text-[14px] pointer-events-none">diamond</span>
+                            <select id="gem-selector" class="pl-7 pr-6 py-1.5 bg-[#2a2b2f] hover:bg-[#333] text-blue-100 text-xs font-bold tracking-wide rounded-lg border border-[#444] outline-none focus:border-blue-500 transition-all appearance-none cursor-pointer max-w-[130px] sm:max-w-[160px] truncate shadow-sm">
+                                <option value="">🤖 全能助理</option>
+                            </select>
+                            <span class="absolute right-1.5 text-gray-400 material-symbols-rounded text-[16px] pointer-events-none">arrow_drop_down</span>
+                        </div>
+
+                        <div class="relative flex items-center mr-auto shrink-0">
+                            <span class="absolute left-2 text-purple-400 material-symbols-rounded text-[14px] pointer-events-none">memory</span>
+                            <select id="model-selector" class="pl-7 pr-6 py-1.5 bg-[#2a2b2f] hover:bg-[#333] text-purple-100 text-xs font-bold tracking-wide rounded-lg border border-[#444] outline-none focus:border-purple-500 transition-all appearance-none cursor-pointer max-w-[130px] sm:max-w-[160px] truncate shadow-sm">
+                                <option value="">🧠 預設模型 (自動)</option>
+                            </select>
+                            <span class="absolute right-1.5 text-gray-400 material-symbols-rounded text-[16px] pointer-events-none">arrow_drop_down</span>
+                        </div>
+
+                    </div>
+                    
+                    <div class="flex items-end gap-1 sm:gap-2 mt-1">
+                        <button onclick="document.getElementById('file-upload').click()" class="input-tool-btn p-2 sm:p-3 shrink-0 text-gray-400 hover:text-white rounded-xl transition-colors"><span class="material-symbols-rounded block">attach_file</span></button>
+                        <input type="file" id="file-upload" class="hidden" onchange="handleFileUpload(event)" accept="image/*,application/pdf,text/*,.docx,.xlsx,.csv,.pptx">
+                        
+                        <button id="mic-btn" type="button" onclick="toggleRecording()" class="input-tool-btn p-2 sm:p-3 shrink-0 text-gray-400 hover:text-white rounded-xl transition-all" title="點擊開始說話">
+                            <span class="material-symbols-rounded block">mic</span>
+                        </button>
+
+                        <textarea id="user-input" rows="1" placeholder="輸入指令..." class="w-full bg-transparent border-none outline-none text-gray-100 py-2.5 sm:py-3 px-1 sm:px-2 resize-none max-h-32 sm:max-h-60 text-base sm:text-lg leading-relaxed"></textarea>
+                        
+                        <button id="send-btn" class="p-2.5 sm:p-3 shrink-0 bg-white text-black rounded-xl hover:bg-gray-200 transition-all shadow-md flex items-center justify-center">
+                            <span class="material-symbols-rounded block">send</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 📚 Right Knowledge Panel (Sources & Fragments & Settings) -->
+    <aside id="right-panel" class="bg-[#1e1f22] flex flex-col z-40 h-full shadow-2xl overflow-visible right-panel-closed">
+        <div id="right-panel-resizer" class="hidden md:block absolute top-0 w-1.5 h-full cursor-col-resize hover:bg-blue-500/50 transition-colors"></div>
+        <div class="p-5 border-b border-[#333] flex items-center justify-between">
+            <div id="right-panel-header" class="flex items-center gap-2">
+                <span class="material-symbols-rounded text-blue-400" id="panel-icon">inventory_2</span>
+                <h3 class="text-sm font-bold text-white uppercase tracking-wider" id="panel-title">專案圖書館</h3>
+            </div>
+            <button onclick="toggleRightPanel()" class="p-1 hover:bg-[#333] rounded-md text-gray-500 md:hidden"><span class="material-symbols-rounded">close</span></button>
+        </div>
+
+        <div id="right-panel-content" class="flex-1 overflow-y-auto p-4 space-y-6">
+            <!-- Content will be swapped via JS -->
+        </div>
+
+        <div class="p-4 border-t border-[#333] bg-[#1a1b1e]">
+            <p class="text-[10px] text-gray-500 leading-relaxed text-center" id="panel-footer-text">
+                <span class="material-symbols-rounded text-[12px] align-middle mr-1">info</span>
+                所有來源與片段均會自動作為 AI 思考的背景知識。
+            </p>
+        </div>
+    </aside>
+
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden" onclick="toggleSidebar()"></div>
+    <div id="right-panel-overlay" class="fixed inset-0 bg-black/50 z-30 hidden" onclick="toggleRightPanel()"></div>
 
     <script>
-        // 🚀 核心設定 (請務必確認此網址正確)
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbyNEz6Kv6WOEEif3Ghjt8fd-IXRt6f6BxV7dg2SXSwTn6dJsP5lgwVuCgslHSdBbD4C/exec";
+        // ⚠️ 部署前，請務必將下方的網址替換為您的 Google Apps Script Web App URL ⚠️
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbyNEz6Kv6WOEEif3Ghjt8fd-IXRt6f6BxV7dg2SXSwTn6dJsP5lgwVuCgslHSdBbD4C/exec"; 
 
-        // 全域變數
+        marked.use({
+            renderer: {
+                link(hrefOrToken, title, text) {
+                    let h = hrefOrToken.href || hrefOrToken, t = hrefOrToken.title || title, txt = hrefOrToken.text || text;
+                    return `<a href="${h}" ${t ? `title="${t}"` : ''} target="_blank" rel="noopener noreferrer">${txt}</a>`;
+                }
+            }
+        });
+
         let currentSessionId = generateUUID();
-        let currentWorkspace = "";
-        let currentImageData = null, currentMimeType = null, currentDocumentText = null, currentDocumentName = null;
-        let isWaiting = false, currentRenderCode = "", abortController = null, currentGemsList = [];
-        let sharedKnowledgeSet = new Set();
+        let currentWorkspace = ""; 
+        let currentImageData = null, currentMimeType = null, currentDocumentText = null, currentDocumentName = null, currentYouTubeId = null;
+        let isWaiting = false, currentRenderCode = "", abortController = null, silenceTimer = null, currentGemsList = []; 
+        window.sharedKnowledgeSet = new Set();
 
-        // 1. 初始化
-        window.onload = async () => {
-            console.log("🚀 System Booting...");
-            await loadWorkspaces();
-            loadSessions();
-            loadGems();
-            loadModels();
+        // ⚙️ 全域設定狀態 (Persistent Settings)
+        const settings = {
+            drawMode: localStorage.getItem('drawMode') === 'true',
+            webSearch: localStorage.getItem('webSearch') === 'true',
+            autoImage: localStorage.getItem('autoImage') === 'true',
+            voiceOutput: localStorage.getItem('voiceOutput') === 'true',
+            continuousMode: localStorage.getItem('continuousMode') === 'true'
         };
 
-        // 2. 通訊邏輯 (加強錯誤診斷)
-        async function fetchGAS(action, payload = {}) {
-            try {
-                const response = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ ...payload, action })
-                });
-                if (!response.ok) throw new Error(`HTTP 錯誤! 狀態碼: ${response.status}`);
-                return await response.json();
-            } catch (err) {
-                console.error(`❌ Action [${action}] failed:`, err);
-                showDiagnostic(`連線至後端時發生錯誤。\n\n可能原因：\n1. GAS 網址不正確\n2. GAS 未部署為「任何人」均可存取\n3. 瀏覽器 CORS 限制`, err.message);
-                throw err;
-            }
+        const chatContainer = document.getElementById('chat-container'), 
+              userInput = document.getElementById('user-input'), 
+              sendBtn = document.getElementById('send-btn'), 
+              sendBtnIcon = sendBtn.querySelector('.material-symbols-rounded');
+
+        // 🐛 修復：補回被遺漏的按鈕綁定事件
+        sendBtn.addEventListener('click', () => {
+            if (isWaiting) stopGeneration();
+            else sendMessage();
+        });
+
+        userInput.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight > 240 ? 240 : this.scrollHeight) + 'px'; });
+
+        function toggleSettingsMenu() {
+            const dropdown = document.getElementById('settings-dropdown');
+            const chevron = document.getElementById('settings-menu-chevron');
+            dropdown.classList.toggle('hidden');
+            chevron.style.transform = dropdown.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
         }
 
-        function showDiagnostic(msg, details) {
-            document.getElementById('diagnostic-msg').innerText = msg;
-            document.getElementById('diagnostic-details').innerText = details;
-            document.getElementById('diagnostic-modal').classList.remove('hidden');
-            document.getElementById('diagnostic-modal').classList.add('flex');
+        document.addEventListener('click', (e) => {
+            const btn = document.getElementById('settings-menu-btn'), dropdown = document.getElementById('settings-dropdown');
+            if (btn && dropdown && !btn.contains(e.target) && !dropdown.contains(e.target)) { dropdown.classList.add('hidden'); document.getElementById('settings-menu-chevron').style.transform = 'rotate(0deg)'; }
+        });
+
+        let recognition = null, isRecording = false, finalTranscript = '';
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.continuous = true; recognition.interimResults = true; recognition.lang = 'cmn-Hant-TW'; 
+            recognition.onstart = function() { isRecording = true; document.getElementById('mic-btn').classList.add('recording-pulse', 'text-white'); document.getElementById('mic-btn').classList.remove('text-gray-400'); finalTranscript = userInput.value; if (window.speechSynthesis) window.speechSynthesis.cancel(); };
+            recognition.onresult = function(event) {
+                if (!isRecording) return; let interim = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) event.results[i].isFinal ? finalTranscript += event.results[i][0].transcript : interim += event.results[i][0].transcript;
+                userInput.value = finalTranscript + interim; userInput.style.height = 'auto'; userInput.style.height = (userInput.scrollHeight > 240 ? 240 : userInput.scrollHeight) + 'px';
+                if (document.getElementById('continuous-mode-toggle').checked) { clearTimeout(silenceTimer); silenceTimer = setTimeout(() => { if (isRecording && userInput.value.trim() !== '') { stopRecording(); sendMessage(); } }, 1500); }
+            };
+            recognition.onerror = () => stopRecording(); recognition.onend = () => stopRecording();
         }
+        function startRecording() { if (!recognition) return; if (!isRecording) { isRecording = true; finalTranscript = userInput.value; try { recognition.start(); } catch(e) { isRecording = false; } } }
+        function toggleRecording() { if (!recognition) { alert('瀏覽器不支援語音輸入。'); return; } isRecording ? stopRecording() : startRecording(); }
+        function stopRecording() { isRecording = false; clearTimeout(silenceTimer); document.getElementById('mic-btn').classList.remove('recording-pulse', 'text-white'); document.getElementById('mic-btn').classList.add('text-gray-400'); if (recognition) try { recognition.stop(); } catch(e) {} }
 
-        // 3. UI 互動
-        function autoResize(textarea) {
-            textarea.style.height = 'auto';
-            textarea.style.height = (textarea.scrollHeight > 240 ? 240 : textarea.scrollHeight) + 'px';
+        function speakText(text, isAutoPlay = false) {
+            if (isAutoPlay && !document.getElementById('voice-output-toggle').checked) return false;
+            if (!window.speechSynthesis) return false; window.speechSynthesis.cancel(); 
+            const bt = String.fromCharCode(96, 96, 96);
+            let cleanText = text.replace(/<thought_process>[\s\S]*?<\/thought_process>/g, '').replace(new RegExp(bt + '[\\s\\S]*?' + bt, 'g'), '').replace(new RegExp('https?:\\/\\/[^\\s]+', 'g'), '網址').replace(new RegExp('[*_#~|]', 'g'), '').trim();
+            if (!cleanText) return false;
+            let utterance = new SpeechSynthesisUtterance(cleanText);
+            let v = window.speechSynthesis.getVoices(), sv = null;
+            if (new RegExp('[\\u4e00-\\u9fa5]').test(cleanText)) { utterance.lang = 'zh-TW'; utterance.rate = 0.95; utterance.pitch = 0.95; sv = v.find(x => x.name.includes('Xiaoxiao') || x.name.includes('Yating') || (x.lang === 'zh-TW' && x.name.includes('Google'))) || v.find(x => x.lang === 'zh-TW'); } 
+            else { utterance.lang = 'en-US'; utterance.rate = 0.9; utterance.pitch = 0.95; sv = v.find(x => x.name.includes('Samantha') || (x.lang === 'en-US' && x.name.includes('Google'))) || v.find(x => x.lang === 'en-US'); }
+            if (sv) utterance.voice = sv;
+            if (isAutoPlay) utterance.onend = () => { if (document.getElementById('continuous-mode-toggle').checked && !isWaiting) startRecording(); };
+            window.speechSynthesis.speak(utterance); return true;
         }
+        if (window.speechSynthesis && window.speechSynthesis.onvoiceschanged !== undefined) window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 
-        function generateUUID() { return 'xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); }); }
-
-        function scrollToBottom() {
-            const container = document.getElementById('chat-container');
-            container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-        }
-
-        // 4. 對話管理
-        async function sendMessage() {
-            const input = document.getElementById('user-input');
-            const text = input.value.trim();
-            if (!text && !currentImageData && !currentDocumentText) return;
-            if (isWaiting) { stopGeneration(); return; }
-
-            const userMsg = text;
-            appendMessage('user', userMsg, currentImageData);
-            
-            input.value = '';
-            autoResize(input);
-            toggleSendButton(true);
-            const lid = appendLoading();
-            abortController = new AbortController();
-
-            // 開啟工作台並切換至思考區
-            openWorkbench('thought');
-            document.getElementById('thought-log').innerHTML = '<div class="text-blue-600">>>> 初始化代理人工作流...</div>';
-
-            try {
-                const gemSelector = document.getElementById('gem-selector');
-                const modelSelector = document.getElementById('model-selector');
-                let gemPrompt = null, gemModel = null;
-                if (gemSelector.value !== "") {
-                    gemPrompt = currentGemsList[parseInt(gemSelector.value)].prompt;
-                    gemModel = currentGemsList[parseInt(gemSelector.value)].model;
-                }
-
-                const data = await fetchGAS('chat', {
-                    message: text,
-                    session_id: currentSessionId,
-                    workspace: currentWorkspace,
-                    file_data: currentImageData ? currentImageData.split(',')[1] : null,
-                    mime_type: currentMimeType,
-                    selected_model: modelSelector.value,
-                    gem_prompt: gemPrompt,
-                    gem_model: gemModel,
-                    web_search: document.getElementById('web-search-toggle')?.checked || false,
-                    auto_image: document.getElementById('auto-image-toggle')?.checked || false,
-                    draw_mode: document.getElementById('draw-mode-toggle')?.checked || false
-                });
-
-                removeLoading(lid);
-                if (data.status === "error") throw new Error(data.error || "伺服器錯誤");
-                
-                // 處理思考過程
-                if (data.thoughts) {
-                    renderThoughts(data.thoughts);
-                }
-
-                // 處理 Artifact (工作台草稿)
-                if (data.artifact) {
-                    renderArtifact(data.artifact, data.artifact_type);
-                }
-                
-                if (data.reply) {
-                    appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model);
-                    speakText(data.reply, true);
-                }
-                loadSessions();
-            } catch (err) {
-                removeLoading(lid);
-                if (err.name !== 'AbortError') {
-                    appendMessage('ai', `❌ 執行失敗：\n${err.message}`);
-                }
-            } finally {
-                toggleSendButton(false);
-                clearUpload();
-            }
-        }
-
-        function toggleSendButton(waiting) {
-            isWaiting = waiting;
-            const icon = document.getElementById('send-icon');
-            const btn = document.getElementById('send-btn');
-            icon.innerText = waiting ? 'stop' : 'arrow_upward';
-            btn.className = waiting ? "w-10 h-10 flex items-center justify-center bg-red-500 text-white rounded-full hover:scale-105 transition-all shadow-lg" : "w-10 h-10 flex items-center justify-center bg-black text-white rounded-full hover:scale-105 transition-all shadow-lg";
-        }
-
-        function stopGeneration() { if (abortController) abortController.abort(); }
-
-        // 5. 訊息渲染 (anygen.io 極簡版)
-        function appendMessage(role, text, imageSrc = null, model = null) {
-            const container = document.getElementById('chat-container');
-            const isAI = role === 'ai';
-            const block = document.createElement('div');
-            block.className = `message-block ${isAI ? 'ai-message' : 'user-message shadow-sm border border-gray-100'}`;
-            
-            let contentHtml = '';
-            if (model && isAI) contentHtml += `<div class="text-[10px] font-bold text-gray-300 uppercase tracking-widest mb-3">Model: ${model}</div>`;
-            if (imageSrc) contentHtml += `<img src="${imageSrc}" class="rounded-2xl border border-gray-100 mb-4 max-w-full shadow-md">`;
-            
-            const parsedText = isAI ? marked.parse(text) : text.replace(/\n/g, '<br>');
-            contentHtml += `<div class="prose prose-slate max-w-none">${parsedText}</div>`;
-            
-            // 操作按鈕
-            if (isAI) {
-                contentHtml += `
-                    <div class="flex items-center gap-3 mt-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onclick="copyText(this)" class="p-2 text-gray-400 hover:text-black transition-colors" title="複製"><span class="material-symbols-rounded text-[18px]">content_copy</span></button>
-                        <button onclick="speakMessage(this)" class="p-2 text-gray-400 hover:text-green-500 transition-colors" title="朗讀"><span class="material-symbols-rounded text-[18px]">volume_up</span></button>
-                        <button onclick="deleteMessage(this, '${role}', \`${text.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)" class="p-2 text-gray-400 hover:text-red-500 transition-colors" title="刪除"><span class="material-symbols-rounded text-[18px]">delete</span></button>
-                    </div>
-                `;
-            } else {
-                contentHtml += `
-                    <div class="flex items-center gap-3 mt-4 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
-                        <button onclick="editMessage(this, \`${text.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)" class="p-2 text-gray-400 hover:text-blue-500 transition-colors" title="編輯"><span class="material-symbols-rounded text-[18px]">edit</span></button>
-                        <button onclick="deleteMessage(this, '${role}', \`${text.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)" class="p-2 text-gray-400 hover:text-red-500 transition-colors" title="刪除"><span class="material-symbols-rounded text-[18px]">delete</span></button>
-                    </div>
-                `;
-            }
-
-            block.innerHTML = contentHtml;
-            block.classList.add('group');
-            container.appendChild(block);
-
-            // 處理代碼預覽
-            if (isAI) {
-                block.querySelectorAll('pre code').forEach(c => {
-                    if (c.className.includes('language-html') || c.className.includes('language-jsx')) {
-                        const btn = document.createElement('button');
-                        btn.className = "absolute top-4 right-4 bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1 shadow-lg hover:bg-blue-500 transition-all";
-                        btn.innerHTML = '<span class="material-symbols-rounded text-[14px]">play_circle</span> 預覽';
-                        btn.onclick = () => openPreview(c.innerText);
-                        c.parentElement.appendChild(btn);
-                    }
-                });
-            }
-
-            scrollToBottom();
-        }
-
-        function appendLoading() {
-            const container = document.getElementById('chat-container');
-            const d = document.createElement('div');
-            d.id = 'loader-' + Date.now();
-            d.className = "message-block ai-message flex items-center justify-center py-12";
-            d.innerHTML = `<div class="dot-flashing"></div>`;
-            container.appendChild(d);
-            scrollToBottom();
-            return d.id;
-        }
-
-        function removeLoading(id) { const el = document.getElementById(id); if (el) el.remove(); }
-
-        // 6. 系統功能 (Workspaces, Sessions)
-        async function loadWorkspaces() {
-            try {
-                const data = await fetchGAS('get_workspaces', { mode: 'system' });
-                if (data && data.workspaces) {
-                    const sel = document.getElementById('workspace-selector');
-                    sel.innerHTML = data.workspaces.map(ws => `<option value="${ws}">${ws}</option>`).join('');
-                    if (!currentWorkspace) {
-                        currentWorkspace = data.workspaces[0];
-                        sel.value = currentWorkspace;
-                    }
-                    document.getElementById('current-workspace-name').innerText = currentWorkspace;
-                }
-            } catch (e) { console.error("Workspace load failed", e); }
-        }
-
-        function changeWorkspace() {
-            currentWorkspace = document.getElementById('workspace-selector').value;
-            console.log("📁 Workspace switched to:", currentWorkspace);
-            startNewSession();
-            loadGems();
-            loadModels();
-        }
-
-        function createNewWorkspace() {
-            const name = prompt("請輸入新專案空間名稱：");
-            if (name && name.trim()) {
-                currentWorkspace = name.trim();
-                const sel = document.getElementById('workspace-selector');
-                const opt = document.createElement('option');
-                opt.value = opt.text = currentWorkspace;
-                sel.add(opt);
-                sel.value = currentWorkspace;
-                changeWorkspace();
-            }
-        }
-
-        async function loadSessions() {
-            try {
-                const data = await fetchGAS('get_session_list', { mode: 'system', workspace: currentWorkspace });
-                const list = document.getElementById('session-list');
-                list.innerHTML = '';
-                    data.sessions.forEach(s => {
-                        const item = document.createElement('div');
-                        const active = s.id === currentSessionId;
-                        item.className = `w-full flex items-center justify-between p-3 rounded-2xl transition-all group/session cursor-pointer ${active ? 'bg-gray-100' : 'hover:bg-gray-50'}`;
-                        item.onclick = () => switchSession(s.id, s.title);
-                        item.innerHTML = `
-                            <div class="flex items-center gap-4 min-w-0 flex-1 pointer-events-none">
-                                <span class="material-symbols-rounded text-gray-400 ${active ? 'text-black' : ''} text-[20px] shrink-0">${s.pinned ? 'push_pin' : 'chat'}</span>
-                                <span class="whitespace-nowrap overflow-hidden text-ellipsis text-xs font-semibold ${active ? 'text-black' : 'text-gray-500'}">${s.title}</span>
-                            </div>
-                            <button onclick="event.stopPropagation(); deleteSession('${s.id}')" class="opacity-0 group-hover/session:opacity-100 p-1.5 text-gray-400 hover:text-red-500 transition-opacity z-20" title="刪除對話">
-                                <span class="material-symbols-rounded text-[16px]">delete</span>
-                            </button>
-                        `;
-                        list.appendChild(item);
-                    });
-            } catch (e) {}
-        }
-
-        async function switchSession(id, title) {
-            currentSessionId = id;
-            document.getElementById('chat-container').innerHTML = '';
-            const lid = appendLoading("正在載入對話...");
-            try {
-                const data = await fetchGAS('load_session', { mode: 'system', session_id: id, workspace: currentWorkspace });
-                removeLoading(lid);
-                if (data.logs) {
-                    data.logs.forEach(l => appendMessage(l.role === 'ai' ? 'ai' : 'user', l.text));
-                }
-                loadSessions();
-            } catch (e) { removeLoading(lid); }
-        }
-
-        function startNewSession() {
-            currentSessionId = generateUUID();
-            document.getElementById('chat-container').innerHTML = `
-                <div class="message-block ai-message text-center pt-24">
-                    <h1 class="text-4xl font-bold tracking-tight mb-4">今天想聊些什麼？</h1>
-                    <p class="text-gray-400 text-lg">您已進入 **${currentWorkspace || "預設"}** 專案空間</p>
-                    <p class="text-gray-300 text-sm mt-2">歷史對話與記憶已隔離。請開始新的討論。</p>
-                </div>
-            `;
-            loadSessions();
-        }
-
-        // --- 檔案解析引擎加載器 ---
         let pdfjsLibLoaded = false, mammothLoaded = false, xlsxLoaded = false, jszipLoaded = false;
         async function loadPdfJs() { if(pdfjsLibLoaded) return; return new Promise((r, j) => { let s = document.createElement('script'); s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"; s.onload = () => { pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; pdfjsLibLoaded = true; r(); }; s.onerror = j; document.head.appendChild(s); }); }
         async function loadMammoth() { if(mammothLoaded) return; return new Promise((r, j) => { let s = document.createElement('script'); s.src = "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"; s.onload = () => { mammothLoaded = true; r(); }; s.onerror = j; document.head.appendChild(s); }); }
         async function loadXlsx() { if(xlsxLoaded) return; return new Promise((r, j) => { let s = document.createElement('script'); s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"; s.onload = () => { xlsxLoaded = true; r(); }; s.onerror = j; document.head.appendChild(s); }); }
         async function loadJszip() { if(jszipLoaded) return; return new Promise((r, j) => { let s = document.createElement('script'); s.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"; s.onload = () => { jszipLoaded = true; r(); }; s.onerror = j; document.head.appendChild(s); }); }
 
-        // --- 核心檔案處理函數 ---
-        async function handleFileUpload(e) {
-            const f = e.target.files[0]; if (!f) return; 
-            const r = new FileReader(), ext = f.name.split('.').pop().toLowerCase();
-            const lid = appendLoading(`正在處理 ${f.name}...`);
+        // ↔️ 右側面板拖拉縮放邏輯
+        (function() {
+            const resizer = document.getElementById('right-panel-resizer');
+            const panel = document.getElementById('right-panel');
+            let isResizing = false;
+
+            resizer.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                panel.style.transition = 'none';
+                document.body.style.cursor = 'col-resize';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                const newWidth = window.innerWidth - e.clientX;
+                if (newWidth > 200 && newWidth < window.innerWidth * 0.7) {
+                    panel.style.width = `${newWidth}px`;
+                    document.documentElement.style.setProperty('--right-panel-width', `${newWidth}px`);
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    panel.style.transition = '';
+                    document.body.style.cursor = '';
+                }
+            });
+        })();
+
+        // ↔️ 左側面板拖拉縮放邏輯
+        (function() {
+            const sidebar = document.getElementById('sidebar'), resizer = document.getElementById('sidebar-resizer');
+            let isResizing = false;
+            if (resizer) {
+                resizer.addEventListener('mousedown', (e) => { isResizing = true; document.body.style.cursor = 'col-resize'; e.preventDefault(); });
+                document.addEventListener('mousemove', (e) => {
+                    if (!isResizing) return;
+                    const newWidth = e.clientX;
+                    if (newWidth > 150 && newWidth < 500 && sidebar) sidebar.style.width = `${newWidth}px`;
+                });
+                document.addEventListener('mouseup', () => { if (isResizing) { isResizing = false; document.body.style.cursor = ''; } });
+            }
+        })();
+        
+        function toggleBookmarks() { const l = document.getElementById('bookmark-list'), c = document.getElementById('bookmark-chevron'); l.classList.toggle('hidden'); c.style.transform = l.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)'; }
+        
+        function toggleSendButton(w) { 
+            isWaiting = w; 
+            sendBtnIcon.innerText = w ? 'stop' : 'send'; 
+            sendBtn.className = w ? "p-2.5 sm:p-3 shrink-0 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-all shadow-md flex items-center justify-center" : "p-2.5 sm:p-3 shrink-0 bg-white text-black rounded-xl hover:bg-gray-200 transition-all shadow-md flex items-center justify-center"; 
+        }
+        
+        function stopGeneration() { if (abortController) { abortController.abort(); abortController = null; } }
+
+        userInput.addEventListener('paste', function(e) {
+            const pt = (e.clipboardData || window.clipboardData).getData('text');
+            const ytMatch = pt.match(new RegExp('(?:youtube\\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=)|youtu\\.be/)([^"&?/\\s]{11})', 'i'));
+            if (ytMatch && ytMatch[1]) { e.preventDefault(); currentYouTubeId = ytMatch[1]; document.getElementById('yt-thumbnail').src = `https://img.youtube.com/vi/${currentYouTubeId}/mqdefault.jpg`; document.getElementById('youtube-preview').classList.remove('hidden'); document.getElementById('image-preview').classList.add('hidden'); document.getElementById('doc-preview').classList.add('hidden'); document.getElementById('upload-preview-container').classList.remove('hidden'); document.getElementById('web-search-toggle').checked = true; return; }
+            if (e.clipboardData && e.clipboardData.items) { for (let i = 0; i < e.clipboardData.items.length; i++) { if (e.clipboardData.items[i].type.indexOf('image') !== -1) { e.preventDefault(); const file = e.clipboardData.items[i].getAsFile(), reader = new FileReader(); reader.onload = (ev) => { currentImageData = ev.target.result; currentMimeType = file.type; document.getElementById('image-preview').src = currentImageData; document.getElementById('image-preview').classList.remove('hidden'); document.getElementById('doc-preview').classList.add('hidden'); document.getElementById('youtube-preview').classList.add('hidden'); document.getElementById('upload-preview-container').classList.remove('hidden'); }; reader.readAsDataURL(file); return; } } }
+            if (pt && pt.startsWith('data:image/')) { e.preventDefault(); currentImageData = pt; const m = pt.match(new RegExp('data:(.*?);')); currentMimeType = m ? m[1] : 'image/png'; document.getElementById('image-preview').src = currentImageData; document.getElementById('image-preview').classList.remove('hidden'); document.getElementById('doc-preview').classList.add('hidden'); document.getElementById('youtube-preview').classList.add('hidden'); document.getElementById('upload-preview-container').classList.remove('hidden'); }
+            setTimeout(() => { userInput.style.height = 'auto'; userInput.style.height = (userInput.scrollHeight > 240 ? 240 : userInput.scrollHeight) + 'px'; }, 0);
+        });
+        
+        userInput.addEventListener('keydown', (e) => { 
+            if (e.key === 'Enter' && !e.shiftKey) { 
+                if (window.innerWidth < 768) return; 
+                e.preventDefault(); 
+                isWaiting ? stopGeneration() : sendMessage(); 
+            } 
+        });
+
+        async function sendEditAndRegenerate(oldText, newText) {
+            if (isWaiting) return;
+            if (window.speechSynthesis) window.speechSynthesis.cancel(); 
+            
+            let agp = null, agm = null;
+            const gs = document.getElementById('gem-selector');
+            const ms = document.getElementById('model-selector');
+            
+            if (gs.value !== "") { agp = currentGemsList[parseInt(gs.value)].prompt; agm = currentGemsList[parseInt(gs.value)].model; }
+
+            let dMsg = newText;
+            if (agp) dMsg = `【使用角色：${currentGemsList[parseInt(gs.value)].name}${agm ? ` (${agm})` : ''}】\n${newText}`;
+
+            appendMessage('user', dMsg, null);
+            
+            const payload = { 
+                mode: 'edit_and_regenerate',
+                old_text: oldText, message: newText, session_id: currentSessionId, workspace: currentWorkspace,
+                file_data: null, mime_type: null, 
+                web_search: settings.webSearch, 
+                auto_image: settings.autoImage, 
+                draw_mode: settings.drawMode, 
+                youtube_id: null, 
+                gem_prompt: agp, gem_model: agm, selected_model: ms.value 
+            };
+            
+            toggleSendButton(true); const lid = appendLoading(); abortController = new AbortController(); 
 
             try {
-                if (f.type.startsWith('image/')) { 
-                    removeLoading(lid);
-                    r.onload = (ev) => { 
-                        currentImageData = ev.target.result; currentMimeType = f.type; 
-                        const img = document.getElementById('image-preview');
-                        img.src = currentImageData; img.classList.remove('hidden'); 
-                        document.getElementById('doc-preview').classList.add('hidden'); 
-                        document.getElementById('upload-preview-container').classList.remove('hidden'); 
-                    }; r.readAsDataURL(f); 
+                if(GAS_URL.includes("請在此填入")) throw new Error("請先在 HTML 檔案第 117 行更換 GAS_URL！");
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload), signal: abortController.signal });
+                const data = await res.json(); removeLoading(lid);
+                if (data.status === "error") throw new Error(data.error || "伺服器錯誤");
+                if (data.reply) { appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model); if (!speakText(data.reply, true) && document.getElementById('continuous-mode-toggle').checked) setTimeout(startRecording, 500); }
+                loadSessions(); 
+            } catch (err) { removeLoading(lid); appendMessage('ai', err.name === 'AbortError' ? `🛑 **生成已中止。**` : `❌ 執行失敗：\n\`\`\`text\n${err.message}\n\`\`\``); } 
+            finally { toggleSendButton(false); abortController = null; }
+        }
+
+        async function sendMessage() {
+            clearTimeout(silenceTimer); stopRecording(); 
+            const text = userInput.value.trim();
+            if (!text && !currentImageData && !currentDocumentText && !currentYouTubeId) return;
+            if (isWaiting) return;
+            if (window.speechSynthesis) window.speechSynthesis.cancel(); 
+
+            let agp = null, agm = null;
+            const gs = document.getElementById('gem-selector');
+            const ms = document.getElementById('model-selector');
+            
+            if (gs.value !== "") { agp = currentGemsList[parseInt(gs.value)].prompt; agm = currentGemsList[parseInt(gs.value)].model; }
+
+            let dMsg = text;
+            if (currentDocumentName) dMsg = `📎 [文件: ${currentDocumentName}]\n${text}`;
+            if (currentYouTubeId) dMsg = `📺 [YouTube 影片]\n${text}`;
+            if (agp && !currentDocumentName && !currentYouTubeId) dMsg = `【使用角色：${currentGemsList[parseInt(gs.value)].name}${agm ? ` (${agm})` : ''}】\n${text}`;
+
+            appendMessage('user', dMsg, currentImageData);
+            
+            let pText = text || "請分析此內容";
+            if (currentDocumentText) pText = `【系統強制附加解析好的檔案內容：${currentDocumentName}】\n${currentDocumentText}\n\n---\n使用者的指令：${pText}`;
+            else if (currentYouTubeId) pText = `【影片】：https://www.youtube.com/watch?v=${currentYouTubeId}\n\n指令：${pText}`;
+
+            userInput.value = ''; userInput.style.height = 'auto'; finalTranscript = ''; 
+            
+            const payload = { 
+                message: pText, session_id: currentSessionId, workspace: currentWorkspace,
+                file_data: currentImageData ? currentImageData.split(',')[1] : null, mime_type: currentMimeType, 
+                web_search: settings.webSearch, 
+                auto_image: settings.autoImage, 
+                draw_mode: settings.drawMode, 
+                youtube_id: currentYouTubeId, 
+                gem_prompt: agp, gem_model: agm, selected_model: ms.value 
+            };
+            
+            clearUpload(); toggleSendButton(true); const lid = appendLoading(); abortController = new AbortController(); 
+
+            try {
+                if(GAS_URL.includes("請在此填入")) throw new Error("請先在 HTML 檔案第 117 行更換 GAS_URL！");
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload), signal: abortController.signal });
+                const data = await res.json(); removeLoading(lid);
+                if (data.status === "error") throw new Error(data.error || "伺服器錯誤");
+                if (data.reply) { appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model); if (!speakText(data.reply, true) && document.getElementById('continuous-mode-toggle').checked) setTimeout(startRecording, 500); }
+                loadSessions(); 
+            } catch (err) { removeLoading(lid); appendMessage('ai', err.name === 'AbortError' ? `🛑 **生成已中止。**` : `❌ 執行失敗：\n\`\`\`text\n${err.message}\n\`\`\``); } 
+            finally { toggleSendButton(false); abortController = null; }
+        }
+
+        async function handleFileUpload(e) {
+            const f = e.target.files[0]; if (!f) return; const r = new FileReader(), ext = f.name.split('.').pop().toLowerCase();
+            
+            if (f.type.startsWith('image/')) { r.onload = (ev) => { currentImageData = ev.target.result; currentMimeType = f.type; document.getElementById('image-preview').src = currentImageData; document.getElementById('image-preview').classList.remove('hidden'); document.getElementById('doc-preview').classList.add('hidden'); document.getElementById('youtube-preview').classList.add('hidden'); document.getElementById('upload-preview-container').classList.remove('hidden'); }; r.readAsDataURL(f); } 
+            else if (f.type === 'application/pdf' || ext === 'pdf') { const lid = appendLoading("載入 PDF 解析引擎..."); try { await loadPdfJs(); r.onload = async (ev) => { try { const pdf = await pdfjsLib.getDocument(new Uint8Array(ev.target.result)).promise; let t = ""; for (let i=1; i<=pdf.numPages; i++) t += (await (await pdf.getPage(i)).getTextContent()).items.map(s => s.str).join(' ') + "\n"; setDocPayload(f.name, t); } catch (err) { alert("PDF 解析失敗"); } finally { removeLoading(lid); } }; r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); alert("載入 PDF 引擎失敗"); } } 
+            else if (ext === 'docx') { const lid = appendLoading("載入 Word 解析引擎..."); try { await loadMammoth(); r.onload = async (ev) => { try { setDocPayload(f.name, (await mammoth.extractRawText({ arrayBuffer: ev.target.result })).value); } catch(err) { alert("Word 解析失敗"); } finally { removeLoading(lid); } }; r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); alert("載入 Word 引擎失敗"); } } 
+            else if (ext === 'xlsx' || ext === 'csv') { const lid = appendLoading("載入 Excel 解析引擎..."); try { await loadXlsx(); r.onload = (ev) => { try { const wb = XLSX.read(ev.target.result, { type: 'array' }); let t = ""; wb.SheetNames.forEach(n => { t += `\n--- 表單: ${n} ---\n`; let c = XLSX.utils.sheet_to_csv(wb.Sheets[n]); t += c.length > 500000 ? c.substring(0, 500000) + "\n...[截斷]..." : c; }); setDocPayload(f.name, t); } catch(err) { alert("Excel 解析失敗"); } finally { removeLoading(lid); } }; r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); alert("載入 Excel 引擎失敗"); } } 
+            else if (ext === 'pptx') { 
+                const lid = appendLoading("正在解析簡報檔..."); 
+                if (f.size < 5 * 1024 * 1024) { 
+                    try {
+                        r.onload = async (ev) => {
+                            try {
+                                const base64Data = ev.target.result.split(',')[1];
+                                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'parse_pptx', file_name: f.name, file_data: base64Data }) });
+                                const data = await res.json();
+                                if (data.status === 'success') { setDocPayload(f.name, data.text); } else { throw new Error(data.message || "雲端轉檔失敗"); }
+                            } catch (err) { console.warn("雲端 PPTX 解析失敗，啟動備用引擎...", err); fallbackJSZipParse(f, ev.target.result.split(',')[1], true, lid); } 
+                        }; r.readAsDataURL(f);
+                    } catch (err) { removeLoading(lid); }
                 } 
-                else if (f.type === 'application/pdf' || ext === 'pdf') { 
-                    await loadPdfJs(); 
-                    r.onload = async (ev) => { 
-                        try { 
-                            const pdf = await pdfjsLib.getDocument(new Uint8Array(ev.target.result)).promise; 
-                            let t = ""; for (let i=1; i<=pdf.numPages; i++) t += (await (await pdf.getPage(i)).getTextContent()).items.map(s => s.str).join(' ') + "\n"; 
-                            setDocPayload(f.name, t); 
-                        } catch (err) { alert("PDF 解析失敗"); } finally { removeLoading(lid); } 
-                    }; r.readAsArrayBuffer(f); 
-                } 
-                else if (ext === 'docx') { 
-                    await loadMammoth(); 
-                    r.onload = async (ev) => { 
-                        try { setDocPayload(f.name, (await mammoth.extractRawText({ arrayBuffer: ev.target.result })).value); } catch(err) { alert("Word 解析失敗"); } finally { removeLoading(lid); } 
-                    }; r.readAsArrayBuffer(f); 
-                } 
-                else if (ext === 'xlsx' || ext === 'csv') { 
-                    await loadXlsx(); 
-                    r.onload = (ev) => { 
-                        try { 
-                            const wb = XLSX.read(ev.target.result, { type: 'array' }); 
-                            let t = ""; wb.SheetNames.forEach(n => { t += `\n--- 表單: ${n} ---\n`; let c = XLSX.utils.sheet_to_csv(wb.Sheets[n]); t += c; }); 
-                            setDocPayload(f.name, t); 
-                        } catch(err) { alert("Excel 解析失敗"); } finally { removeLoading(lid); } 
-                    }; r.readAsArrayBuffer(f); 
-                } 
-                else if (ext === 'pptx') { 
-                    r.onload = async (ev) => { 
-                        try { await fallbackJSZipParse(f, ev.target.result, false, lid); } catch (err) { removeLoading(lid); } 
-                    }; r.readAsArrayBuffer(f); 
-                } 
-                else { 
-                    r.onload = (ev) => { setDocPayload(f.name, ev.target.result); removeLoading(lid); }; 
-                    r.readAsText(f); 
-                }
-            } catch (err) { removeLoading(lid); alert("上傳過程發生錯誤"); }
+                else { try { r.onload = (ev) => fallbackJSZipParse(f, ev.target.result, false, lid); r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); } }
+            } 
+            else { r.onload = (ev) => setDocPayload(f.name, ev.target.result); r.readAsText(f); }
         }
 
         async function fallbackJSZipParse(fileObj, fileData, isBase64, loaderId) {
             try { 
                 await loadJszip(); const zip = await (new JSZip()).loadAsync(fileData, isBase64 ? { base64: true } : {}); 
-                let t = `【系統解析：簡報檔名 ${fileObj.name}】\n\n`; 
+                let t = `【系統解析：簡報檔名 ${fileObj.name} (啟動本機輕量模式)】\n\n`; 
                 const sFiles = Object.keys(zip.files).filter(n => n.match(/^ppt\/slides\/slide\d+\.xml$/)).sort((a, b) => parseInt(a.match(/(\d+)\.xml$/)[1]) - parseInt(b.match(/(\d+)\.xml$/)[1]));
+                const nFiles = Object.keys(zip.files).filter(n => n.match(/^ppt\/notesSlides\/notesSlide\d+\.xml$/));
                 const parser = new DOMParser(); 
                 for (const p of sFiles) { 
                     const sn = p.match(/(\d+)\.xml$/)[1]; t += `--- 第 ${sn} 頁 ---\n`; 
                     const sx = await zip.file(p).async("string"); 
-                    if (sx) { const xmlDoc = parser.parseFromString(sx, "text/xml"); t += Array.from(xmlDoc.getElementsByTagName("a:t")).map(n => n.textContent).join(" ") + "\n"; } 
+                    if (sx) { const xmlDoc = parser.parseFromString(sx, "text/xml"); const textNodes = Array.from(xmlDoc.getElementsByTagName("a:t")); let extText = textNodes.map(n => n.textContent).join(" "); t += `[投影片內容]:\n${extText.trim()}\n`; } 
+                    const np = `ppt/notesSlides/notesSlide${sn}.xml`; 
+                    if (nFiles.includes(np)) { const nx = await zip.file(np).async("string"); if (nx) { const xmlDoc = parser.parseFromString(nx, "text/xml"); const textNodes = Array.from(xmlDoc.getElementsByTagName("a:t")); let extText = textNodes.map(n => n.textContent).join(" "); if (extText.trim()) t += `[講者備忘錄]:\n${extText.trim()}\n`; } } 
+                    t += `\n`; 
                 } setDocPayload(fileObj.name, t); 
-            } catch (err) { alert("PPTX 解析失敗"); } finally { removeLoading(loaderId); }
+            } catch (err) { alert("PPTX 本機備用解析失敗"); } finally { removeLoading(loaderId); }
         }
 
-        function setDocPayload(n, t) { 
-            currentDocumentName = n; currentDocumentText = t; 
-            document.getElementById('doc-filename').innerText = n; 
-            document.getElementById('doc-preview').classList.remove('hidden'); 
-            document.getElementById('image-preview').classList.add('hidden'); 
-            document.getElementById('upload-preview-container').classList.remove('hidden'); 
+        function setDocPayload(n, t) { currentDocumentName = n; currentDocumentText = t; document.getElementById('doc-filename').innerText = n; document.getElementById('doc-preview').classList.remove('hidden'); document.getElementById('image-preview').classList.add('hidden'); document.getElementById('youtube-preview').classList.add('hidden'); document.getElementById('upload-preview-container').classList.remove('hidden'); }
+        function clearUpload() { currentImageData = currentDocumentText = currentDocumentName = currentYouTubeId = null; document.getElementById('upload-preview-container').classList.add('hidden'); document.getElementById('file-upload').value = ''; }
+
+        function appendMessage(role, text, imageSrc = null, model = null) {
+            const isAI = role === 'ai', w = document.createElement('div'); w.className = `flex gap-3 sm:gap-4 max-w-4xl mx-auto w-full group ${!isAI ? 'flex-row-reverse' : ''}`;
+            let b = `<div class="flex-1 ${!isAI ? 'text-right' : ''} space-y-2 max-w-[90%] sm:max-w-[85%] relative min-w-0">`;
+            
+            if (model && isAI) b += `<div class="text-[10px] text-gray-500 mb-1 ml-1 select-none font-mono">Powered by ${model}</div>`;
+            if (imageSrc) b += `<img src="${imageSrc}" class="rounded-xl border border-[#333] mb-2 max-w-full">`;
+            if (text) {
+                const isShared = window.sharedKnowledgeSet && window.sharedKnowledgeSet.has(text.trim());
+                let cleanText = text;
+                if (isAI) {
+                    const nl = String.fromCharCode(10);
+                    cleanText = cleanText.split('<think>').join('<details class="text-xs text-gray-500 mb-2 border-l-2 border-gray-600 pl-2"><summary class="cursor-pointer font-bold">查看思考過程</summary>' + nl + nl)
+                                 .split('</think>').join(nl + nl + '</details>' + nl)
+                                 .split('<thought>').join('<details class="text-xs text-gray-500 mb-2 border-l-2 border-gray-600 pl-2"><summary class="cursor-pointer font-bold">查看思考過程</summary>' + nl + nl)
+                                 .split('</thought>').join(nl + nl + '</details>' + nl);
+                }
+                let parsedText = isAI ? marked.parse(cleanText) : cleanText.split('\\n').join('<br>');
+                if (isAI) {
+                    parsedText = parsedText.replace(/\[來源\s*(\d+)\]/g, '<span class="citation" onclick="highlightSource($1)">[來源 $1]</span>');
+                }
+                b += `<div class="prose prose-invert text-gray-200 bg-[#1e1f22] p-4 sm:p-5 rounded-2xl rounded-tl-none shadow-sm text-base sm:text-lg leading-relaxed text-left ${isShared ? 'shared-message' : ''}">${parsedText}${isShared ? '<span class="shared-badge">專案共用</span>' : ''}</div>`;
+            }
+            
+            b += `<div class="flex items-center gap-2 mt-2 opacity-100 sm:opacity-50 sm:group-hover:opacity-100 transition-opacity ${!isAI ? 'justify-end' : ''}">`;
+            if (isAI && text) {
+                b += `<button class="share-btn p-1.5 text-gray-400 hover:text-yellow-400 hover:bg-[#333] rounded-md" title="同步至專案共用資料"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">verified</span></button>`;
+                b += `<button class="copy-btn p-1.5 text-gray-400 hover:text-white hover:bg-[#333] rounded-md" title="複製"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">content_copy</span></button>`;
+                b += `<button class="speak-btn p-1.5 text-gray-400 hover:text-green-400 hover:bg-[#333] rounded-md" title="朗讀此訊息"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">volume_up</span></button>`;
+            } 
+            if (!isAI && text) {
+                b += `<button class="share-btn p-1.5 text-gray-400 hover:text-yellow-400 hover:bg-[#333] rounded-md" title="同步至專案共用資料"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">verified</span></button>`;
+                b += `<button class="edit-btn p-1.5 text-gray-400 hover:text-blue-400 hover:bg-[#333] rounded-md transition-colors" title="編輯並重新生成"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">edit</span></button>`;
+            }
+            if (text || imageSrc) {
+                b += `<button class="delete-btn p-1.5 text-gray-400 hover:text-red-400 hover:bg-[#333] rounded-md transition-colors" title="刪除此訊息"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">delete</span></button>`;
+            }
+            b += `</div></div>`; 
+            
+            w.innerHTML = `<div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 shadow-lg ${isAI ? 'bg-blue-600' : 'bg-gray-700'}"><span class="material-symbols-rounded text-white text-[18px] sm:text-xl">${isAI ? 'smart_toy' : 'person'}</span></div>` + b;
+            w.classList.add('message-bubble');
+            chatContainer.appendChild(w);
+
+            if (isAI) { w.querySelectorAll('pre code').forEach(c => { if (c.className.includes('language-html') || c.className.includes('language-jsx') || c.className.includes('language-javascript')) { let btn = document.createElement('button'); btn.className = "absolute top-2 sm:top-3 right-2 sm:right-3 bg-blue-600 hover:bg-blue-500 text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg flex items-center gap-1 shadow-lg"; btn.innerHTML = '<span class="material-symbols-rounded text-[12px] sm:text-sm">play_circle</span> 預覽'; btn.onclick = () => openPreview(c.innerText); c.parentElement.appendChild(btn); } }); }
+            
+            if (isAI && text) { 
+                const sBtn = w.querySelector('.share-btn');
+                if (sBtn) sBtn.onclick = () => toggleMessageSharing(text, w);
+                w.querySelector('.copy-btn').onclick = () => navigator.clipboard.writeText(text).then(() => { let ic = w.querySelector('.copy-btn .material-symbols-rounded'); ic.innerText = 'check'; ic.classList.add('text-green-400'); setTimeout(() => { ic.innerText = 'content_copy'; ic.classList.remove('text-green-400'); }, 2000); }); 
+                w.querySelector('.speak-btn').onclick = () => speakText(text, false); 
+            } 
+            
+            if (!isAI && text) {
+                const sBtn = w.querySelector('.share-btn');
+                if (sBtn) sBtn.onclick = () => toggleMessageSharing(text, w);
+                w.querySelector('.edit-btn').onclick = () => {
+                    const contentDiv = w.querySelector('.prose'); const actionsDiv = w.querySelector('.flex.items-center.gap-2.mt-2'); contentDiv.classList.add('hidden'); actionsDiv.classList.add('hidden');
+                    const editContainer = document.createElement('div'); editContainer.className = "w-full mt-2 flex flex-col gap-2 text-left";
+                    let cleanEditText = text.replace(new RegExp('^【使用角色：.*?】\\n'), '').replace(new RegExp('^📎 \\[(?:文件|檔案): .*?\\]\\n'), '').replace(new RegExp('^📺 \\[YouTube 影片\\]\\n'), '');
+                    editContainer.innerHTML = `<textarea class="w-full bg-[#2a2b2f] text-white p-3 rounded-xl border border-blue-500 outline-none resize-y min-h-[100px] text-base leading-relaxed">${cleanEditText}</textarea><div class="flex justify-end gap-2"><button class="cancel-edit-btn px-3 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-[#333] transition-colors">取消</button><button class="save-edit-btn px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1 transition-colors shadow-md"><span class="material-symbols-rounded text-[16px]">send</span> 重新發送</button></div>`;
+                    w.querySelector('.flex-1').appendChild(editContainer);
+                    editContainer.querySelector('.cancel-edit-btn').onclick = () => { editContainer.remove(); contentDiv.classList.remove('hidden'); actionsDiv.classList.remove('hidden'); };
+                    editContainer.querySelector('.save-edit-btn').onclick = () => {
+                        const newText = editContainer.querySelector('textarea').value.trim(); if (!newText) return;
+                        let curr = w; while(curr) { let next = curr.nextElementSibling; curr.remove(); curr = next; }
+                        sendEditAndRegenerate(text, newText); 
+                    };
+                };
+            }
+
+            if (w.querySelector('.delete-btn')) {
+                w.querySelector('.delete-btn').onclick = () => {
+                    if (confirm("確定要刪除這則訊息嗎？\n(刪除後系統將徹底忘記這段對話)")) {
+                        w.remove(); fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'delete_message', session_id: currentSessionId, workspace: currentWorkspace, target_text: text, target_role: role }) });
+                    }
+                };
+            }
+            scrollToBottom();
         }
 
-        function clearUpload() {
-            currentImageData = currentMimeType = currentDocumentText = currentDocumentName = null;
-            document.getElementById('upload-preview-container').classList.add('hidden');
-            document.getElementById('file-upload').value = '';
+        function appendLoading(customMsg) { 
+            const id = 'loader-' + Date.now(), d = document.createElement('div'); d.id = id; d.className = "flex gap-3 sm:gap-4 max-w-4xl mx-auto w-full"; 
+            let msg = customMsg || "代理人正忙碌中";
+            d.innerHTML = `<div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-600 flex items-center justify-center shrink-0 animate-pulse"><span class="material-symbols-rounded text-white text-[18px] sm:text-xl">hourglass_empty</span></div><div class="pt-1.5 sm:pt-3 flex gap-2 items-center text-gray-500 text-sm sm:text-base italic typing-indicator">${msg}<span></span><span></span><span></span></div>`; 
+            chatContainer.appendChild(d); scrollToBottom(); return id; 
+        }
+        function removeLoading(id) { const el = document.getElementById(id); if (el) el.remove(); }
+        function scrollToBottom() { chatContainer.scrollTop = chatContainer.scrollHeight; }
+        function generateUUID() { return 'xxxx-4xxx-yxxx'.replace(new RegExp('[xy]', 'g'), c => (c === 'x' ? (Math.random() * 16 | 0) : (Math.random() * 16 | 0 & 0x3 | 0x8)).toString(16)); }
+        function toggleSidebar() {
+            const s = document.getElementById('sidebar');
+            const o = document.getElementById('sidebar-overlay');
+            const isOpen = s.classList.toggle('translate-x-0');
+            s.classList.toggle('-translate-x-full');
+            if (window.innerWidth < 768) {
+                o.classList.toggle('hidden');
+                document.body.style.overflow = isOpen ? 'hidden' : '';
+            }
+        }
+        
+        function startNewSession() { 
+            currentSessionId = generateUUID(); 
+            chatContainer.innerHTML = ''; 
+            appendMessage('ai', `您已進入 **${currentWorkspace || "主"}** 專案空間。\n我會自動隔離記憶，確保任務上下文精準不發散！\n(下方的麥克風與進階功能選單皆已就緒)`); 
+            if (window.innerWidth < 768) toggleSidebar(); 
+            loadSessions(); loadWorkspaceContext(); loadSources();
+        }
+        
+        async function loadWorkspaces() { 
+            try { 
+                const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_workspaces' }) })).json(); 
+                if (d && d.workspaces) {
+                    const sel = document.getElementById('workspace-selector'); let html = '';
+                    d.workspaces.forEach(ws => { html += `<option value="${ws}">${ws}</option>`; });
+                    sel.innerHTML = html;
+                    
+                    if (currentWorkspace && d.workspaces.includes(currentWorkspace)) {
+                        sel.value = currentWorkspace;
+                    } else if (d.workspaces.length > 0) { 
+                        currentWorkspace = d.workspaces[0]; 
+                        sel.value = currentWorkspace; 
+                    }
+                }
+            } catch (e) {} 
         }
 
-        // 8. 其他輔助功能
-        async function loadGems() {
+        function changeWorkspace() { currentWorkspace = document.getElementById('workspace-selector').value; startNewSession(); loadWorkspaceContext(); loadSources(); }
+        
+        function createNewWorkspace() {
+            const name = prompt("請輸入新專案空間 (Workspace) 的名稱：");
+            if (name && name.trim()) { currentWorkspace = name.trim(); const sel = document.getElementById('workspace-selector'); sel.innerHTML += `<option value="${currentWorkspace}">${currentWorkspace}</option>`; sel.value = currentWorkspace; startNewSession(); }
+        }
+
+        async function switchSession(id, title) { if (id === currentSessionId && chatContainer.children.length > 1) return; currentSessionId = id; document.getElementById('mobile-title').innerText = title; chatContainer.innerHTML = ''; const lid = appendLoading("正在載入歷史對話..."); if (window.innerWidth < 768) toggleSidebar(); try { const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'load_session', session_id: id, workspace: currentWorkspace }) })).json(); removeLoading(lid); if (Array.isArray(d.logs)) d.logs.forEach(l => appendMessage(l.role === 'ai' ? 'ai' : 'user', l.text)); loadSessions(); loadWorkspaceContext(); loadSources(); } catch (e) {} }
+        
+        async function loadGems() { try { const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_gems', workspace: currentWorkspace }) })).json(); if (d && d.gems) { currentGemsList = d.gems; const s = document.getElementById('gem-selector'); s.innerHTML = '<option value="">🤖 全能助理</option>'; currentGemsList.forEach((g, i) => s.innerHTML += `<option value="${i}">💎 ${g.name}</option>`); } } catch (e) {} }
+        
+        async function loadModels() { 
+            try { 
+                const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_models', workspace: currentWorkspace }) })).json(); 
+                const s = document.getElementById('model-selector'); s.innerHTML = '<option value="">🧠 預設模型 (自動)</option>'; 
+                if (d && d.models && d.models.length > 0) { d.models.forEach(m => s.innerHTML += `<option value="${m.id}">${m.name}</option>`); } 
+                else { s.innerHTML += `<option value="gemini-2.5-flash">⚡ 閃電 (2.5 Flash)</option><option value="gemini-2.5-pro">🧠 專家 (2.5 Pro)</option><option value="gemini-3.1-flash-lite-preview">🔍 審查員 (3.1 Lite)</option>`; }
+            } catch (e) {} 
+        }
+
+        async function loadSessions() { 
+            try { 
+                const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_session_list', workspace: currentWorkspace }) })).json(); 
+                const l = document.getElementById('session-list'); l.innerHTML = ''; 
+                if (Array.isArray(d.sessions)) d.sessions.forEach(s => { 
+                    const act = s.id === currentSessionId, pin = s.pinned, i = document.createElement('div'); 
+                    i.className = `group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${act ? 'active-session' : 'text-gray-400 hover:bg-[#2a2b2f] hover:text-white'}`; 
+                    i.innerHTML = `<div class="flex items-center gap-3 truncate flex-1 min-w-0"><span class="material-symbols-rounded text-lg shrink-0 ${pin ? 'pinned-icon' : ''}">${pin ? 'push_pin' : (act ? 'chat_bubble' : 'chat')}</span><span class="truncate text-sm font-medium tracking-wide">${s.title}</span></div><div class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 shrink-0 ml-2 transition-opacity"><button class="p-1 pin-btn ${pin ? 'text-blue-500' : ''} hover:bg-[#333] rounded-md transition-colors" title="釘選"><span class="material-symbols-rounded text-[16px]">push_pin</span></button><button class="p-1 move-btn hover:text-green-400 hover:bg-[#333] rounded-md transition-colors" title="歸檔至其他專案"><span class="material-symbols-rounded text-[16px]">drive_file_move</span></button><button class="p-1 edit-btn hover:text-blue-400 hover:bg-[#333] rounded-md transition-colors" title="重新命名"><span class="material-symbols-rounded text-[16px]">edit</span></button><button class="p-1 del-btn hover:text-red-400 hover:bg-[#333] rounded-md transition-colors" title="刪除對話"><span class="material-symbols-rounded text-[16px]">delete</span></button></div>`; 
+                    i.onclick = () => switchSession(s.id, s.title); 
+                    
+                    i.querySelector('.pin-btn').onclick = (e) => { e.stopPropagation(); fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'pin_session', session_id: s.id, is_pinned: !pin, workspace: currentWorkspace }) }).then(loadSessions); }; 
+                    i.querySelector('.edit-btn').onclick = (e) => { e.stopPropagation(); const n = prompt("重命名：", s.title); if (n && n.trim()) fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'rename_session', session_id: s.id, new_title: n, workspace: currentWorkspace }) }).then(loadSessions); }; 
+                    i.querySelector('.del-btn').onclick = (e) => { e.stopPropagation(); if (confirm("確定要刪除嗎？")) fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'delete_session', session_id: s.id, workspace: currentWorkspace }) }).then(() => s.id === currentSessionId ? startNewSession() : loadSessions()); }; 
+                    
+                    i.querySelector('.move-btn').onclick = (e) => { 
+                        e.stopPropagation(); 
+                        const targetWs = prompt(`將對話「${s.title}」歸檔\n請輸入目標專案空間名稱 (若不存在將自動建立)：`, "歸檔專案"); 
+                        if (targetWs && targetWs.trim() && targetWs.trim() !== currentWorkspace) {
+                            const lid = appendLoading("正在轉移對話紀錄...");
+                            fetch(GAS_URL, { 
+                                method: 'POST', 
+                                body: JSON.stringify({ mode: 'system', action: 'move_session', session_id: s.id, workspace: currentWorkspace, target_workspace: targetWs.trim() }) 
+                            }).then(() => {
+                                removeLoading(lid);
+                                if (s.id === currentSessionId) startNewSession(); else loadSessions();
+                                loadWorkspaces(); 
+                            }); 
+                        } 
+                    };
+                    l.appendChild(i); 
+                }); 
+            } catch (e) {} 
+        }
+
+        function openPreview(code) {
+            let rc = code;
+            if ((code.includes('export default') || code.includes('import React') || code.includes('className=')) && !(code.trim().toLowerCase().startsWith('<!doctype html') || code.trim().toLowerCase().startsWith('<html'))) {
+                let cc = code.replace(new RegExp('import\\s+.*?from\\s+[\'"].*?[\'"];?', 'g'), '').replace(new RegExp('export\\s+default\\s+function', 'g'), 'function');
+                let cm = code.replace(new RegExp('import\\s+.*?from\\s+[\'"].*?[\'"];?', 'g'), '').match(new RegExp('export\\s+default\\s+function\\s+([A-Za-z0-9_]+)'));
+                rc = `<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">` + 
+                     `<script src="https://unpkg.com/react@18/umd/react.production.min.js">\x3C/script>` + 
+                     `<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js">\x3C/script>` + 
+                     `<script src="https://unpkg.com/@babel/standalone/babel.min.js">\x3C/script>` + 
+                     `<script src="https://cdn.tailwindcss.com">\x3C/script>` + 
+                     `<script src="https://unpkg.com/lucide@latest">\x3C/script>` + 
+                     `</head><body class="bg-gray-50"><div id="root"></div><script type="text/babel">const { useState, useEffect, useRef, useMemo, useCallback } = React; try { ${cc} const root = ReactDOM.createRoot(document.getElementById('root')); root.render(<${cm ? cm[1] : 'App'} />); setTimeout(() => { if(window.lucide) window.lucide.createIcons(); }, 100); } catch(err) { document.getElementById('root').innerHTML = '<div class="p-4 text-red-700">渲染錯誤:<br>' + err.message + '</div>'; } \x3C/script></body></html>`;
+            }
+            currentRenderCode = rc; document.getElementById('preview-modal').classList.remove('hidden'); document.getElementById('preview-modal').classList.add('flex'); document.getElementById('preview-iframe').srcdoc = rc;
+        }
+        function closePreview() { document.getElementById('preview-modal').classList.add('hidden'); document.getElementById('preview-modal').classList.remove('flex'); document.getElementById('preview-iframe').srcdoc = ''; }
+        function refreshPreview() { if (currentRenderCode) document.getElementById('preview-iframe').srcdoc = currentRenderCode; }
+
+        function toggleSharedData() { /* 已整合至右面板 */ }
+        function toggleSources() { /* 已整合至右面板 */ }
+        
+        let currentRightTab = 'library';
+        function switchRightPanel(tab) {
+            const p = document.getElementById('right-panel');
+            const isOpen = p.classList.contains('right-panel-open');
+            
+            if (isOpen && currentRightTab === tab) {
+                toggleRightPanel();
+                return;
+            }
+            
+            currentRightTab = tab;
+            renderRightPanelContent();
+            if (!isOpen) toggleRightPanel();
+            
+            document.querySelectorAll('.dock-btn').forEach(b => b.classList.remove('active', 'settings-active'));
+            if (tab === 'library') document.getElementById('dock-library').classList.add('active');
+            else if (tab === 'settings') document.getElementById('dock-settings').classList.add('settings-active');
+        }
+
+        function renderRightPanelContent() {
+            const container = document.getElementById('right-panel-content');
+            const icon = document.getElementById('panel-icon');
+            const title = document.getElementById('panel-title');
+            const footer = document.getElementById('panel-footer-text');
+            
+            if (currentRightTab === 'library') {
+                icon.innerText = 'inventory_2';
+                icon.className = 'material-symbols-rounded text-blue-400';
+                title.innerText = '專案圖書館';
+                footer.innerHTML = '<span class="material-symbols-rounded text-[12px] align-middle mr-1">info</span>所有來源與片段均會自動作為 AI 思考的背景知識。';
+                container.innerHTML = `
+                    <div class="mb-4">
+                        <button onclick="generateWiki()" class="w-full py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95">
+                            <span class="material-symbols-rounded text-[18px]">auto_stories</span>
+                            一鍵生成專案 Wiki
+                        </button>
+                    </div>
+                    <section>
+                        <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 px-1 flex items-center justify-between">資料來源 (SOURCES) <span class="bg-blue-600/20 text-blue-400 px-1.5 py-0.5 rounded text-[9px]" id="source-count">0</span></h4>
+                        <div class="space-y-3">
+                            <div class="flex gap-1 mb-2"><input type="text" id="source-input" placeholder="貼上網址或 Drive ID..." class="flex-1 bg-[#2a2b2f] border border-[#444] rounded-md px-2 py-1.5 text-[10px] text-white outline-none focus:border-blue-500"><button onclick="handleAddSource()" class="bg-blue-600 hover:bg-blue-500 text-white p-1.5 rounded-md"><span class="material-symbols-rounded text-[16px]">add</span></button></div>
+                            <div id="sources-list" class="space-y-1.5"><div class="p-4 text-[11px] text-gray-500 italic text-center bg-[#2a2b2f]/50 rounded-xl border border-dashed border-[#444]">載入中...</div></div>
+                        </div>
+                    </section>
+                    <section class="pt-4 border-t border-[#333]">
+                        <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 px-1">釘選知識片段 (FRAGMENTS)</h4>
+                        <div id="shared-data-list" class="space-y-1.5"><div class="p-4 text-[11px] text-gray-500 italic text-center bg-[#2a2b2f]/50 rounded-xl border border-dashed border-[#444]">載入中...</div></div>
+                    </section>
+                `;
+                loadSources();
+                loadWorkspaceContext();
+            } else {
+                icon.innerText = 'tune';
+                icon.className = 'material-symbols-rounded text-purple-400';
+                title.innerText = '功能設定';
+                footer.innerHTML = '<span class="material-symbols-rounded text-[12px] align-middle mr-1">settings</span>調整 AI 的執行模式與行為。';
+                container.innerHTML = `
+                    <div class="space-y-6">
+                        <section>
+                            <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 px-1">模式切換</h4>
+                            <div class="space-y-4">
+                                <label class="flex items-center justify-between p-3 bg-[#2a2b2f] rounded-xl cursor-pointer group hover:bg-[#333] transition-all">
+                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-purple-400">palette</span><div class="flex flex-col"><span class="text-xs font-bold text-gray-200">單純繪圖模式</span><span class="text-[9px] text-gray-500">僅生成圖片，不產生文字</span></div></div>
+                                    <div class="relative"><input type="checkbox" id="draw-mode-toggle" class="sr-only peer"><div class="w-8 h-4.5 bg-gray-600 rounded-full peer peer-checked:bg-purple-600 after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-full"></div></div>
+                                </label>
+                                <label class="flex items-center justify-between p-3 bg-[#2a2b2f] rounded-xl cursor-pointer group hover:bg-[#333] transition-all">
+                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-blue-400">language</span><div class="flex flex-col"><span class="text-xs font-bold text-gray-200">即時聯網搜尋</span><span class="text-[9px] text-gray-500">允許 AI 存取最新網頁資訊</span></div></div>
+                                    <div class="relative"><input type="checkbox" id="web-search-toggle" class="sr-only peer"><div class="w-8 h-4.5 bg-gray-600 rounded-full peer peer-checked:bg-blue-600 after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-full"></div></div>
+                                </label>
+                                <label class="flex items-center justify-between p-3 bg-[#2a2b2f] rounded-xl cursor-pointer group hover:bg-[#333] transition-all">
+                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-pink-400">imagesmode</span><div class="flex flex-col"><span class="text-xs font-bold text-gray-200">自動簡報配圖</span><span class="text-[9px] text-gray-500">建立簡報時自動生成示意圖</span></div></div>
+                                    <div class="relative"><input type="checkbox" id="auto-image-toggle" class="sr-only peer"><div class="w-8 h-4.5 bg-gray-600 rounded-full peer peer-checked:bg-pink-600 after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-full"></div></div>
+                                </label>
+                            </div>
+                        </section>
+                        <section class="pt-4 border-t border-[#333]">
+                            <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 px-1">互動偏好</h4>
+                            <div class="space-y-4">
+                                <label class="flex items-center justify-between p-3 bg-[#2a2b2f] rounded-xl cursor-pointer group hover:bg-[#333] transition-all">
+                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-green-400">volume_up</span><div class="flex flex-col"><span class="text-xs font-bold text-gray-200">語音自動播報</span><span class="text-[9px] text-gray-500">AI 回應後自動朗讀文字</span></div></div>
+                                    <div class="relative"><input type="checkbox" id="voice-output-toggle" class="sr-only peer"><div class="w-8 h-4.5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-full"></div></div>
+                                </label>
+                                <label class="flex items-center justify-between p-3 bg-[#2a2b2f] rounded-xl cursor-pointer group hover:bg-[#333] transition-all">
+                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-yellow-400">all_inclusive</span><div class="flex flex-col"><span class="text-xs font-bold text-gray-200">無限連續對話</span><span class="text-[9px] text-gray-500">不自動清空上下文，適合深度討論</span></div></div>
+                                    <div class="relative"><input type="checkbox" id="continuous-mode-toggle" class="sr-only peer"><div class="w-8 h-4.5 bg-gray-600 rounded-full peer peer-checked:bg-yellow-500 after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-full"></div></div>
+                                </label>
+                            </div>
+                        </section>
+                    </div>
+                `;
+                // 恢復 Checkbox 狀態
+                document.getElementById('draw-mode-toggle').checked = settings.drawMode;
+                document.getElementById('web-search-toggle').checked = settings.webSearch;
+                document.getElementById('auto-image-toggle').checked = settings.autoImage;
+                document.getElementById('voice-output-toggle').checked = settings.voiceOutput;
+                document.getElementById('continuous-mode-toggle').checked = settings.continuousMode;
+
+                // 綁定事件
+                ['drawMode','webSearch','autoImage','voiceOutput','continuousMode'].forEach(key => {
+                    const id = key.replace(/[A-Z]/g, m => '-' + m.toLowerCase()) + '-toggle';
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.onchange = (e) => {
+                            settings[key] = e.target.checked;
+                            localStorage.setItem(key, e.target.checked);
+                        };
+                    }
+                });
+            }
+        }
+
+        async function handleAddSource() {
+            const input = document.getElementById('source-input');
+            const url = input.value.trim();
+            if (!url) return;
+            const lid = appendLoading("正在抓取並分析來源...");
             try {
-                const data = await fetchGAS('get_gems', { mode: 'system', workspace: currentWorkspace });
-                if (data.gems) {
-                    currentGemsList = data.gems;
-                    const sel = document.getElementById('gem-selector');
-                    sel.innerHTML = '<option value="">🤖 全能助理</option>' + data.gems.map((g, i) => `<option value="${i}">💎 ${g.name}</option>`).join('');
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'add_source', workspace: currentWorkspace, url: url, title: url, type: url.includes('youtube.com') ? 'youtube' : 'web' }) });
+                const d = await res.json();
+                if (d.status === 'success') { input.value = ''; loadSources(); }
+            } catch (e) {} finally { removeLoading(lid); }
+        }
+
+        async function removeSource(id) {
+            if (!confirm("確定要移除此來源嗎？")) return;
+            try { await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'remove_source', workspace: currentWorkspace, source_id: id }) }); loadSources(); } catch (e) {}
+        }
+
+        async function toggleMessageSharing(text, element, isFromChat = true) {
+            try {
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'toggle_message_sharing', workspace: currentWorkspace, text: text }) });
+                const d = await res.json();
+                if (d.status === 'success') {
+                    if (isFromChat && element) {
+                        const prose = element.querySelector('.prose');
+                        if (d.shared) {
+                            prose.classList.add('shared-message');
+                            if (!prose.querySelector('.shared-badge')) prose.innerHTML += '<span class="shared-badge">專案共用</span>';
+                        } else {
+                            prose.classList.remove('shared-message');
+                            const badge = prose.querySelector('.shared-badge');
+                            if (badge) badge.remove();
+                        }
+                    }
+                    loadWorkspaceContext();
                 }
             } catch (e) {}
-        }
-
-        async function loadModels() {
-            try {
-                const data = await fetchGAS('get_models', { mode: 'system', workspace: currentWorkspace });
-                if (data.models) {
-                    const sel = document.getElementById('model-selector');
-                    sel.innerHTML = '<option value="">🧠 預設模型 (自動)</option>' + data.models.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
-                }
-            } catch (e) {}
-        }
-
-        function copyText(btn) {
-            const text = btn.closest('.message-block').querySelector('.prose').innerText;
-            navigator.clipboard.writeText(text);
-            const icon = btn.querySelector('.material-symbols-rounded');
-            icon.innerText = 'check';
-            setTimeout(() => icon.innerText = 'content_copy', 2000);
-        }
-
-        // --- Workbench (工作台) 核心邏輯 ---
-        function openWorkbench(tab = 'edit') {
-            const panel = document.getElementById('right-panel');
-            panel.classList.remove('translate-x-full');
-            switchWorkbenchTab(tab);
         }
 
         function toggleRightPanel() {
-            const panel = document.getElementById('right-panel');
-            panel.classList.toggle('translate-x-full');
-        }
-
-        function switchWorkbenchTab(tab) {
-            const tabs = ['edit', 'thought', 'library'];
-            tabs.forEach(t => {
-                document.getElementById(`workbench-${t}-area`).classList.add('hidden');
-                document.getElementById(`tab-${t}`).classList.replace('text-black', 'text-gray-400');
-                document.getElementById(`tab-${t}`).classList.replace('border-black', 'border-transparent');
-            });
-            document.getElementById(`workbench-${tab}-area`).classList.remove('hidden');
-            document.getElementById(`tab-${tab}`).classList.replace('text-gray-400', 'text-black');
-            document.getElementById(`tab-${tab}`).classList.replace('border-transparent', 'border-black');
+            const p = document.getElementById('right-panel');
+            const o = document.getElementById('right-panel-overlay');
+            const isOpen = p.classList.toggle('right-panel-open');
+            p.classList.toggle('right-panel-closed');
             
-            if (tab === 'library') loadSources();
-        }
-
-        function renderThoughts(thoughts) {
-            const container = document.getElementById('thought-log');
-            container.innerHTML = '';
-            thoughts.forEach((t, i) => {
-                const div = document.createElement('div');
-                div.className = 'flex items-start gap-3 p-2 bg-gray-50 rounded-lg border-l-2 border-blue-200 animate-in fade-in slide-in-from-left duration-500';
-                div.style.animationDelay = `${i * 200}ms`;
-                div.innerHTML = `<span class="text-blue-500 font-bold">●</span> <div class="text-[11px] text-gray-600">${t}</div>`;
-                container.appendChild(div);
-            });
-        }
-
-        function switchWorkbenchMode(mode) {
-            const editor = document.getElementById('workbench-editor');
-            const preview = document.getElementById('workbench-preview');
-            const container = document.getElementById('workbench-container');
-            const btns = {
-                edit: document.getElementById('mode-edit-btn'),
-                split: document.getElementById('mode-split-btn'),
-                preview: document.getElementById('mode-preview-btn')
-            };
-
-            Object.values(btns).forEach(b => {
-                if (b) b.className = "text-[10px] px-3 py-1 rounded-md font-bold transition-all text-gray-500 hover:text-black";
-            });
-            if (btns[mode]) btns[mode].className = "text-[10px] px-3 py-1 rounded-md font-bold transition-all bg-white shadow-sm text-black";
-
-            if (mode === 'edit') {
-                editor.classList.remove('hidden');
-                preview.classList.add('hidden');
-            } else if (mode === 'preview') {
-                editor.classList.add('hidden');
-                preview.classList.remove('hidden');
-                updateRealtimePreview();
-            } else if (mode === 'split') {
-                editor.classList.remove('hidden');
-                preview.classList.remove('hidden');
-                updateRealtimePreview();
+            // 手機版：切換遮罩並鎖定捲動
+            if (window.innerWidth < 1024) {
+                o.classList.toggle('hidden');
+                document.body.style.overflow = isOpen ? 'hidden' : '';
             }
-        }
-
-        function updateRealtimePreview() {
-            const content = document.getElementById('workbench-editor').value;
-            const preview = document.getElementById('workbench-preview');
-            if (typeof marked !== 'undefined') {
-                preview.innerHTML = marked.parse(content);
-            } else {
-                preview.innerText = content;
-            }
-        }
-
-        function renderArtifact(content, type) {
-            console.log("🎨 Rendering Artifact...");
-            document.getElementById('workbench-editor').value = content;
-            document.getElementById('artifact-type-tag').innerText = type || 'Workspace Draft';
             
-            // 強制開啟工作台並切換至編輯區
-            const panel = document.getElementById('right-panel');
-            panel.classList.remove('translate-x-full');
-            switchWorkbenchTab('edit');
-            
-            // 狀態點閃爍動畫
-            const dot = document.getElementById('workbench-status-dot');
-            dot.classList.add('animate-pulse');
-            setTimeout(() => dot.classList.remove('animate-pulse'), 3000);
+            if (isOpen) renderRightPanelContent();
         }
+        
+        function toggleSettingsMenu() { switchRightPanel('settings'); }
 
-        function copyWorkbenchContent() {
-            const content = document.getElementById('workbench-editor').value;
-            navigator.clipboard.writeText(content);
-            alert("已複製工作台內容");
-        }
-
-        async function exportToGoogleDoc() {
-            const content = document.getElementById('workbench-editor').value;
-            if (!content) return alert("沒有內容可供輸出");
-            const lid = appendLoading("正在排版並更新至 Google 文件...");
-            try {
-                const data = await fetchGAS('export_to_doc', { content, workspace: currentWorkspace });
-                removeLoading(lid);
-                if (data.url) window.open(data.url, '_blank');
-                else alert("輸出完成");
-            } catch (e) { removeLoading(lid); alert("輸出失敗"); }
-        }
-
-        async function exportToSheets() {
-            const content = document.getElementById('workbench-editor').value;
-            if (!content) return alert("沒有內容可供生成表格");
-            const lid = appendLoading("正在生成 Google 試算表...");
-            try {
-                const data = await fetchGAS('export_to_sheets', { content, workspace: currentWorkspace });
-                removeLoading(lid);
-                if (data.url) window.open(data.url, '_blank');
-                else alert("生成成功");
-            } catch (e) { removeLoading(lid); alert("生成失敗"); }
-        }
-
-        async function exportToSlides() {
-            const content = document.getElementById('workbench-editor').value;
-            if (!content) return alert("沒有內容可供生成簡報");
-            const lid = appendLoading("正在生成專業簡報...");
-            try {
-                const data = await fetchGAS('export_to_slides', { content, workspace: currentWorkspace });
-                removeLoading(lid);
-                if (data.url) window.open(data.url, '_blank');
-                else alert("簡報生成完成");
-            } catch (e) { removeLoading(lid); alert("生成失敗"); }
-        }
-
-        // 修改原本的 switchRightPanel 相容工作台
-        function switchRightPanel(tab) {
-            openWorkbench(tab);
-        }
-
+        let cachedSources = [];
         async function loadSources() {
             try {
-                const data = await fetchGAS('get_sources', { mode: 'system', workspace: currentWorkspace });
-                const container = document.getElementById('right-panel-content');
-                if (data.sources && data.sources.length > 0) {
-                    container.innerHTML = data.sources.map(s => `
-                        <div class="flex items-center gap-4 p-4 hover:bg-gray-50 rounded-2xl transition-colors border border-gray-50 cursor-pointer" onclick="window.open('${s.url}', '_blank')">
-                            <span class="material-symbols-rounded text-blue-500">${s.type === 'youtube' ? 'subscriptions' : 'public'}</span>
-                            <div class="flex-1 min-w-0"><div class="text-sm font-bold truncate">${s.title}</div><div class="text-[10px] text-gray-400 truncate">${s.url}</div></div>
-                        </div>
-                    `).join('');
-                } else {
-                    container.innerHTML = `<div class="p-12 text-center text-gray-300 italic">尚無來源資料</div>`;
-                }
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_sources', workspace: currentWorkspace }) });
+                const d = await res.json();
+                const l = document.getElementById('sources-list');
+                const countEl = document.getElementById('source-count');
+                if (!l) return;
+                l.innerHTML = '';
+                cachedSources = d.sources || [];
+                if (cachedSources.length > 0) {
+                    countEl.innerText = cachedSources.length;
+                    cachedSources.forEach((s, i) => {
+                        const icon = s.type === 'youtube' ? 'subscriptions' : (s.type === 'web' ? 'public' : 'description');
+                        const div = document.createElement('div');
+                        div.id = `source-item-${i+1}`;
+                        div.className = "flex items-center gap-2 p-2.5 bg-[#2a2b2f] hover:bg-[#333] rounded-xl text-[11px] text-gray-300 hover:text-white transition-all group border border-transparent hover:border-[#444] cursor-pointer";
+                        div.innerHTML = `<span class="font-bold text-blue-400 shrink-0 w-5">[${i+1}]</span><span class="material-symbols-rounded text-gray-500 text-[16px]">${icon}</span><span class="truncate flex-1 font-medium">${s.title}</span><button class="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 transition-opacity"><span class="material-symbols-rounded text-[14px]">delete</span></button>`;
+                        div.onclick = () => window.open(s.url, '_blank');
+                        div.querySelector('button').onclick = (e) => { e.stopPropagation(); removeSource(s.id); };
+                        l.appendChild(div);
+                    });
+                } else { countEl.innerText = '0'; l.innerHTML = '<div class="p-4 text-[11px] text-gray-500 italic text-center bg-[#2a2b2f]/50 rounded-xl border border-dashed border-[#444]">尚無來源資料</div>'; }
+            } catch (e) {}
+        }
+        
+        async function loadWorkspaceContext() {
+            try {
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_workspace_context', workspace: currentWorkspace }) });
+                const d = await res.json();
+                const l = document.getElementById('shared-data-list');
+                if (!l) return;
+                l.innerHTML = '';
+                window.sharedKnowledgeSet.clear();
+                if (d.context && d.context.length > 0) {
+                    d.context.forEach(item => {
+                        window.sharedKnowledgeSet.add(item.text.trim());
+                        const div = document.createElement('div');
+                        div.className = "flex items-center gap-2 p-2.5 bg-[#2a2b2f] hover:bg-[#333] rounded-xl text-[10px] text-gray-300 hover:text-white transition-all group border border-transparent hover:border-[#444]";
+                        div.innerHTML = `<span class="material-symbols-rounded text-yellow-500 text-[14px]">verified</span><span class="truncate flex-1">${item.text.substring(0, 40)}...</span><button class="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 transition-opacity"><span class="material-symbols-rounded text-[14px]">close</span></button>`;
+                        div.querySelector('button').onclick = (e) => { e.stopPropagation(); toggleMessageSharing(item.text, null, false); };
+                        l.appendChild(div);
+                    });
+                } else { l.innerHTML = '<div class="p-4 text-[11px] text-gray-500 italic text-center bg-[#2a2b2f]/50 rounded-xl border border-dashed border-[#444]">尚無片段</div>'; }
             } catch (e) {}
         }
 
-        // 10. 預覽與縮放
-        function openPreview(code) {
-            document.getElementById('preview-iframe').srcdoc = code;
-            document.getElementById('preview-modal').classList.remove('hidden');
-            document.getElementById('preview-modal').classList.add('flex');
-        }
-        function closePreview() { document.getElementById('preview-modal').classList.add('hidden'); }
-        function refreshPreview() { document.getElementById('preview-iframe').contentWindow.location.reload(); }
+        function highlightSource(num) {
+            const source = cachedSources[num - 1];
+            if (!source) return;
 
-        async function deleteMessage(btn, role, text) {
-            if (confirm("確定要刪除這則訊息嗎？\n(刪除後系統將徹底忘記這段對話)")) {
-                const block = btn.closest('.message-block');
-                block.remove();
-                try {
-                    await fetchGAS('delete_message', { 
-                        session_id: currentSessionId, 
-                        workspace: currentWorkspace, 
-                        target_text: text, 
-                        target_role: role === 'ai' ? 'ai' : 'user' 
-                    });
-                } catch (e) { console.error("Delete failed", e); }
-            }
-        }
-
-        function editMessage(btn, text) {
-            const block = btn.closest('.message-block');
-            const prose = block.querySelector('.prose');
-            const actions = block.querySelector('.flex.justify-end');
+            const peek = document.getElementById('source-peek');
+            document.getElementById('peek-title').innerText = source.title;
+            document.getElementById('peek-link').href = source.url;
+            document.getElementById('peek-icon').innerText = source.type === 'youtube' ? 'subscriptions' : (source.type === 'web' ? 'public' : 'description');
+            document.getElementById('peek-content').innerText = source.content ? source.content.substring(0, 300) + '...' : '正在讀取文件摘要與關鍵段落...';
             
-            prose.classList.add('hidden');
-            actions.classList.add('hidden');
-
-            const editContainer = document.createElement('div');
-            editContainer.className = "w-full mt-2 flex flex-col gap-3";
-            editContainer.innerHTML = `
-                <textarea class="w-full p-4 bg-white border-2 border-blue-500 rounded-2xl outline-none text-lg min-h-[100px] shadow-inner">${text}</textarea>
-                <div class="flex justify-end gap-2">
-                    <button class="px-4 py-2 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-all" onclick="cancelEdit(this)">取消</button>
-                    <button class="px-6 py-2 text-sm font-bold bg-black text-white rounded-xl shadow-lg hover:scale-105 active:scale-95 transition-all" onclick="saveAndRegenerate(this, \`${text.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">儲存並重新發送</button>
-                </div>
-            `;
-            block.appendChild(editContainer);
-        }
-
-        function cancelEdit(btn) {
-            const block = btn.closest('.message-block');
-            block.querySelector('.prose').classList.remove('hidden');
-            block.querySelector('.flex.justify-end').classList.remove('hidden');
-            btn.closest('div.flex-col').remove();
-        }
-
-        async function saveAndRegenerate(btn, oldText) {
-            const block = btn.closest('.message-block');
-            const newText = block.querySelector('textarea').value.trim();
-            if (!newText) return;
-
-            // 刪除此訊息之後的所有訊息
-            let curr = block;
-            while (curr.nextElementSibling) {
-                curr.nextElementSibling.remove();
-            }
-            block.remove();
-
-            // 呼叫後端進行編輯與重新生成
-            await sendEditAndRegenerate(oldText, newText);
-        }
-
-        async function sendEditAndRegenerate(oldText, newText) {
-            appendMessage('user', newText);
-            toggleSendButton(true);
-            const lid = appendLoading("正在重新生成...");
+            peek.classList.remove('hidden');
+            peek.style.display = 'block';
             
-            try {
-                const modelSelector = document.getElementById('model-selector');
-                const data = await fetchGAS('edit_and_regenerate', {
-                    old_text: oldText,
-                    message: newText,
-                    session_id: currentSessionId,
-                    workspace: currentWorkspace,
-                    selected_model: modelSelector.value
-                });
-
-                removeLoading(lid);
-                if (data.status === "error") throw new Error(data.error || "伺服器錯誤");
-                if (data.reply) {
-                    appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model);
-                    speakText(data.reply, true);
+            // 同步亮起右側面板中的項目
+            switchRightPanel('library');
+            setTimeout(() => {
+                const el = document.getElementById(`source-item-${num}`);
+                if (el) {
+                    el.classList.add('bg-blue-600/30', 'ring-2', 'ring-blue-500');
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(() => el.classList.remove('bg-blue-600/30', 'ring-2', 'ring-blue-500'), 3000);
                 }
-                loadSessions();
-            } catch (err) {
-                removeLoading(lid);
-                appendMessage('ai', `❌ 重新生成失敗：\n${err.message}`);
+            }, 350);
+        }
+
+        function closePeek() { 
+            const peek = document.getElementById('source-peek');
+            peek.style.display = 'none'; 
+            peek.classList.add('hidden');
+        }
+
+        async function generateWiki() {
+            const btn = event.currentTarget;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[18px]">sync</span> 正在分析專案...';
+            btn.disabled = true;
+
+            const prompt = `請幫我分析目前的專案背景、現有的資料來源（包含 ${cachedSources.length} 個檔案）與我們先前的討論進度，自動建立一份結構完整的「專案 Wiki」導覽文件。內容請包含：
+1. 專案願景與目標
+2. 現有資料資產索引
+3. 開發/討論里程碑
+4. 後續建議行動
+請直接呼叫 create_project_wiki 工具執行。`;
+
+            try {
+                const chatInput = document.getElementById('user-input');
+                chatInput.value = prompt;
+                await sendMessage();
             } finally {
-                toggleSendButton(false);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
             }
         }
 
-        async function deleteSession(id) {
-            if (confirm("確定要永久刪除這段對話嗎？")) {
-                try {
-                    await fetchGAS('delete_session', { mode: 'system', session_id: id, workspace: currentWorkspace });
-                    if (id === currentSessionId) startNewSession();
-                    loadSessions();
-                } catch (e) { alert("刪除失敗"); }
-            }
-        }
-
-        // 語音播放簡化
-        function speakText(text, auto = false) {
-            if (auto && !document.getElementById('voice-output-toggle')?.checked) return;
-            const utterance = new SpeechSynthesisUtterance(text.replace(/[*#_]/g, ''));
-            utterance.lang = 'zh-TW';
-            window.speechSynthesis.speak(utterance);
-        }
-
+        // 啟動入口
+        window.onload = async () => { 
+            await loadWorkspaces(); 
+            loadSessions(); loadGems(); loadModels(); renderRightPanelContent();
+        };
     </script>
 </body>
 </html>

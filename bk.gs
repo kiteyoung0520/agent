@@ -102,7 +102,12 @@ class FirebaseClient {
         const results = [];
         if (Array.isArray(json)) {
             json.forEach(item => {
-                if (item.document && item.document.fields) results.push(this._parseData(item.document.fields));
+                if (item.document && item.document.fields) {
+                    const d = this._parseData(item.document.fields);
+                    const docId = item.document.name.split('/').pop();
+                    if (!d.session_id) d.session_id = docId;
+                    results.push(d);
+                }
             });
         }
         
@@ -114,6 +119,64 @@ class FirebaseClient {
             return dateB - dateA;
         });
         return results.slice(0, 50);
+    }
+
+    querySources(workspace) {
+        if (!this.apiKey) return [];
+        const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents:runQuery?key=${this.apiKey}`;
+        const payload = {
+            structuredQuery: {
+                from: [{ collectionId: "sources" }],
+                where: {
+                    fieldFilter: { field: { fieldPath: "workspace" }, op: "EQUAL", value: { stringValue: workspace } }
+                }
+            }
+        };
+        const res = this.fetchWithRetry(url, {
+            method: "post", contentType: "application/json", payload: JSON.stringify(payload), muteHttpExceptions: true
+        });
+        if (!res) return [];
+        const json = JSON.parse(res.getContentText());
+        const results = [];
+        if (Array.isArray(json)) {
+            json.forEach(item => {
+                if (item.document && item.document.fields) {
+                    const d = this._parseData(item.document.fields);
+                    d.id = item.document.name.split('/').pop();
+                    results.push(d);
+                }
+            });
+        }
+        return results;
+    }
+
+    queryContext(workspace) {
+        if (!this.apiKey) return [];
+        const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents:runQuery?key=${this.apiKey}`;
+        const payload = {
+            structuredQuery: {
+                from: [{ collectionId: "context" }],
+                where: {
+                    fieldFilter: { field: { fieldPath: "workspace" }, op: "EQUAL", value: { stringValue: workspace } }
+                }
+            }
+        };
+        const res = this.fetchWithRetry(url, {
+            method: "post", contentType: "application/json", payload: JSON.stringify(payload), muteHttpExceptions: true
+        });
+        if (!res) return [];
+        const json = JSON.parse(res.getContentText());
+        const results = [];
+        if (Array.isArray(json)) {
+            json.forEach(item => {
+                if (item.document && item.document.fields) {
+                    const d = this._parseData(item.document.fields);
+                    d.id = item.document.name.split('/').pop();
+                    results.push(d);
+                }
+            });
+        }
+        return results;
     }
 
     _formatData(data) {
@@ -245,8 +308,7 @@ const AGENT_TOOLS = [{
                     topic: { type: "STRING", description: "簡報核心主題" }, 
                     customColors: { type: "STRING", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。請依主題氛圍自主調配。" }, 
                     shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist' (極簡), 'rounded' (圓角), 'cyber' (銳角/科技), 'dynamic' (斜切/活力), 'layered' (疊層/深邃)。" }, 
-                    globalLogoUrl: { type: "STRING", description: "【標誌】可選。公司或品牌的 Logo 圖片網址，若提供則會出現在每頁角落。" },
-                    slidesData: { type: "STRING", description: "簡報 JSON 陣列。格式：[{layout: 'cover|title_only|standard_list|split_column|image_right|image_left|icon_grid|timeline|big_data', title: '標題', content: '內文', points: ['重點'], titleIconKeyword: '標題旁的小圖標關鍵字(英文)', imageKeyword: '背景/主圖生圖提示詞(英文)', gridItems: [{title:'標題', content:'內容', iconKeyword:'圖標關鍵字'}]}]。⚠️請務必為每一頁產出 titleIconKeyword 以增加視覺層次感。" } 
+                    slidesData: { type: "STRING", description: "簡報 JSON 陣列。格式：[{layout: 'cover|title_only|standard_list|split_column|image_right|image_left|icon_grid|timeline|big_data', title: '標題', content: '內文', points: ['重點'], left: '左欄', right: '右欄', value: '大數據值', imageKeyword: '英文生圖提示詞', gridItems: [{title:'標題', content:'內容', iconKeyword:'圖標關鍵字'}]}]。⚠️請根據內容特徵挑選最佳 layout：如果是數據則用 big_data，如果是歷程則用 timeline，如果是對比則用 split_column。" } 
                 }, 
                 required: ["topic", "customColors", "shapeStyle", "slidesData"] 
             } 
@@ -261,8 +323,7 @@ const AGENT_TOOLS = [{
                     action: { type: "STRING", description: "'append' (附加投影片到最後) 或 'overwrite' (清空並重新繪製整份簡報)" }, 
                     customColors: { type: "STRING", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。" }, 
                     shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist', 'rounded', 'cyber', 'dynamic', 'layered' 擇一。" }, 
-                    globalLogoUrl: { type: "STRING", description: "【標誌】可選。公司或品牌的 Logo 圖片網址。" },
-                    slidesData: { type: "STRING", description: "要新增或覆寫的簡報 JSON 陣列。格式同 create_presentation，請務必包含 titleIconKeyword。" } 
+                    slidesData: { type: "STRING", description: "要新增或覆寫的簡報 JSON 陣列。格式同 create_presentation。" } 
                 }, 
                 required: ["presentationUrl", "action", "slidesData"] 
             } 
@@ -1267,7 +1328,7 @@ function runAutonomousAgentLoop(config) {
                             } catch(e) { console.error("顏色解析失敗", e); }
                             
                             let safeSlidesData = args.slidesData.replace(/\n/g, ' ').replace(/\r/g, '').replace(/\t/g, ' ');
-                            const pid = createGeometricSlides(args.topic, JSON.parse(safeSlidesData), themeToUse, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel, args.globalLogoUrl);
+                            const pid = createGeometricSlides(args.topic, JSON.parse(safeSlidesData), themeToUse, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel);
                             toolResult = { isTerminal: true, reply: `📊 **專屬簡報生成完畢！**\n🔗 [點擊開啟 Google 簡報](https://docs.google.com/presentation/d/${pid}/edit)` };
                             break;
                         case "update_presentation":
@@ -1291,7 +1352,7 @@ function runAutonomousAgentLoop(config) {
                                 } else { processedUpdData = rawUpdData; }
                             } catch(e) { throw new Error("簡報資料格式錯誤，無法解析 JSON"); }
 
-                            updateGeometricSlides(presIdMatch[0], args.action, processedUpdData, updTheme, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel, args.globalLogoUrl);
+                            updateGeometricSlides(presIdMatch[0], args.action, processedUpdData, updTheme, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel);
                             
                             let actionVerb = (String(args.action).toLowerCase().trim() === 'overwrite') ? "覆寫" : "擴充";
                             toolResult = { isTerminal: true, reply: `📊 **簡報${actionVerb}完畢！**\n\n已成功將 ${processedUpdData.length} 頁內容同步至簡報中。\n🔗 [點擊開啟驗證](https://docs.google.com/presentation/d/${presIdMatch[0]}/edit)` };
@@ -1399,7 +1460,20 @@ function fetchAIImage(prompt, key, model, aspectRatio = "16:9") {
     return lastError ? `ERROR:${lastError}` : null;
 }
 
-
+function loadSettings(ss) {
+    const s = { CUSTOM_RULES: "" };
+    const sh = ss.getSheetByName(BASE_CONFIG.SETTING_SHEET_NAME);
+    if(sh) {
+        let rules = [];
+        const data = sh.getDataRange().getValues();
+        data.forEach(r => {
+            let key = String(r[0] || "").trim(); let val = String(r[1] || "").trim();
+            if(key.match(/^[A-Z_]+$/) && val) { s[key] = val; } else if (key || val) { rules.push(key + (val ? " " + val : "")); }
+        });
+        s.CUSTOM_RULES = rules.join("\n\n");
+    }
+    return s;
+}
 
 function getOptimizedHistoryFB(db, wsName, sessionId) {
     const cache = CacheService.getScriptCache(); const cacheKey = `history_${wsName}_${sessionId}`;
@@ -1509,7 +1583,7 @@ function handleSystemMode(payload, ss, wsName, db) {
             const sessions = db.querySessions(wsName);
             const formatted = sessions.map(x => ({
                 id: x.session_id,
-                title: x.customTitle || x.title,
+                title: x.customTitle || x.title || "未命名對話",
                 date: x.updated_at,
                 pinned: x.pinned
             }));
@@ -1543,6 +1617,43 @@ function handleSystemMode(payload, ss, wsName, db) {
                 db.write("sessions", payload.session_id, session);
             }
             return response({status: "success", pinned: payload.is_pinned});
+        },
+        'get_sources': () => {
+            const sources = db.querySources(wsName);
+            return response({ sources: sources });
+        },
+        'add_source': () => {
+            const id = "src_" + Math.random().toString(36).substring(2, 12);
+            const sourceData = {
+                workspace: wsName,
+                title: payload.title || "未命名來源",
+                url: payload.url || "",
+                type: payload.type || "web",
+                content: payload.content || "",
+                created_at: new Date()
+            };
+            db.write("sources", id, sourceData);
+            return response({ status: "success", id: id });
+        },
+        'remove_source': () => {
+            db.delete("sources", payload.source_id);
+            return response({ status: "success" });
+        },
+        'get_workspace_context': () => {
+            const context = db.queryContext(wsName);
+            return response({ context: context });
+        },
+        'toggle_message_sharing': () => {
+            const text = String(payload.text).trim();
+            const existing = db.queryContext(wsName).find(c => c.text.trim() === text);
+            if (existing) {
+                db.delete("context", existing.id);
+                return response({ status: "success", shared: false });
+            } else {
+                const id = "ctx_" + Math.random().toString(36).substring(2, 12);
+                db.write("context", id, { workspace: wsName, text: text, created_at: new Date() });
+                return response({ status: "success", shared: true });
+            }
         }
     };
     if (routeHandlers[action]) return routeHandlers[action](); else return response({status: "error", message: "Unknown action"});
@@ -1736,31 +1847,12 @@ function fetchIconImage(keyword, colorHex, bgHex) {
     try { let cleanColor = colorHex.replace('#', ''); let bgClean = bgHex.replace('#', ''); let safeKeyword = encodeURIComponent(keyword.trim().split(' ')[0] || "star"); let url = `https://img.icons8.com/ios-filled/100/${cleanColor}/${safeKeyword}.png`; let res = UrlFetchApp.fetch(url, {muteHttpExceptions: true}); if(res.getResponseCode() === 200) return res.getBlob(); let fallbackUrl = `https://ui-avatars.com/api/?name=${safeKeyword}&background=${cleanColor}&color=${bgClean}&size=128&rounded=true&font-size=0.4`; let res2 = UrlFetchApp.fetch(fallbackUrl, {muteHttpExceptions: true}); if(res2.getResponseCode() === 200) return res2.getBlob(); } catch(e) {} return null;
 }
 
-function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl) {
+function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel) {
     let mainShape = SlidesApp.ShapeType.RECTANGLE; let coverShape = SlidesApp.ShapeType.ELLIPSE; let isMinimal = (style === 'minimalist'); let alphaMod = (style === 'layered') ? 0.3 : 1;
     if (style === 'rounded') { mainShape = SlidesApp.ShapeType.ROUND_RECTANGLE; coverShape = SlidesApp.ShapeType.ROUND_RECTANGLE; } else if (style === 'cyber') { mainShape = SlidesApp.ShapeType.RIGHT_TRIANGLE; coverShape = SlidesApp.ShapeType.RIGHT_TRIANGLE; } else if (style === 'dynamic') { mainShape = SlidesApp.ShapeType.PARALLELOGRAM; coverShape = SlidesApp.ShapeType.PARALLELOGRAM; }
 
-    let logoBlob = null;
-    if (globalLogoUrl) { try { logoBlob = UrlFetchApp.fetch(globalLogoUrl).getBlob(); } catch(e) { console.warn("Logo 下載失敗", e); } }
-
     slidesData.forEach((d, i) => {
         const slide = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK); slide.getBackground().setSolidFill(theme.bg);
-        
-        // --- 🎭 繪製裝飾線條與圖案 (Decorative Engine) ---
-        if (style === 'cyber') {
-            drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 710, 0, 10, 80, theme.accent, 0.8);
-            drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 640, 0, 80, 5, theme.accent, 0.8);
-            drawShape(slide, SlidesApp.ShapeType.RIGHT_TRIANGLE, 0, 355, 50, 50, theme.shape, 0.3).setRotation(180);
-        } else if (style === 'minimalist') {
-            drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 50, 400, 620, 1, theme.accent, 0.5);
-        } else if (style === 'dynamic') {
-            drawShape(slide, SlidesApp.ShapeType.PARALLELOGRAM, 650, -50, 150, 550, theme.shape, 0.1).setRotation(15);
-        } else if (style === 'layered') {
-            drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 10, 10, 700, 385, theme.shape, 0.05);
-        }
-
-        if (logoBlob) { try { slide.insertImage(logoBlob, 650, 20, 50, 50); } catch(e){} }
-
         let layoutType = (deck.getSlides().length === 1 && i === 0) ? 'cover' : (d.layout || 'standard_list');
         let imgBlob = null; let titleIconBlob = null; let keyword = d.imageKeyword || d.title || "presentation";
         const needsLargeImage = ['cover', 'image_right', 'image_left', 'image_top', 'image_bottom', 'profile_quote'].includes(layoutType);
@@ -1888,16 +1980,16 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
     });
 }
 
-function createGeometricSlides(topic, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl) {
+function createGeometricSlides(topic, slidesData, theme, style, enableAutoImage, apiKey, artistModel) {
     const deck = SlidesApp.create(`PPT: ${topic}`); 
     const slides = deck.getSlides(); if (slides.length > 0) slides[0].remove();
-    appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl);
+    appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel);
     deck.saveAndClose(); 
     try { DriveApp.getFileById(deck.getId()).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.EDIT); } catch(e) { console.error("權限設定失敗", e); }
     return deck.getId();
 }
 
-function updateGeometricSlides(presentationId, action, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl) {
+function updateGeometricSlides(presentationId, action, slidesData, theme, style, enableAutoImage, apiKey, artistModel) {
     const deck = SlidesApp.openById(presentationId);
     const safeAction = String(action || "").toLowerCase().trim();
     console.log(`[SlidesService] Action: ${safeAction}, ID: ${presentationId}, Slides: ${slidesData.length}`);
@@ -1907,111 +1999,17 @@ function updateGeometricSlides(presentationId, action, slidesData, theme, style,
         const slides = deck.getSlides();
         console.log(`[SlidesService] Overwriting... Removing ${slides.length - 1} old slides.`);
         slides.forEach(s => { if (s.getObjectId() !== tempSlide.getObjectId()) s.remove(); });
-        appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl);
+        appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel);
         tempSlide.remove(); 
     } else {
         console.log(`[SlidesService] Appending ${slidesData.length} new slides.`);
-        appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl);
+        appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel);
     }
     deck.saveAndClose();
 }
 
 function drawShape(s, t, x, y, w, h, c, a) { const sh = s.insertShape(t, x, y, w, h); sh.getBorder().setTransparent(); sh.getFill().setSolidFill(c, a); return sh; }
 function addText(s, t, x, y, w, h, c, sz, b) { if(!t)return; const box = s.insertShape(SlidesApp.ShapeType.TEXT_BOX, x, y, w, h); box.getText().setText(t).getTextStyle().setFontSize(sz).setForegroundColor(c).setBold(b); }
-
-function loadSettings(ss) {
-    const s = { CUSTOM_RULES: "" };
-    const sh = ss.getSheetByName(BASE_CONFIG.SETTING_SHEET_NAME);
-    if(sh) {
-        let rules = [];
-        const data = sh.getDataRange().getValues();
-        data.forEach(r => {
-            let key = String(r[0] || "").trim(); let val = String(r[1] || "").trim();
-            if(key.match(/^[A-Z_]+$/) && val) { s[key] = val; } else if (key || val) { rules.push(key + (val ? " " + val : "")); }
-        });
-        s.CUSTOM_RULES = rules.join("\n\n");
-    }
-    return s;
-}
-
-function response(o){ return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
-
-function appendMarkdownToBody(body, content) {
-    let lines = content.split('\n');
-    lines.forEach((line) => {
-        let trimmed = line.trim();
-        if (!trimmed) { body.appendParagraph(""); return; }
-        if (trimmed.startsWith('# ')) { body.appendParagraph(trimmed.substring(2)).setHeading(DocumentApp.ParagraphHeading.HEADING1); }
-        else if (trimmed.startsWith('## ')) { body.appendParagraph(trimmed.substring(3)).setHeading(DocumentApp.ParagraphHeading.HEADING2); }
-        else if (trimmed.startsWith('* ') || trimmed.startsWith('- ')) { body.appendListItem(trimmed.substring(2)).setGlyphType(DocumentApp.GlyphType.BULLET); }
-        else { body.appendParagraph(trimmed); }
-    });
-}
-
-function createDocFromContent(title, content) {
-    const doc = DocumentApp.create(title); const body = doc.getBody(); body.clear();
-    const titlePara = body.appendParagraph(title); titlePara.setHeading(DocumentApp.ParagraphHeading.TITLE).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-    appendMarkdownToBody(body, content);
-    doc.saveAndClose(); 
-    try { DriveApp.getFileById(doc.getId()).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.EDIT); } catch(e) {}
-    return { url: doc.getUrl(), id: doc.getId() };
-}
-
-function fetchIconImage(keyword, colorHex, bgHex) {
-    try { let cleanColor = colorHex.replace('#', ''); let safeKeyword = encodeURIComponent(keyword.trim().split(' ')[0] || "star"); let url = `https://img.icons8.com/ios-filled/100/${cleanColor}/${safeKeyword}.png`; let res = UrlFetchApp.fetch(url, {muteHttpExceptions: true}); if(res.getResponseCode() === 200) return res.getBlob(); } catch(e) {} return null;
-}
-
-function sanitizeJson(str) {
-    if (!str) return "[]";
-    let clean = str.replace(/```json/gi, '').replace(/```/g, '').trim();
-    let result = ""; let inQuotes = false;
-    for (let i = 0; i < clean.length; i++) {
-        let char = clean[i];
-        if (char === '"' && (i === 0 || clean[i-1] !== '\\')) inQuotes = !inQuotes;
-        if (inQuotes && (char === '\n' || char === '\r')) result += "\\n";
-        else if (inQuotes && char === '\t') result += "  ";
-        else result += char;
-    }
-    return result;
-}
-
-function performInnerQALoop(text, apiKey, isRetry) {
-    console.log("[InnerQA] 啟動閉環思維檢查...");
-    try {
-        const checkPrompt = `【🕵️ 閉環思維稽核員】
-你是一位嚴格的品質控管工程師。請檢查以下 AI 的回覆內容：
----
-${text}
----
-
-請判斷內容是否符合以下標準：
-1. 是否包含格式錯誤（如未閉合的括號）？
-2. 邏輯是否連貫，有沒有前後矛盾？
-3. 如果是簡報大綱，JSON 註解 <!--OUTLINE_DATA:[...]--> 是否格式正確且完整？
-
-若內容完美，請直接回覆 "PASS"。
-若內容有瑕疵，請直接給出「修正後的完整內容」，不要有任何開場白或解釋。`;
-
-        const res = callGeminiAPI_Raw({
-            prompt: checkPrompt,
-            model: "gemini-1.5-flash", 
-            apiKey: apiKey,
-            systemInstruction: "你是一位精準的稽核員，只會回覆 PASS 或修正後的內容。"
-        });
-
-        const reply = res.candidates[0].content.parts[0].text.trim();
-        if (reply === "PASS") {
-            console.log("[InnerQA] 檢查通過 (PASS)");
-            return text;
-        } else {
-            console.log("[InnerQA] 偵測到瑕疵，已自動修正。");
-            return reply;
-        }
-    } catch (e) {
-        console.warn("[InnerQA] 稽核過程出錯，跳過檢查:", e.toString());
-        return text;
-    }
-}
 
 function forceAuthSetup() {
     // 不使用 try-catch，強制觸發 Google 的靜態權限掃描與授權視窗
