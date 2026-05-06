@@ -455,6 +455,18 @@ function doPost(e) {
 
         if (mode === 'system') return handleSystemMode(payload, ss, wsName, db, apiKey);
 
+        const wsRules = db.get("workspace_rules", wsName) || { rules: "" };
+        const globalProfile = payload.global_profile || "";
+
+        // 🧠 注入思維模式與專案邏輯
+        let enhancedPrompt = "";
+        if (globalProfile) enhancedPrompt += `\n【使用者個人思維偏好】：\n${globalProfile}\n`;
+        if (wsRules.rules) enhancedPrompt += `\n【目前專案執行邏輯 (Workspace Rules)】：\n${wsRules.rules}\n`;
+        
+        if (enhancedPrompt) {
+            payload.message = `以下是系統層級的行為指引，請務必優先遵循：\n${enhancedPrompt}\n---\n正式指令：\n${payload.message}`;
+        }
+
         if (mode === 'edit_and_regenerate') {
             const session = db.get("sessions", session_id);
             if (session && session.history_json) {
@@ -1695,6 +1707,14 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
                 tempFile.setTrashed(true);
                 return response({ status: "success", text: content });
             } catch(e) { return response({ status: "error", message: e.toString() }); }
+        },
+        'get_workspace_rules': () => {
+            const rules = db.get("workspace_rules", wsName) || { rules: "" };
+            return response({ rules: rules.rules });
+        },
+        'update_workspace_rules': () => {
+            db.write("workspace_rules", wsName, { rules: payload.rules });
+            return response({ status: "success" });
         }
     };
     if (routeHandlers[action]) return routeHandlers[action](); else return response({status: "error", message: "Unknown action"});
