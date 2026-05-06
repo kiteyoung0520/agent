@@ -189,6 +189,20 @@
                 </div>
                 <h1 class="text-xl font-bold tracking-tight text-white">anyGem Agent</h1>
             </div>
+
+            <!-- 👤 用戶身份顯示 -->
+            <div id="user-profile" class="mb-6 p-3 bg-[#2a2b2f] rounded-xl border border-[#444] flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30">
+                    <span class="material-symbols-rounded text-indigo-400 text-lg">person</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-[10px] text-gray-500 uppercase font-bold tracking-tighter">當前雲端帳號</div>
+                    <div id="user-email" class="text-xs text-gray-300 truncate font-mono italic opacity-60 text-[10px]">載入中...</div>
+                    <a href="https://accounts.google.com/AccountChooser" target="_blank" class="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-0.5 mt-0.5 transition-colors">
+                        <span class="material-symbols-rounded text-[12px]">sync_alt</span> 切換帳號
+                    </a>
+                </div>
+            </div>
             
             <!-- ✨ Workspace 專案隔離選擇器 -->
             <div class="mb-4">
@@ -1209,6 +1223,14 @@
         window.onload = async () => { 
             await loadWorkspaces(); 
             loadSessions(); loadGems(); loadModels(); renderRightPanelContent();
+            
+            // 載入用戶資訊 (確認雲端帳號)
+            try {
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_user_info' }) });
+                const data = await res.json();
+                document.getElementById('user-email').innerText = data.email || "未授權帳號";
+                document.getElementById('user-email').classList.remove('italic', 'opacity-60', 'text-[10px]');
+            } catch(e) { document.getElementById('user-email').innerText = "連線失敗"; }
         };
     </script>
 </body>

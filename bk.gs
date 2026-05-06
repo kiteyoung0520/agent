@@ -1637,6 +1637,11 @@ function handleSystemMode(payload, ss, wsName, db) {
                 db.write("context", id, { workspace: wsName, text: text, created_at: new Date() });
                 return response({ status: "success", shared: true });
             }
+        },
+        'get_user_info': () => {
+            let email = "未知使用者";
+            try { email = Session.getEffectiveUser().getEmail() || Session.getActiveUser().getEmail(); } catch(e) {}
+            return response({ email: email });
         }
     };
     if (routeHandlers[action]) return routeHandlers[action](); else return response({status: "error", message: "Unknown action"});
