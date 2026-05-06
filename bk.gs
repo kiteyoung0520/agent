@@ -968,7 +968,8 @@ function runAutonomousAgentLoop(config) {
                         case "search_drive_files":
                             try {
                                 let safeKw = args.keyword.replace(/'/g, "\\'");
-                                let query = `(title contains '${safeKw}' or fullText contains '${safeKw}') and trashed = false`;
+                                // 修正查詢語法：fullText 其實已經包含 title 了，使用更簡單的語法
+                                let query = `fullText contains '${safeKw}' and trashed = false`;
                                 
                                 if (args.fileType) {
                                     const typeMap = { 'document': 'application/vnd.google-apps.document', 'spreadsheet': 'application/vnd.google-apps.spreadsheet', 'folder': 'application/vnd.google-apps.folder', 'pdf': 'application/pdf' };
@@ -977,19 +978,30 @@ function runAutonomousAgentLoop(config) {
                                     }
                                 }
                                 
+                                // 嘗試搜尋檔案
                                 let files = DriveApp.searchFiles(query);
                                 let results = [];
                                 let count = 0;
-                                while (files.hasNext() && count < 30) {
+                                while (files.hasNext() && count < 40) {
                                     let f = files.next();
                                     results.push({ name: f.getName(), url: f.getUrl(), id: f.getId(), type: f.getMimeType() });
                                     count++;
                                 }
                                 
+                                // 如果完全沒結果，嘗試只搜檔名 (有時候 fullText 在某些權限下會失效)
+                                if (results.length === 0) {
+                                    let titleQuery = `title contains '${safeKw}' and trashed = false`;
+                                    let titleFiles = DriveApp.searchFiles(titleQuery);
+                                    while (titleFiles.hasNext() && count < 40) {
+                                        let f = titleFiles.next();
+                                        results.push({ name: f.getName(), url: f.getUrl(), id: f.getId(), type: f.getMimeType() });
+                                        count++;
+                                    }
+                                }
+                                
                                 toolResult = { 
                                     status: "success", 
-                                    data: results.length > 0 ? results : "未找到符合條件的檔案或資料夾。",
-                                    nextPageToken: null 
+                                    data: results.length > 0 ? results : "未找到符合條件的檔案或資料夾。"
                                 };
                             } catch(e) { toolResult = { status: "error", error_message: `搜尋失敗: ${e.toString()}` }; }
                             break;

@@ -726,6 +726,8 @@
                         `;
                         container.appendChild(div);
                     });
+                } else if (data.status === 'error') {
+                    container.innerHTML = `<div class="text-center py-20 text-red-400 text-sm"><p>⚠️ 伺服器錯誤：<br>${data.error_message || data.message || "未知錯誤"}</p></div>`;
                 } else {
                     container.innerHTML = `<div class="text-center py-20 text-gray-500"><p>${data.data || "找不到相關檔案"}</p></div>`;
                 }
