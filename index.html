@@ -419,7 +419,8 @@
             webSearch: localStorage.getItem('webSearch') === 'true',
             autoImage: localStorage.getItem('autoImage') === 'true',
             voiceOutput: localStorage.getItem('voiceOutput') === 'true',
-            continuousMode: localStorage.getItem('continuousMode') === 'true'
+            continuousMode: localStorage.getItem('continuousMode') === 'true',
+            globalProfile: localStorage.getItem('globalProfile') || ""
         };
 
         const chatContainer = document.getElementById('chat-container'), 
@@ -625,7 +626,8 @@
             userInput.value = ''; userInput.style.height = 'auto'; finalTranscript = ''; 
             
             const payload = { 
-                message: pText, session_id: currentSessionId, workspace: currentWorkspace,
+                message: settings.globalProfile ? `【全域個人思維偏好注入】\n${settings.globalProfile}\n\n---\n${pText}` : pText,
+                session_id: currentSessionId, workspace: currentWorkspace,
                 file_data: currentImageData ? currentImageData.split(',')[1] : null, mime_type: currentMimeType, 
                 web_search: settings.webSearch, 
                 auto_image: settings.autoImage, 
@@ -1041,6 +1043,14 @@
                                     <div class="relative"><input type="checkbox" id="continuous-mode-toggle" class="sr-only peer"><div class="w-8 h-4.5 bg-gray-600 rounded-full peer peer-checked:bg-yellow-500 after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-full"></div></div>
                                 </label>
                             </div>
+                        <section class="pt-4 border-t border-[#333]">
+                            <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 px-1">全域思維風格定義</h4>
+                            <div class="space-y-2">
+                                <p class="text-[10px] text-gray-500 px-1 leading-relaxed">在此輸入您的個人溝通習慣或決策邏輯（適用於所有專案）。</p>
+                                <textarea id="global-profile-input" rows="5" 
+                                    placeholder="例如：請優先使用條列式、說話請專業且簡潔、在提供建議時請先進行風險評估..." 
+                                    class="w-full bg-[#1e1f22] border border-[#333] rounded-xl p-3 text-xs text-gray-200 outline-none focus:border-purple-500/50 transition-all resize-none shadow-inner"></textarea>
+                            </div>
                         </section>
                     </div>
                 `;
@@ -1050,6 +1060,13 @@
                 document.getElementById('auto-image-toggle').checked = settings.autoImage;
                 document.getElementById('voice-output-toggle').checked = settings.voiceOutput;
                 document.getElementById('continuous-mode-toggle').checked = settings.continuousMode;
+                document.getElementById('global-profile-input').value = settings.globalProfile;
+
+                // 綁定文字框自動儲存
+                document.getElementById('global-profile-input').oninput = (e) => {
+                    settings.globalProfile = e.target.value;
+                    localStorage.setItem('globalProfile', e.target.value);
+                };
 
                 // 綁定事件
                 ['drawMode','webSearch','autoImage','voiceOutput','continuousMode'].forEach(key => {
