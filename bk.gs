@@ -54,8 +54,7 @@ class FirebaseClient {
 
     write(collection, docId, data) {
         if (!this.apiKey) return false;
-        const encodedId = encodeURIComponent(docId);
-        const url = `${this.baseUrl}/${collection}/${encodedId}?key=${this.apiKey}`;
+        const url = `${this.baseUrl}/${collection}/${docId}?key=${this.apiKey}`;
         const options = {
             method: "patch", 
             contentType: "application/json",
@@ -68,8 +67,7 @@ class FirebaseClient {
 
     get(collection, docId) {
         if (!this.apiKey) return null;
-        const encodedId = encodeURIComponent(docId);
-        const url = `${this.baseUrl}/${collection}/${encodedId}?key=${this.apiKey}`;
+        const url = `${this.baseUrl}/${collection}/${docId}?key=${this.apiKey}`;
         const res = this.fetchWithRetry(url, { muteHttpExceptions: true });
         if (res && res.getResponseCode() === 200) {
             return this._parseData(JSON.parse(res.getContentText()).fields);
@@ -79,8 +77,7 @@ class FirebaseClient {
 
     delete(collection, docId) {
         if (!this.apiKey) return;
-        const encodedId = encodeURIComponent(docId);
-        const url = `${this.baseUrl}/${collection}/${encodedId}?key=${this.apiKey}`;
+        const url = `${this.baseUrl}/${collection}/${docId}?key=${this.apiKey}`;
         this.fetchWithRetry(url, { method: "delete", muteHttpExceptions: true });
     }
 
@@ -458,18 +455,6 @@ function doPost(e) {
 
         if (mode === 'system') return handleSystemMode(payload, ss, wsName, db, apiKey);
 
-        const wsRules = db.get("workspace_rules", wsName) || { rules: "" };
-        const globalProfile = payload.global_profile || "";
-
-        // 🧠 注入思維模式與專案邏輯
-        let enhancedPrompt = "";
-        if (globalProfile) enhancedPrompt += `\n【使用者個人思維偏好】：\n${globalProfile}\n`;
-        if (wsRules.rules) enhancedPrompt += `\n【目前專案執行邏輯 (Workspace Rules)】：\n${wsRules.rules}\n`;
-        
-        if (enhancedPrompt) {
-            payload.message = `以下是系統層級的行為指引，請務必優先遵循：\n${enhancedPrompt}\n---\n正式指令：\n${payload.message}`;
-        }
-
         if (mode === 'edit_and_regenerate') {
             const session = db.get("sessions", session_id);
             if (session && session.history_json) {
@@ -555,10 +540,6 @@ function doPost(e) {
         logToFirebaseAndCache(db, wsName, session_id || "default", message, agentResult.reply || "執行完成");
         return response({ status: "success", reply: agentResult.reply, model: agentResult.model || modelId, image: agentResult.image || null, mime: agentResult.mime || null });
     } catch (err) { return response({ error: err.toString(), status: "error" }); }
-}
-
-function response(obj) {
-    return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 
 // ==========================================
@@ -1714,14 +1695,6 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
                 tempFile.setTrashed(true);
                 return response({ status: "success", text: content });
             } catch(e) { return response({ status: "error", message: e.toString() }); }
-        },
-        'get_workspace_rules': () => {
-            const rules = db.get("workspace_rules", wsName) || { rules: "" };
-            return response({ rules: rules.rules });
-        },
-        'update_workspace_rules': () => {
-            db.write("workspace_rules", wsName, { rules: payload.rules });
-            return response({ status: "success" });
         }
     };
     if (routeHandlers[action]) return routeHandlers[action](); else return response({status: "error", message: "Unknown action"});

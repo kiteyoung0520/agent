@@ -419,8 +419,7 @@
             webSearch: localStorage.getItem('webSearch') === 'true',
             autoImage: localStorage.getItem('autoImage') === 'true',
             voiceOutput: localStorage.getItem('voiceOutput') === 'true',
-            continuousMode: localStorage.getItem('continuousMode') === 'true',
-            globalProfile: localStorage.getItem('globalProfile') || ""
+            continuousMode: localStorage.getItem('continuousMode') === 'true'
         };
 
         const chatContainer = document.getElementById('chat-container'), 
@@ -469,7 +468,7 @@
             if (isAutoPlay && !settings.voiceOutput) return false;
             if (!window.speechSynthesis) return false; window.speechSynthesis.cancel(); 
             const bt = String.fromCharCode(96, 96, 96);
-            let cleanText = text.replace(/<thought_process>[\s\S]*?<\/thought_process>/g, '').replace(new RegExp(bt + '[\\s\\S]*?' + bt, 'g'), '').replace(new RegExp('https?:\\/\\/[^\\s]+', 'g'), '網址').replace(new RegExp('[*_#~|]', 'g'), '');
+            let cleanText = text.replace(/<thought_process>[\s\S]*?<\/thought_process>/g, '').replace(new RegExp(bt + '[\\s\\S]*?' + bt, 'g'), '').replace(new RegExp('https?:\\/\\/[^\\s]+', 'g'), '網址').replace(new RegExp('[*_#~|]', 'g'), '').trim();
             if (!cleanText) return false;
             let utterance = new SpeechSynthesisUtterance(cleanText);
             let v = window.speechSynthesis.getVoices(), sv = null;
@@ -583,8 +582,7 @@
                 auto_image: settings.autoImage, 
                 draw_mode: settings.drawMode, 
                 youtube_id: null, 
-                gem_prompt: agp, gem_model: agm, selected_model: ms.value,
-                global_profile: settings.globalProfile
+                gem_prompt: agp, gem_model: agm, selected_model: ms.value 
             };
             
             toggleSendButton(true); const lid = appendLoading(); abortController = new AbortController(); 
@@ -633,8 +631,7 @@
                 auto_image: settings.autoImage, 
                 draw_mode: settings.drawMode, 
                 youtube_id: currentYouTubeId, 
-                gem_prompt: agp, gem_model: agm, selected_model: ms.value,
-                global_profile: settings.globalProfile
+                gem_prompt: agp, gem_model: agm, selected_model: ms.value 
             };
             
             clearUpload(); toggleSendButton(true); const lid = appendLoading(); abortController = new AbortController(); 
@@ -1002,10 +999,6 @@
                         </div>
                     </section>
                     <section class="pt-4 border-t border-[#333]">
-                        <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 px-1">專案執行邏輯 (RULES)</h4>
-                        <textarea id="workspace-rules-input" onblur="saveWorkspaceRules()" placeholder="例如：本專案請使用 React 開發、變數命名用小駝峰..." class="w-full h-24 bg-[#2a2b2f] border border-[#444] rounded-xl p-3 text-[11px] text-gray-300 outline-none focus:border-blue-500 transition-all resize-none"></textarea>
-                    </section>
-                    <section class="pt-4 border-t border-[#333]">
                         <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 px-1">釘選知識片段 (FRAGMENTS)</h4>
                         <div id="shared-data-list" class="space-y-1.5"><div class="p-4 text-[11px] text-gray-500 italic text-center bg-[#2a2b2f]/50 rounded-xl border border-dashed border-[#444]">載入中...</div></div>
                     </section>
@@ -1049,15 +1042,9 @@
                                 </label>
                             </div>
                         </section>
-                        <section class="pt-4 border-t border-[#333]">
-                            <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 px-1">個人思維偏好 (STYLE PROFILE)</h4>
-                            <p class="text-[9px] text-gray-500 mb-2 px-1">這段描述會告訴 AI 您喜歡如何思考與對話。</p>
-                            <textarea id="global-profile-input" oninput="saveGlobalProfile(this.value)" placeholder="例如：我喜歡條列式說明、優先考慮成本效益..." class="w-full h-24 bg-[#2a2b2f] border border-[#444] rounded-xl p-3 text-xs text-gray-300 outline-none focus:border-purple-500 transition-all resize-none font-mono"></textarea>
-                        </section>
                     </div>
                 `;
-                // 恢復設定狀態
-                document.getElementById('global-profile-input').value = settings.globalProfile;
+                // 恢復 Checkbox 狀態
                 document.getElementById('draw-mode-toggle').checked = settings.drawMode;
                 document.getElementById('web-search-toggle').checked = settings.webSearch;
                 document.getElementById('auto-image-toggle').checked = settings.autoImage;
@@ -1075,31 +1062,7 @@
                         };
                     }
                 });
-            } else {
-                loadWorkspaceRules();
             }
-        }
-
-        function saveGlobalProfile(val) {
-            settings.globalProfile = val;
-            localStorage.setItem('globalProfile', val);
-        }
-
-        async function loadWorkspaceRules() {
-            const el = document.getElementById('workspace-rules-input');
-            if (!el) return;
-            try {
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_workspace_rules', workspace: currentWorkspace }) });
-                const d = await res.json();
-                el.value = d.rules || "";
-            } catch(e) {}
-        }
-
-        async function saveWorkspaceRules() {
-            const val = document.getElementById('workspace-rules-input').value;
-            try {
-                await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'update_workspace_rules', workspace: currentWorkspace, rules: val }) });
-            } catch(e) {}
         }
 
         async function handleAddSource() {
@@ -1259,28 +1222,17 @@
         }
 
         // 啟動入口
-        window.onload = () => { 
-            loadWorkspaces().then(() => {
-                loadSessions(); loadGems(); loadModels(); renderRightPanelContent();
-            }).catch(err => {
-                console.error("Initialization failed:", err);
-                renderRightPanelContent();
-            });
+        window.onload = async () => { 
+            await loadWorkspaces(); 
+            loadSessions(); loadGems(); loadModels(); renderRightPanelContent();
             
             // 載入用戶資訊 (確認雲端帳號)
-            fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_user_info' }) })
-                .then(res => res.json())
-                .then(data => {
-                    const el = document.getElementById('user-email');
-                    if (el) {
-                        el.innerText = data.email || "未授權帳號";
-                        el.classList.remove('italic', 'opacity-60', 'text-[10px]');
-                    }
-                })
-                .catch(() => {
-                    const el = document.getElementById('user-email');
-                    if (el) el.innerText = "連線失敗";
-                });
+            try {
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_user_info' }) });
+                const data = await res.json();
+                document.getElementById('user-email').innerText = data.email || "未授權帳號";
+                document.getElementById('user-email').classList.remove('italic', 'opacity-60', 'text-[10px]');
+            } catch(e) { document.getElementById('user-email').innerText = "連線失敗"; }
         };
     </script>
 </body>
