@@ -469,7 +469,7 @@
             if (isAutoPlay && !settings.voiceOutput) return false;
             if (!window.speechSynthesis) return false; window.speechSynthesis.cancel(); 
             const bt = String.fromCharCode(96, 96, 96);
-            let cleanText = text.replace(/<thought_process>[\s\S]*?<\/thought_process>/g, '').replace(new RegExp(bt + '[\\s\\S]*?' + bt, 'g'), '').replace(new RegExp('https?:\\/\\/[^\\s]+', 'g'), '網址').replace(new RegExp('[*_#~|]', 'g'), '').trim();
+            let cleanText = text.replace(/<thought_process>[\s\S]*?<\/thought_process>/g, '').replace(new RegExp(bt + '[\\s\\S]*?' + bt, 'g'), '').replace(new RegExp('https?:\\/\\/[^\\s]+', 'g'), '網址').replace(new RegExp('[*_#~|]', 'g'), '');
             if (!cleanText) return false;
             let utterance = new SpeechSynthesisUtterance(cleanText);
             let v = window.speechSynthesis.getVoices(), sv = null;
@@ -1259,17 +1259,28 @@
         }
 
         // 啟動入口
-        window.onload = async () => { 
-            await loadWorkspaces(); 
-            loadSessions(); loadGems(); loadModels(); renderRightPanelContent();
+        window.onload = () => { 
+            loadWorkspaces().then(() => {
+                loadSessions(); loadGems(); loadModels(); renderRightPanelContent();
+            }).catch(err => {
+                console.error("Initialization failed:", err);
+                renderRightPanelContent();
+            });
             
             // 載入用戶資訊 (確認雲端帳號)
-            try {
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_user_info' }) });
-                const data = await res.json();
-                document.getElementById('user-email').innerText = data.email || "未授權帳號";
-                document.getElementById('user-email').classList.remove('italic', 'opacity-60', 'text-[10px]');
-            } catch(e) { document.getElementById('user-email').innerText = "連線失敗"; }
+            fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_user_info' }) })
+                .then(res => res.json())
+                .then(data => {
+                    const el = document.getElementById('user-email');
+                    if (el) {
+                        el.innerText = data.email || "未授權帳號";
+                        el.classList.remove('italic', 'opacity-60', 'text-[10px]');
+                    }
+                })
+                .catch(() => {
+                    const el = document.getElementById('user-email');
+                    if (el) el.innerText = "連線失敗";
+                });
         };
     </script>
 </body>

@@ -54,7 +54,8 @@ class FirebaseClient {
 
     write(collection, docId, data) {
         if (!this.apiKey) return false;
-        const url = `${this.baseUrl}/${collection}/${docId}?key=${this.apiKey}`;
+        const encodedId = encodeURIComponent(docId);
+        const url = `${this.baseUrl}/${collection}/${encodedId}?key=${this.apiKey}`;
         const options = {
             method: "patch", 
             contentType: "application/json",
@@ -67,7 +68,8 @@ class FirebaseClient {
 
     get(collection, docId) {
         if (!this.apiKey) return null;
-        const url = `${this.baseUrl}/${collection}/${docId}?key=${this.apiKey}`;
+        const encodedId = encodeURIComponent(docId);
+        const url = `${this.baseUrl}/${collection}/${encodedId}?key=${this.apiKey}`;
         const res = this.fetchWithRetry(url, { muteHttpExceptions: true });
         if (res && res.getResponseCode() === 200) {
             return this._parseData(JSON.parse(res.getContentText()).fields);
@@ -77,7 +79,8 @@ class FirebaseClient {
 
     delete(collection, docId) {
         if (!this.apiKey) return;
-        const url = `${this.baseUrl}/${collection}/${docId}?key=${this.apiKey}`;
+        const encodedId = encodeURIComponent(docId);
+        const url = `${this.baseUrl}/${collection}/${encodedId}?key=${this.apiKey}`;
         this.fetchWithRetry(url, { method: "delete", muteHttpExceptions: true });
     }
 
