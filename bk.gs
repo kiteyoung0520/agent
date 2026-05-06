@@ -1654,6 +1654,47 @@ function handleSystemMode(payload, ss, wsName, db) {
             let email = "未知使用者";
             try { email = Session.getEffectiveUser().getEmail() || Session.getActiveUser().getEmail(); } catch(e) {}
             return response({ email: email });
+        },
+        'search_drive_files': () => {
+            try {
+                let safeKw = (payload.keyword || "").replace(/'/g, "\\'");
+                let query = `fullText contains '${safeKw}' and trashed = false`;
+                let files = DriveApp.searchFiles(query);
+                let results = [];
+                let count = 0;
+                while (files.hasNext() && count < 40) {
+                    let f = files.next();
+                    results.push({ name: f.getName(), url: f.getUrl(), id: f.getId(), type: f.getMimeType() });
+                    count++;
+                }
+                if (results.length === 0) {
+                    let titleFiles = DriveApp.searchFiles(`title contains '${safeKw}' and trashed = false`);
+                    while (titleFiles.hasNext() && count < 40) {
+                        let f = titleFiles.next();
+                        results.push({ name: f.getName(), url: f.getUrl(), id: f.getId(), type: f.getMimeType() });
+                        count++;
+                    }
+                }
+                return response({ status: "success", data: results });
+            } catch(e) { return response({ status: "error", error_message: e.toString() }); }
+        },
+        'read_drive_file': () => {
+            try {
+                let idMatch = payload.fileUrl.match(/[-\w]{25,}/);
+                if (!idMatch) return response({ status: "error", error_message: "無法辨識的檔案網址" });
+                const file = DriveApp.getFileById(idMatch[0]);
+                let content = extractTextFromAnyFile(file, apiKey);
+                return response({ status: "success", data: content });
+            } catch(e) { return response({ status: "error", error_message: e.toString() }); }
+        },
+        'parse_pptx': () => {
+            try {
+                const blob = Utilities.newBlob(Utilities.base64Decode(payload.file_data), "application/vnd.openxmlformats-officedocument.presentationml.presentation", payload.file_name);
+                const tempFile = DriveApp.createFile(blob);
+                const content = extractTextFromAnyFile(tempFile, apiKey);
+                tempFile.setTrashed(true);
+                return response({ status: "success", text: content });
+            } catch(e) { return response({ status: "error", message: e.toString() }); }
         }
     };
     if (routeHandlers[action]) return routeHandlers[action](); else return response({status: "error", message: "Unknown action"});
