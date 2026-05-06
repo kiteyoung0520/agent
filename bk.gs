@@ -453,7 +453,7 @@ function doPost(e) {
             targetSheet.appendRow(["🔥 Firebase Mode", "此專案空間已遷移至 Firestore，對話紀錄不再儲存於此表單，請至專屬資料庫查看。"]);
         }
 
-        if (mode === 'system') return handleSystemMode(payload, ss, wsName, db);
+        if (mode === 'system') return handleSystemMode(payload, ss, wsName, db, apiKey);
 
         if (mode === 'edit_and_regenerate') {
             const session = db.get("sessions", session_id);
@@ -1506,7 +1506,7 @@ function logToFirebaseAndCache(db, wsName, sessionId, userMsg, aiReply) {
     } catch(e) {}
 }
 
-function handleSystemMode(payload, ss, wsName, db) {
+function handleSystemMode(payload, ss, wsName, db, apiKey) {
     const action = payload.action; 
 
     const routeHandlers = {
