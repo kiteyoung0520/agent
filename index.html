@@ -456,7 +456,7 @@
                 if (!isRecording) return; let interim = '';
                 for (let i = event.resultIndex; i < event.results.length; ++i) event.results[i].isFinal ? finalTranscript += event.results[i][0].transcript : interim += event.results[i][0].transcript;
                 userInput.value = finalTranscript + interim; userInput.style.height = 'auto'; userInput.style.height = (userInput.scrollHeight > 240 ? 240 : userInput.scrollHeight) + 'px';
-                if (document.getElementById('continuous-mode-toggle').checked) { clearTimeout(silenceTimer); silenceTimer = setTimeout(() => { if (isRecording && userInput.value.trim() !== '') { stopRecording(); sendMessage(); } }, 1500); }
+                if (settings.continuousMode) { clearTimeout(silenceTimer); silenceTimer = setTimeout(() => { if (isRecording && userInput.value.trim() !== '') { stopRecording(); sendMessage(); } }, 1500); }
             };
             recognition.onerror = () => stopRecording(); recognition.onend = () => stopRecording();
         }
@@ -465,7 +465,7 @@
         function stopRecording() { isRecording = false; clearTimeout(silenceTimer); document.getElementById('mic-btn').classList.remove('recording-pulse', 'text-white'); document.getElementById('mic-btn').classList.add('text-gray-400'); if (recognition) try { recognition.stop(); } catch(e) {} }
 
         function speakText(text, isAutoPlay = false) {
-            if (isAutoPlay && !document.getElementById('voice-output-toggle').checked) return false;
+            if (isAutoPlay && !settings.voiceOutput) return false;
             if (!window.speechSynthesis) return false; window.speechSynthesis.cancel(); 
             const bt = String.fromCharCode(96, 96, 96);
             let cleanText = text.replace(/<thought_process>[\s\S]*?<\/thought_process>/g, '').replace(new RegExp(bt + '[\\s\\S]*?' + bt, 'g'), '').replace(new RegExp('https?:\\/\\/[^\\s]+', 'g'), '網址').replace(new RegExp('[*_#~|]', 'g'), '').trim();
@@ -475,7 +475,7 @@
             if (new RegExp('[\\u4e00-\\u9fa5]').test(cleanText)) { utterance.lang = 'zh-TW'; utterance.rate = 0.95; utterance.pitch = 0.95; sv = v.find(x => x.name.includes('Xiaoxiao') || x.name.includes('Yating') || (x.lang === 'zh-TW' && x.name.includes('Google'))) || v.find(x => x.lang === 'zh-TW'); } 
             else { utterance.lang = 'en-US'; utterance.rate = 0.9; utterance.pitch = 0.95; sv = v.find(x => x.name.includes('Samantha') || (x.lang === 'en-US' && x.name.includes('Google'))) || v.find(x => x.lang === 'en-US'); }
             if (sv) utterance.voice = sv;
-            if (isAutoPlay) utterance.onend = () => { if (document.getElementById('continuous-mode-toggle').checked && !isWaiting) startRecording(); };
+            if (isAutoPlay) utterance.onend = () => { if (settings.continuousMode && !isWaiting) startRecording(); };
             window.speechSynthesis.speak(utterance); return true;
         }
         if (window.speechSynthesis && window.speechSynthesis.onvoiceschanged !== undefined) window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
@@ -592,7 +592,7 @@
                 const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload), signal: abortController.signal });
                 const data = await res.json(); removeLoading(lid);
                 if (data.status === "error") throw new Error(data.error || "伺服器錯誤");
-                if (data.reply) { appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model); if (!speakText(data.reply, true) && document.getElementById('continuous-mode-toggle').checked) setTimeout(startRecording, 500); }
+                if (data.reply) { appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model); if (!speakText(data.reply, true) && settings.continuousMode) setTimeout(startRecording, 500); }
                 loadSessions(); 
             } catch (err) { removeLoading(lid); appendMessage('ai', err.name === 'AbortError' ? `🛑 **生成已中止。**` : `❌ 執行失敗：\n\`\`\`text\n${err.message}\n\`\`\``); } 
             finally { toggleSendButton(false); abortController = null; }
@@ -641,7 +641,7 @@
                 const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload), signal: abortController.signal });
                 const data = await res.json(); removeLoading(lid);
                 if (data.status === "error") throw new Error(data.error || "伺服器錯誤");
-                if (data.reply) { appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model); if (!speakText(data.reply, true) && document.getElementById('continuous-mode-toggle').checked) setTimeout(startRecording, 500); }
+                if (data.reply) { appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model); if (!speakText(data.reply, true) && settings.continuousMode) setTimeout(startRecording, 500); }
                 loadSessions(); 
             } catch (err) { removeLoading(lid); appendMessage('ai', err.name === 'AbortError' ? `🛑 **生成已中止。**` : `❌ 執行失敗：\n\`\`\`text\n${err.message}\n\`\`\``); } 
             finally { toggleSendButton(false); abortController = null; }
