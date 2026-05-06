@@ -557,6 +557,10 @@ function doPost(e) {
     } catch (err) { return response({ error: err.toString(), status: "error" }); }
 }
 
+function response(obj) {
+    return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
 // ==========================================
 // 💬 LINE Webhook 全通路攔截處理邏輯
 // ==========================================
