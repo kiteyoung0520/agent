@@ -161,7 +161,7 @@
             </div>
             <div class="p-4 bg-[#131314]">
                 <div class="relative">
-                    <input type="text" id="drive-search-input" placeholder="搜尋檔名或關鍵字..." class="w-full pl-10 pr-4 py-3 bg-[#2a2b2f] border border-[#444] rounded-xl text-white text-sm outline-none focus:border-amber-500 transition-all">
+                    <input type="text" id="drive-search-input" onkeyup="if(event.key==='Enter') performDriveSearch()" placeholder="搜尋檔名或關鍵字..." class="w-full pl-10 pr-4 py-3 bg-[#2a2b2f] border border-[#444] rounded-xl text-white text-sm outline-none focus:border-amber-500 transition-all">
                     <span class="absolute left-3 top-3.5 material-symbols-rounded text-gray-500 text-sm">search</span>
                     <button onclick="performDriveSearch()" class="absolute right-2 top-2 px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-lg transition-colors">搜尋</button>
                 </div>

@@ -968,45 +968,28 @@ function runAutonomousAgentLoop(config) {
                         case "search_drive_files":
                             try {
                                 let safeKw = args.keyword.replace(/'/g, "\\'");
-                                let query = `fullText contains '${safeKw}' and trashed = false`;
-                                
-                                if (args.folderId) {
-                                    let folderIdMatch = args.folderId.match(/[-\w]{25,}/);
-                                    let targetFolderId = folderIdMatch ? folderIdMatch[0] : args.folderId;
-                                    query += ` and '${targetFolderId}' in parents`;
-                                }
+                                let query = `(title contains '${safeKw}' or fullText contains '${safeKw}') and trashed = false`;
                                 
                                 if (args.fileType) {
-                                    let mimeTypeStr = '';
                                     const typeMap = { 'document': 'application/vnd.google-apps.document', 'spreadsheet': 'application/vnd.google-apps.spreadsheet', 'folder': 'application/vnd.google-apps.folder', 'pdf': 'application/pdf' };
                                     for (const [key, val] of Object.entries(typeMap)) {
-                                        if (args.fileType.toLowerCase().includes(key)) { mimeTypeStr = val; break; }
+                                        if (args.fileType.toLowerCase().includes(key)) { query += ` and mimeType = '${val}'`; break; }
                                     }
-                                    if (mimeTypeStr) query += ` and mimeType = '${mimeTypeStr}'`;
                                 }
                                 
-                                let listArgs = { q: query, maxResults: args.maxResults || 30 };
-                                if (args.pageToken) listArgs.pageToken = args.pageToken; 
-                                
-                                let response;
-                                try {
-                                    response = Drive.Files.list(listArgs);
-                                } catch (driveErr) {
-                                    throw new Error("請確認已在 GAS 服務中開啟 Drive API (v2)。" + driveErr.toString());
-                                }
-                                
+                                let files = DriveApp.searchFiles(query);
                                 let results = [];
-                                if (response.items) {
-                                    response.items.forEach(f => {
-                                        let type = f.mimeType === 'application/vnd.google-apps.folder' ? 'folder' : f.mimeType;
-                                        results.push({ name: f.title, url: f.alternateLink, id: f.id, type: type });
-                                    });
+                                let count = 0;
+                                while (files.hasNext() && count < 30) {
+                                    let f = files.next();
+                                    results.push({ name: f.getName(), url: f.getUrl(), id: f.getId(), type: f.getMimeType() });
+                                    count++;
                                 }
                                 
                                 toolResult = { 
                                     status: "success", 
                                     data: results.length > 0 ? results : "未找到符合條件的檔案或資料夾。",
-                                    nextPageToken: response.nextPageToken || null 
+                                    nextPageToken: null 
                                 };
                             } catch(e) { toolResult = { status: "error", error_message: `搜尋失敗: ${e.toString()}` }; }
                             break;
