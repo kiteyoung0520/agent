@@ -1359,9 +1359,11 @@ function runAutonomousAgentLoop(config) {
                                 if (Array.isArray(rawS)) {
                                     parsedData = rawS;
                                 } else {
-                                    throw new Error("Invalid slidesData format");
+                                    toolResult = { isTerminal: true, reply: "⚠️ **簡報建立失敗**\n\nAI 生成的簡報資料格式無效 (不是陣列)。請嘗試重新生成或簡化指令。" }; break;
                                 }
-                            } catch(e) { throw new Error("簡報資料格式錯誤，無法解析內容"); }
+                            } catch(e) { 
+                                toolResult = { isTerminal: true, reply: `⚠️ **簡報建立失敗**\n\n簡報資料格式錯誤，無法解析內容：\n${e.toString()}` }; break; 
+                            }
                             
                             toolResult = { 
                                 isTerminal: true, 
@@ -1394,9 +1396,11 @@ function runAutonomousAgentLoop(config) {
                                 } else if (Array.isArray(args.slidesData)) {
                                     processedUpdData = args.slidesData;
                                 } else {
-                                    throw new Error("Invalid array");
+                                    toolResult = { isTerminal: true, reply: "⚠️ **簡報更新失敗**\n\nAI 生成的簡報資料格式無效 (不是陣列)。" }; break;
                                 }
-                            } catch(e) { throw new Error("簡報資料格式錯誤，無法解析 JSON"); }
+                            } catch(e) { 
+                                toolResult = { isTerminal: true, reply: `⚠️ **簡報更新失敗**\n\n簡報資料格式錯誤，無法解析 JSON：\n${e.toString()}` }; break;
+                            }
 
                             updateGeometricSlides(presIdMatch[0], args.action, processedUpdData, updTheme, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel);
                             
