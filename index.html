@@ -1005,7 +1005,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com">\x3C/script>
     <style>
         body { margin: 0; overflow: hidden; background: ${data.theme.colors.background}; }
         #slider { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; width: 100vw; height: 100vh; }
@@ -1048,7 +1048,7 @@
             window.parent.postMessage({ type: 'export_google_slides', payload: presentationData }, '*');
             setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 3000);
         }
-    </script>
+    \x3C/script>
 </body>
 </html>`;
             currentRenderCode = rc; 
