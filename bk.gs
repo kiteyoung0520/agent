@@ -351,12 +351,12 @@ function getSuperAgentPrompt(wsName, customRules) {
 【視覺執行與設計鐵律 (Execution Discipline)】：
 1. **方案優先 (Discussed Plan First)**：如果在對話中與使用者討論過版面規劃（例如：第三頁用雙欄、主題色用紫色），在呼叫 'create_presentation' 時【必須】嚴格遵守。禁止使用預設主題名，請務必手動根據討論結果計算配色 JSON 填入 'customColors'。
 2. **內容保護 (Strict Content)**：對於使用者提供的教案、文案、名單、數據，必須 100% 完整保留並填入簡報中。絕對禁止自行做摘要、禁止刪減名單、禁止修改專業術語。
-3. **動態版面 (Dynamic Layout)**：捨棄呆板排版，根據內容靈活切換 `layout`。
-   - 金句/名言/哲理：必用 `hero_quote` (全螢幕大字)。
-   - 多重點/特色：必用 `card_deck` (卡片堆疊) 或 `icon_grid`。
-   - 流程/步驟/歷史：必用 `stepper` 或 `timeline`。
-   - 對比/優缺點：必用 `split_column`。
-   - 震撼數據：必用 `big_data`。
+3. **動態版面 (Dynamic Layout)**：捨棄呆板排版，根據內容靈活切換 'layout'。
+   - 金句/名言/哲理：必用 'hero_quote' (全螢幕大字)。
+   - 多重點/特色：必用 'card_deck' (卡片堆疊) 或 'icon_grid'。
+   - 流程/步驟/歷史：必用 'stepper' 或 'timeline'。
+   - 對比/優缺點：必用 'split_column'。
+   - 震撼數據：必用 'big_data'。
 4. **配色紀律**：'customColors' 的 JSON 格式必須包含：{"bg": "#...", "text": "#...", "accent": "#...", "shape": "#..."}。請依據主題氛圍（如：優雅、科技、教育）自主設計高品質配色。
 5. **生圖引導**：在 'imageKeyword' 中填入高品質的英文 Prompt，讓每張投影片都具備視覺張力。
 
