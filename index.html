@@ -989,16 +989,92 @@
             const theme = data.theme || { colors: { background: "#0f172a", text: "#f8fafc", accent: "#38bdf8", shape: "#1e293b" } };
             const colors = theme.colors || { background: "#0f172a", text: "#f8fafc", accent: "#38bdf8", shape: "#1e293b" };
 
+            const renderList = (content) => content ? content.split('\\n').map(c => c.trim() ? `<li class="mb-2">${c.replace(/^- /, '').replace(/^• /, '')}</li>` : '').join('') : '';
+
             const slidesHtml = data.slides.map((slide, index) => {
+                let layoutHtml = '';
+                const titleHtml = slide.title ? `<h1 class="text-4xl md:text-5xl font-extrabold mb-4 outline-none hover:bg-white/10 p-2 rounded transition-colors" contenteditable="true" onblur="updateSlideData(${index}, 'title', this.innerText)">${slide.title}</h1>` : '';
+                const subtitleHtml = slide.subtitle ? `<h2 class="text-xl md:text-2xl opacity-80 mb-6 outline-none hover:bg-white/10 p-2 rounded transition-colors" contenteditable="true" onblur="updateSlideData(${index}, 'subtitle', this.innerText)">${slide.subtitle}</h2>` : '';
+                
+                switch(slide.layout) {
+                    case 'cover':
+                    case 'title':
+                        layoutHtml = `
+                            <div class="flex flex-col items-center justify-center h-full text-center max-w-4xl mx-auto px-8">
+                                ${titleHtml}
+                                ${subtitleHtml}
+                            </div>`;
+                        break;
+                    case 'split_column':
+                        layoutHtml = `
+                            <div class="flex flex-col h-full max-w-6xl mx-auto w-full pt-16 px-8">
+                                <div class="text-center mb-8">${titleHtml}</div>
+                                <div class="grid grid-cols-2 gap-12 h-full overflow-y-auto pb-24">
+                                    <div class="outline-none hover:bg-white/10 p-6 rounded transition-colors" contenteditable="true" onblur="updateSlideData(${index}, 'left', this.innerHTML)">
+                                        <ul class="list-disc pl-5 text-2xl space-y-4 leading-relaxed">${renderList(slide.left || slide.content || '左側內容')}</ul>
+                                    </div>
+                                    <div class="outline-none hover:bg-white/10 p-6 rounded transition-colors" contenteditable="true" onblur="updateSlideData(${index}, 'right', this.innerHTML)">
+                                        <ul class="list-disc pl-5 text-2xl space-y-4 leading-relaxed">${renderList(slide.right || '右側內容')}</ul>
+                                    </div>
+                                </div>
+                            </div>`;
+                        break;
+                    case 'icon_grid':
+                    case 'grid':
+                    case 'timeline':
+                        let gridItemsHtml = '';
+                        if (slide.gridItems && Array.isArray(slide.gridItems)) {
+                            gridItemsHtml = slide.gridItems.map((item, i) => `
+                                <div class="p-6 rounded-xl border border-white/20 hover:bg-white/5 transition flex flex-col items-center text-center shadow-sm">
+                                    <div class="text-3xl font-bold mb-4" style="color: ${colors.accent}">${item.title}</div>
+                                    <div class="text-xl opacity-90 leading-relaxed">${item.content}</div>
+                                </div>
+                            `).join('');
+                        }
+                        layoutHtml = `
+                            <div class="flex flex-col h-full max-w-7xl mx-auto w-full pt-16 px-8">
+                                <div class="text-center mb-10">${titleHtml}${subtitleHtml}</div>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-6 overflow-y-auto pb-24 px-4 content-start">
+                                    ${gridItemsHtml}
+                                </div>
+                            </div>`;
+                        break;
+                    case 'big_data':
+                    case 'quote':
+                        layoutHtml = `
+                            <div class="flex flex-col items-center justify-center h-full text-center max-w-5xl mx-auto px-8">
+                                ${titleHtml}
+                                <div class="text-8xl md:text-9xl font-black my-10 outline-none hover:bg-white/10 p-4 rounded transition-colors" style="color: ${colors.accent}" contenteditable="true" onblur="updateSlideData(${index}, 'value', this.innerText)">
+                                    ${slide.value || (slide.points && slide.points[0]) || '"'}
+                                </div>
+                                <div class="text-3xl opacity-90 max-w-4xl leading-relaxed outline-none hover:bg-white/10 p-6 rounded" contenteditable="true" onblur="updateSlideData(${index}, 'content', this.innerText)">
+                                    ${slide.content || slide.subtitle || '請輸入說明'}
+                                </div>
+                            </div>`;
+                        break;
+                    default: 
+                        layoutHtml = `
+                            <div class="flex flex-col h-full max-w-6xl mx-auto w-full pt-16 px-12">
+                                <div class="mb-8 text-left border-b-2 pb-6" style="border-color: ${colors.accent}40">
+                                    ${titleHtml}
+                                    ${subtitleHtml}
+                                </div>
+                                <div class="text-2xl text-left outline-none hover:bg-white/10 p-6 rounded transition-colors overflow-y-auto pb-24 leading-loose" contenteditable="true" onblur="updateSlideData(${index}, 'content', this.innerHTML)">
+                                    <ul class="list-disc pl-8 space-y-4">
+                                        ${slide.points ? slide.points.map(p => `<li>${p}</li>`).join('') : renderList(slide.content)}
+                                    </ul>
+                                </div>
+                            </div>`;
+                        break;
+                }
+
                 return `
-                    <div class="slide h-screen w-full flex flex-col justify-center items-center p-12 text-center shrink-0 snap-center relative group" style="background-color: ${colors.background}; color: ${colors.text}; font-family: ${theme.fontFamily || 'sans-serif'};">
-                        <div class="absolute top-4 right-4 text-sm opacity-30">${index + 1} / ${data.slides.length}</div>
-                        ${slide.title ? `<h1 class="text-5xl font-extrabold mb-6 outline-none hover:bg-white/10 p-2 rounded transition-colors" contenteditable="true" onblur="updateSlideData(${index}, 'title', this.innerText)">${slide.title}</h1>` : ''}
-                        ${slide.subtitle ? `<h2 class="text-2xl opacity-80 mb-8 outline-none hover:bg-white/10 p-2 rounded transition-colors" contenteditable="true" onblur="updateSlideData(${index}, 'subtitle', this.innerText)">${slide.subtitle}</h2>` : ''}
-                        ${slide.content ? `<div class="text-xl max-w-4xl text-left space-y-4 outline-none hover:bg-white/10 p-4 rounded transition-colors" contenteditable="true" onblur="updateSlideData(${index}, 'content', this.innerHTML)">${slide.content.split('\n').map(c => c.trim() ? `<p>• ${c}</p>` : '').join('')}</div>` : ''}
-                        <div class="absolute bottom-4 left-0 w-full flex justify-between px-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onclick="document.getElementById('slider').scrollBy({left: -window.innerWidth, behavior: 'smooth'})" class="p-3 bg-white/10 rounded-full hover:bg-white/20"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
-                            <button onclick="document.getElementById('slider').scrollBy({left: window.innerWidth, behavior: 'smooth'})" class="p-3 bg-white/10 rounded-full hover:bg-white/20"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+                    <div class="slide h-screen w-full shrink-0 snap-center relative group overflow-hidden" style="background-color: ${colors.background}; color: ${colors.text}; font-family: ${theme.fontFamily || 'sans-serif'};">
+                        <div class="absolute top-6 right-8 text-lg font-bold opacity-30 z-10">${index + 1} / ${data.slides.length}</div>
+                        ${layoutHtml}
+                        <div class="absolute bottom-8 left-0 w-full flex justify-between px-12 opacity-0 group-hover:opacity-100 transition-opacity z-20 pointer-events-none">
+                            <button onclick="document.getElementById('slider').scrollBy({left: -window.innerWidth, behavior: 'smooth'})" class="pointer-events-auto p-4 bg-black/40 backdrop-blur rounded-full hover:bg-black/60 text-white shadow-xl transition-transform hover:scale-110"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+                            <button onclick="document.getElementById('slider').scrollBy({left: window.innerWidth, behavior: 'smooth'})" class="pointer-events-auto p-4 bg-black/40 backdrop-blur rounded-full hover:bg-black/60 text-white shadow-xl transition-transform hover:scale-110"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
                         </div>
                     </div>
                 `;
