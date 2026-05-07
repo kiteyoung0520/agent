@@ -895,9 +895,16 @@
         async function loadModels() { 
             try { 
                 const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_models', workspace: currentWorkspace }) })).json(); 
-                const s = document.getElementById('model-selector'); s.innerHTML = '<option value="">🧠 預設模型 (自動)</option>'; 
+                const s = document.getElementById('model-selector'); 
+                s.innerHTML = `
+                    <option value="auto">✨ 智慧配對 (Model Nexus)</option>
+                    <option value="nexus-speed">⚡ 最速配對 (Flash Priority)</option>
+                    <option value="nexus-power">🧠 最強配對 (Pro/Thinking)</option>
+                    <option value="nexus-stable">🛡️ 穩定配對 (Latest Stable)</option>
+                    <hr>
+                `; 
                 if (d && d.models && d.models.length > 0) { d.models.forEach(m => s.innerHTML += `<option value="${m.id}">${m.name}</option>`); } 
-                else { s.innerHTML += `<option value="gemini-2.5-flash">⚡ 閃電 (2.5 Flash)</option><option value="gemini-2.5-pro">🧠 專家 (2.5 Pro)</option><option value="gemini-3.1-flash-lite-preview">🔍 審查員 (3.1 Lite)</option>`; }
+                else { s.innerHTML += `<option value="gemini-1.5-flash-latest">⚡ 閃電 (1.5 Flash)</option><option value="gemini-1.5-pro-latest">🧠 專家 (1.5 Pro)</option>`; }
             } catch (e) {} 
         }
 
