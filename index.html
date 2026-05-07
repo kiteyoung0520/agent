@@ -1009,33 +1009,51 @@
             const theme = data.theme || { colors: { background: "#0f172a", text: "#f8fafc", accent: "#38bdf8", shape: "#1e293b" } };
             const colors = theme.colors || { background: "#0f172a", text: "#f8fafc", accent: "#38bdf8", shape: "#1e293b" };
 
-            const renderList = (content) => content ? content.split('\\n').map(c => c.trim() ? `<li class="mb-2">${c.replace(/^- /, '').replace(/^• /, '')}</li>` : '').join('') : '';
+            const renderList = (content) => content ? content.split('\\n').map(c => c.trim() ? `<li class="relative pl-6 mb-4 leading-relaxed before:content-[''] before:absolute before:left-0 before:top-2.5 before:w-1.5 before:h-1.5 before:bg-current"><span class="opacity-90">${c.replace(/^- /, '').replace(/^• /, '')}</span></li>` : '').join('') : '';
 
             const slidesHtml = data.slides.map((slide, index) => {
                 let layoutHtml = '';
-                const titleHtml = slide.title ? `<h1 class="text-4xl md:text-6xl font-black mb-6 tracking-tight outline-none hover:bg-white/10 p-2 rounded transition-all drop-shadow-sm animate-[fadeInUp_0.8s_ease-out]" contenteditable="true" onblur="updateSlideData(${index}, 'title', this.innerText)">${slide.title}</h1>` : '';
-                const subtitleHtml = slide.subtitle ? `<h2 class="text-xl md:text-3xl font-light opacity-80 mb-8 outline-none hover:bg-white/10 p-2 rounded transition-all animate-[fadeInUp_1s_ease-out]" contenteditable="true" onblur="updateSlideData(${index}, 'subtitle', this.innerText)">${slide.subtitle}</h2>` : '';
+                
+                // Manus 風格：提取眉批 (Eyebrow)
+                let titleText = slide.title || "";
+                let eyebrowText = slide.label || "";
+                if (!eyebrowText && titleText.startsWith('【') && titleText.includes('】')) {
+                    const match = titleText.match(/【(.*?)】/);
+                    if (match) {
+                        eyebrowText = match[0];
+                        titleText = titleText.replace(eyebrowText, '').trim();
+                    }
+                }
+
+                const eyebrowHtml = eyebrowText ? `<div class="text-sm md:text-base font-bold tracking-wider mb-8 outline-none hover:bg-black/5 p-1 inline-block rounded transition-colors" style="color: ${colors.accent}" contenteditable="true" onblur="updateSlideData(${index}, 'label', this.innerText)">${eyebrowText}</div>` : '';
+                
+                // Manus 風格：極簡、無底色的粗體標題
+                const titleHtml = titleText ? `<h1 class="text-4xl md:text-5xl font-extrabold mb-6 leading-snug tracking-tight outline-none hover:bg-black/5 p-2 rounded transition-colors animate-[fadeInUp_0.8s_ease-out]" contenteditable="true" onblur="updateSlideData(${index}, 'title', this.innerText)">${titleText}</h1>` : '';
+                
+                const subtitleHtml = slide.subtitle ? `<h2 class="text-lg md:text-xl opacity-75 mb-8 leading-relaxed outline-none hover:bg-black/5 p-2 rounded transition-colors animate-[fadeInUp_1s_ease-out]" contenteditable="true" onblur="updateSlideData(${index}, 'subtitle', this.innerText)">${slide.subtitle}</h2>` : '';
                 
                 switch(slide.layout) {
                     case 'cover':
                     case 'title':
                         layoutHtml = `
                             <div class="flex flex-col items-center justify-center h-full text-center max-w-5xl mx-auto px-8 relative">
-                                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-white/5 rounded-full blur-3xl -z-10"></div>
+                                <div class="w-16 h-16 mb-12 flex items-center justify-center rounded border-[3px] transform rotate-6 opacity-80" style="border-color: ${colors.accent}; color: ${colors.accent}">
+                                    <span class="text-2xl font-black -rotate-6">${eyebrowText.replace(/[【】]/g, '').substring(0,2) || '簡報'}</span>
+                                </div>
                                 ${titleHtml}
-                                <div class="w-24 h-1 mb-8 rounded-full" style="background-color: ${colors.accent};"></div>
-                                ${subtitleHtml}
+                                <div class="text-xl opacity-60 mt-4 tracking-widest outline-none hover:bg-black/5 p-2 rounded" contenteditable="true" onblur="updateSlideData(${index}, 'subtitle', this.innerText)">${slide.subtitle || slide.content || ''}</div>
+                                <div class="absolute bottom-12 text-xs opacity-30 tracking-widest">Agent Generated</div>
                             </div>`;
                         break;
                     case 'hero_quote':
                         layoutHtml = `
                             <div class="flex flex-col items-center justify-center h-full text-center max-w-5xl mx-auto px-12 relative">
-                                <div class="text-[12rem] leading-none font-serif opacity-20 absolute top-10 left-10" style="color: ${colors.accent}">"</div>
-                                <div class="text-5xl md:text-7xl font-serif font-bold my-10 leading-snug outline-none hover:bg-white/10 p-6 rounded transition-colors z-10 drop-shadow-lg" contenteditable="true" onblur="updateSlideData(${index}, 'content', this.innerText)">
+                                ${eyebrowHtml}
+                                <div class="text-4xl md:text-6xl font-serif font-bold my-10 leading-snug outline-none hover:bg-black/5 p-6 rounded transition-colors z-10" contenteditable="true" onblur="updateSlideData(${index}, 'content', this.innerText)">
                                     ${slide.content || slide.subtitle || '金句內容'}
                                 </div>
-                                <div class="text-2xl font-light tracking-widest mt-8 border-t pt-6" style="border-color: ${colors.accent}40" contenteditable="true" onblur="updateSlideData(${index}, 'title', this.innerText)">
-                                    — ${slide.title || '講者'}
+                                <div class="text-xl font-light tracking-widest mt-8 opacity-60" contenteditable="true" onblur="updateSlideData(${index}, 'title', this.innerText)">
+                                    — ${titleText || '講者'}
                                 </div>
                             </div>`;
                         break;
@@ -1044,98 +1062,91 @@
                         let stepsHtml = '';
                         if (slide.gridItems && Array.isArray(slide.gridItems)) {
                             stepsHtml = slide.gridItems.map((item, i) => `
-                                <div class="flex flex-col items-center relative z-10 w-full group">
-                                    <div class="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold shadow-lg mb-6 transition-transform group-hover:scale-110" style="background-color: ${colors.accent}; color: ${colors.background}">${i+1}</div>
-                                    <div class="text-2xl font-bold mb-3">${item.title}</div>
-                                    <div class="text-lg opacity-80 leading-relaxed text-center">${item.content}</div>
+                                <div class="flex flex-col items-start relative w-full group pl-8 border-l-2 pb-12" style="border-color: ${colors.accent}40">
+                                    <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full" style="background-color: ${colors.accent}"></div>
+                                    <div class="text-2xl font-bold mb-3" style="color: ${colors.accent}">${item.title}</div>
+                                    <div class="text-lg opacity-80 leading-relaxed">${item.content}</div>
                                 </div>
                             `).join('');
                         }
                         layoutHtml = `
-                            <div class="flex flex-col h-full max-w-7xl mx-auto w-full pt-20 px-12 relative">
-                                <div class="text-center mb-20">${titleHtml}</div>
-                                <div class="relative flex justify-between items-start gap-8 w-full mt-10">
-                                    <div class="absolute top-8 left-8 right-8 h-1 z-0 opacity-30" style="background-color: ${colors.accent}"></div>
+                            <div class="flex flex-col h-full max-w-6xl mx-auto w-full pt-16 px-12">
+                                ${eyebrowHtml}
+                                <div class="mb-12">${titleHtml}</div>
+                                <div class="flex flex-col w-full max-w-3xl pl-4">
                                     ${stepsHtml}
                                 </div>
                             </div>`;
                         break;
-                    case 'card_deck':
-                        let cardsHtml = '';
-                        if (slide.gridItems && Array.isArray(slide.gridItems)) {
-                            cardsHtml = slide.gridItems.map((item, i) => `
-                                <div class="p-8 rounded-2xl bg-black/10 backdrop-blur-md border border-white/10 hover:border-white/30 hover:-translate-y-2 transition-all duration-300 shadow-xl flex flex-col h-full">
-                                    <div class="text-4xl mb-6" style="color: ${colors.accent}">${item.iconKeyword || '✨'}</div>
-                                    <div class="text-3xl font-bold mb-4">${item.title}</div>
-                                    <div class="text-xl opacity-80 leading-relaxed flex-grow">${item.content}</div>
-                                </div>
-                            `).join('');
-                        }
+                    case 'split_column': // Manus 非對稱排版 (圖2, 圖5)
                         layoutHtml = `
-                            <div class="flex flex-col h-full max-w-7xl mx-auto w-full pt-16 px-12">
-                                <div class="text-left mb-12">${titleHtml}${subtitleHtml}</div>
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 overflow-y-auto pb-24 px-2">
-                                    ${cardsHtml}
-                                </div>
-                            </div>`;
-                        break;
-                    case 'split_column':
-                        layoutHtml = `
-                            <div class="flex flex-col h-full max-w-7xl mx-auto w-full pt-16 px-12">
-                                <div class="text-center mb-12">${titleHtml}</div>
-                                <div class="grid grid-cols-2 gap-16 h-full overflow-y-auto pb-24 items-start">
-                                    <div class="outline-none hover:bg-black/5 p-8 rounded-2xl bg-black/5 backdrop-blur transition-colors border-t-4" style="border-color: ${colors.accent}" contenteditable="true" onblur="updateSlideData(${index}, 'left', this.innerHTML)">
-                                        <ul class="list-disc pl-6 text-[1.4rem] space-y-6 leading-relaxed">${renderList(slide.left || slide.content || '左側內容')}</ul>
+                            <div class="flex flex-col h-full max-w-6xl mx-auto w-full pt-16 px-12">
+                                ${eyebrowHtml}
+                                <div class="grid grid-cols-12 gap-16 h-full overflow-y-auto pb-24 items-start mt-4">
+                                    <div class="col-span-12 md:col-span-5 flex flex-col">
+                                        ${titleHtml}
+                                        <div class="text-lg opacity-70 leading-relaxed outline-none hover:bg-black/5 p-4 rounded mt-4" contenteditable="true" onblur="updateSlideData(${index}, 'left', this.innerHTML)">
+                                            ${slide.left || slide.content || ''}
+                                        </div>
                                     </div>
-                                    <div class="outline-none hover:bg-black/5 p-8 rounded-2xl bg-black/5 backdrop-blur transition-colors border-t-4" style="border-color: ${colors.text}40" contenteditable="true" onblur="updateSlideData(${index}, 'right', this.innerHTML)">
-                                        <ul class="list-disc pl-6 text-[1.4rem] space-y-6 leading-relaxed">${renderList(slide.right || '右側內容')}</ul>
+                                    <div class="col-span-12 md:col-span-7">
+                                        <ul class="text-xl space-y-6 outline-none hover:bg-black/5 p-6 rounded" style="color: ${colors.accent}" contenteditable="true" onblur="updateSlideData(${index}, 'right', this.innerHTML)">
+                                            ${renderList(slide.right || slide.points?.join('\\n') || '右側內容')}
+                                        </ul>
                                     </div>
                                 </div>
                             </div>`;
                         break;
                     case 'icon_grid':
-                    case 'grid':
+                    case 'card_deck':
+                    case 'grid': // Manus 四欄文字排版 (圖3)
                         let gridItemsHtml = '';
                         if (slide.gridItems && Array.isArray(slide.gridItems)) {
                             gridItemsHtml = slide.gridItems.map((item, i) => `
-                                <div class="p-8 rounded-xl hover:bg-white/5 transition-colors flex flex-col text-left">
-                                    <div class="text-2xl font-bold mb-3 border-l-4 pl-4" style="border-color: ${colors.accent}; color: ${colors.accent}">${item.title}</div>
-                                    <div class="text-[1.2rem] opacity-90 leading-relaxed">${item.content}</div>
+                                <div class="flex flex-col text-center items-center group">
+                                    <div class="text-2xl font-bold mb-3 transition-colors" style="color: ${colors.accent}">${item.title}</div>
+                                    <div class="text-xs font-bold py-1 px-3 mb-6 rounded-sm opacity-80" style="background-color: ${colors.accent}15; color: ${colors.accent}">${item.iconKeyword || '要點'}</div>
+                                    <div class="text-[0.95rem] opacity-75 leading-relaxed">${item.content}</div>
                                 </div>
                             `).join('');
                         }
                         layoutHtml = `
-                            <div class="flex flex-col h-full max-w-7xl mx-auto w-full pt-16 px-12">
-                                <div class="text-center mb-12">${titleHtml}${subtitleHtml}</div>
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-12 overflow-y-auto pb-24 content-start">
+                            <div class="flex flex-col h-full max-w-6xl mx-auto w-full pt-16 px-12 relative">
+                                ${eyebrowHtml}
+                                <div class="mb-2 italic opacity-50 text-sm">${slide.subtitle || ''}</div>
+                                <div class="mb-16">${titleHtml}</div>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-12 overflow-y-auto pb-24 content-start">
                                     ${gridItemsHtml}
+                                </div>
+                                <div class="absolute bottom-12 left-0 w-full text-center border-t pt-6 italic opacity-60 text-lg px-12" style="border-color: ${colors.accent}20">
+                                    ${slide.content ? '"' + slide.content + '"' : ''}
                                 </div>
                             </div>`;
                         break;
                     case 'big_data':
                         layoutHtml = `
-                            <div class="flex flex-col items-center justify-center h-full text-center max-w-6xl mx-auto px-12 relative">
-                                <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/10 -z-10"></div>
+                            <div class="flex flex-col items-center justify-center h-full text-center max-w-5xl mx-auto px-12">
+                                ${eyebrowHtml}
                                 ${titleHtml}
-                                <div class="text-[10rem] md:text-[14rem] font-black my-4 outline-none hover:scale-105 transition-transform leading-none tracking-tighter" style="color: ${colors.accent}" contenteditable="true" onblur="updateSlideData(${index}, 'value', this.innerText)">
+                                <div class="text-[8rem] md:text-[10rem] font-serif font-bold my-8 outline-none tracking-tighter" style="color: ${colors.accent}" contenteditable="true" onblur="updateSlideData(${index}, 'value', this.innerText)">
                                     ${slide.value || (slide.points && slide.points[0]) || '99%'}
                                 </div>
-                                <div class="text-3xl font-light opacity-90 max-w-4xl leading-relaxed mt-8 outline-none hover:bg-white/10 p-6 rounded" contenteditable="true" onblur="updateSlideData(${index}, 'content', this.innerText)">
+                                <div class="text-xl font-light opacity-80 max-w-3xl leading-relaxed outline-none hover:bg-black/5 p-4 rounded" contenteditable="true" onblur="updateSlideData(${index}, 'content', this.innerText)">
                                     ${slide.content || slide.subtitle || '請輸入資料說明'}
                                 </div>
                             </div>`;
                         break;
                     default: 
                         layoutHtml = `
-                            <div class="flex flex-col h-full max-w-6xl mx-auto w-full pt-20 px-16">
-                                <div class="mb-12 text-left">
+                            <div class="flex flex-col h-full max-w-6xl mx-auto w-full pt-16 px-12">
+                                ${eyebrowHtml}
+                                <div class="mb-10 text-left">
                                     ${titleHtml}
-                                    <div class="w-20 h-1 mt-4 mb-6 rounded-full" style="background-color: ${colors.accent};"></div>
                                     ${subtitleHtml}
                                 </div>
-                                <div class="text-[1.6rem] font-light text-left outline-none hover:bg-white/10 p-8 rounded-xl transition-colors overflow-y-auto pb-24 leading-loose tracking-wide" contenteditable="true" onblur="updateSlideData(${index}, 'content', this.innerHTML)">
-                                    <ul class="list-disc pl-10 space-y-6">
-                                        ${slide.points ? slide.points.map(p => `<li>${p}</li>`).join('') : renderList(slide.content)}
+                                <div class="text-xl font-light text-left outline-none hover:bg-black/5 p-6 rounded transition-colors overflow-y-auto pb-24" style="color: ${colors.accent}" contenteditable="true" onblur="updateSlideData(${index}, 'content', this.innerHTML)">
+                                    <ul class="space-y-6">
+                                        ${slide.points ? renderList(slide.points.join('\\n')) : renderList(slide.content)}
                                     </ul>
                                 </div>
                             </div>`;
