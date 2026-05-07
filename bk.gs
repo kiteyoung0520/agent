@@ -311,7 +311,7 @@ const AGENT_TOOLS = [{
                     topic: { type: "STRING", description: "簡報核心主題" }, 
                     customColors: { type: "OBJECT", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。請依主題氛圍自主調配。" }, 
                     shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist' (極簡), 'rounded' (圓角), 'cyber' (銳角/科技), 'dynamic' (斜切/活力), 'layered' (疊層/深邃)。" }, 
-                    slidesData: { type: "ARRAY", items: { type: "OBJECT" }, description: "簡報 JSON 陣列。格式：[{layout: 'cover|title_only|standard_list|split_column|image_right|image_left|icon_grid|timeline|big_data', title: '標題', content: '內文', points: ['重點'], left: '左欄', right: '右欄', value: '大數據值', imageKeyword: '英文生圖提示詞', gridItems: [{title:'標題', content:'內容', iconKeyword:'圖標關鍵字'}]}]。⚠️請根據內容特徵挑選最佳 layout：如果是數據則用 big_data，如果是歷程則用 timeline，如果是對比則用 split_column。" } 
+                    slidesData: { type: "ARRAY", items: { type: "OBJECT" }, description: "簡報 JSON 陣列。格式：[{layout: 'cover|hero_quote|standard_list|split_column|card_deck|stepper|icon_grid|timeline|big_data', title: '標題', content: '內文', points: ['重點'], left: '左欄', right: '右欄', value: '大數據值', imageKeyword: '英文生圖提示詞', gridItems: [{title:'標題', content:'內容', iconKeyword:'圖標關鍵字'}]}]。⚠️請根據內容特徵挑選最佳 layout：如果是金句用 hero_quote，如果是特點用 card_deck，如果是步驟用 stepper，如果是數據則用 big_data，如果是對比用 split_column。" } 
                 }, 
                 required: ["topic", "customColors", "shapeStyle", "slidesData"] 
             } 
@@ -351,7 +351,12 @@ function getSuperAgentPrompt(wsName, customRules) {
 【視覺執行與設計鐵律 (Execution Discipline)】：
 1. **方案優先 (Discussed Plan First)**：如果在對話中與使用者討論過版面規劃（例如：第三頁用雙欄、主題色用紫色），在呼叫 'create_presentation' 時【必須】嚴格遵守。禁止使用預設主題名，請務必手動根據討論結果計算配色 JSON 填入 'customColors'。
 2. **內容保護 (Strict Content)**：對於使用者提供的教案、文案、名單、數據，必須 100% 完整保留並填入簡報中。絕對禁止自行做摘要、禁止刪減名單、禁止修改專業術語。
-3. **版面適配**：根據內容邏輯選擇最佳 layout。對比內容必用 'split_column'，關鍵數據必用 'big_data'，多個並列項目必用 'icon_grid' 或 'timeline'。
+3. **動態版面 (Dynamic Layout)**：捨棄呆板排版，根據內容靈活切換 `layout`。
+   - 金句/名言/哲理：必用 `hero_quote` (全螢幕大字)。
+   - 多重點/特色：必用 `card_deck` (卡片堆疊) 或 `icon_grid`。
+   - 流程/步驟/歷史：必用 `stepper` 或 `timeline`。
+   - 對比/優缺點：必用 `split_column`。
+   - 震撼數據：必用 `big_data`。
 4. **配色紀律**：'customColors' 的 JSON 格式必須包含：{"bg": "#...", "text": "#...", "accent": "#...", "shape": "#..."}。請依據主題氛圍（如：優雅、科技、教育）自主設計高品質配色。
 5. **生圖引導**：在 'imageKeyword' 中填入高品質的英文 Prompt，讓每張投影片都具備視覺張力。
 
