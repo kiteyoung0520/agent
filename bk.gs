@@ -102,7 +102,12 @@ class FirebaseClient {
         const results = [];
         if (Array.isArray(json)) {
             json.forEach(item => {
-                if (item.document && item.document.fields) results.push(this._parseData(item.document.fields));
+                if (item.document && item.document.fields) {
+                    const d = this._parseData(item.document.fields);
+                    const docId = item.document.name.split('/').pop();
+                    if (!d.session_id) d.session_id = docId;
+                    results.push(d);
+                }
             });
         }
         
@@ -114,6 +119,64 @@ class FirebaseClient {
             return dateB - dateA;
         });
         return results.slice(0, 50);
+    }
+
+    querySources(workspace) {
+        if (!this.apiKey) return [];
+        const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents:runQuery?key=${this.apiKey}`;
+        const payload = {
+            structuredQuery: {
+                from: [{ collectionId: "sources" }],
+                where: {
+                    fieldFilter: { field: { fieldPath: "workspace" }, op: "EQUAL", value: { stringValue: workspace } }
+                }
+            }
+        };
+        const res = this.fetchWithRetry(url, {
+            method: "post", contentType: "application/json", payload: JSON.stringify(payload), muteHttpExceptions: true
+        });
+        if (!res) return [];
+        const json = JSON.parse(res.getContentText());
+        const results = [];
+        if (Array.isArray(json)) {
+            json.forEach(item => {
+                if (item.document && item.document.fields) {
+                    const d = this._parseData(item.document.fields);
+                    d.id = item.document.name.split('/').pop();
+                    results.push(d);
+                }
+            });
+        }
+        return results;
+    }
+
+    queryContext(workspace) {
+        if (!this.apiKey) return [];
+        const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents:runQuery?key=${this.apiKey}`;
+        const payload = {
+            structuredQuery: {
+                from: [{ collectionId: "context" }],
+                where: {
+                    fieldFilter: { field: { fieldPath: "workspace" }, op: "EQUAL", value: { stringValue: workspace } }
+                }
+            }
+        };
+        const res = this.fetchWithRetry(url, {
+            method: "post", contentType: "application/json", payload: JSON.stringify(payload), muteHttpExceptions: true
+        });
+        if (!res) return [];
+        const json = JSON.parse(res.getContentText());
+        const results = [];
+        if (Array.isArray(json)) {
+            json.forEach(item => {
+                if (item.document && item.document.fields) {
+                    const d = this._parseData(item.document.fields);
+                    d.id = item.document.name.split('/').pop();
+                    results.push(d);
+                }
+            });
+        }
+        return results;
     }
 
     _formatData(data) {
@@ -245,9 +308,7 @@ const AGENT_TOOLS = [{
                     topic: { type: "STRING", description: "簡報核心主題" }, 
                     customColors: { type: "STRING", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。請依主題氛圍自主調配。" }, 
                     shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist' (極簡), 'rounded' (圓角), 'cyber' (銳角/科技), 'dynamic' (斜切/活力), 'layered' (疊層/深邃)。" }, 
-                    globalLogoUrl: { type: "STRING", description: "【標誌】可選。公司或品牌的 Logo 圖片網址。" },
-                    contentDensity: { type: "STRING", description: "內容密度: 'brief' (簡易/演講用), 'detailed' (詳細/商務用), 'full' (完整/報告用)。" },
-                    slidesData: { type: "STRING", description: "簡報 JSON 陣列。格式：[{layout: '...', title: '...', content: '...', points: [...], speakerNotes: '...', citations: '...', titleIconKeyword: '...', imageKeyword: '...', gridItems: [...]}]。⚠️ 嚴禁產出過於簡短的內容，備忘錄必須豐富且具備深度。" } 
+                    slidesData: { type: "STRING", description: "簡報 JSON 陣列。格式：[{layout: 'cover|title_only|standard_list|split_column|image_right|image_left|icon_grid|timeline|big_data', title: '標題', content: '內文', points: ['重點'], left: '左欄', right: '右欄', value: '大數據值', imageKeyword: '英文生圖提示詞', gridItems: [{title:'標題', content:'內容', iconKeyword:'圖標關鍵字'}]}]。⚠️請根據內容特徵挑選最佳 layout：如果是數據則用 big_data，如果是歷程則用 timeline，如果是對比則用 split_column。" } 
                 }, 
                 required: ["topic", "customColors", "shapeStyle", "slidesData"] 
             } 
@@ -262,9 +323,7 @@ const AGENT_TOOLS = [{
                     action: { type: "STRING", description: "'append' (附加投影片到最後) 或 'overwrite' (清空並重新繪製整份簡報)" }, 
                     customColors: { type: "STRING", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。" }, 
                     shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist', 'rounded', 'cyber', 'dynamic', 'layered' 擇一。" }, 
-                    globalLogoUrl: { type: "STRING", description: "【標誌】可選。公司或品牌的 Logo 圖片網址。" },
-                    contentDensity: { type: "STRING", description: "內容密度: 'brief', 'detailed', 'full'。" },
-                    slidesData: { type: "STRING", description: "要新增或覆寫的簡報 JSON 陣列。⚠️ 嚴禁省略：必須包含所有頁面的完整內容。" } 
+                    slidesData: { type: "STRING", description: "要新增或覆寫的簡報 JSON 陣列。格式同 create_presentation。" } 
                 }, 
                 required: ["presentationUrl", "action", "slidesData"] 
             } 
@@ -318,27 +377,17 @@ ${customRules}
 
 
 
-【🔧 專案開發場景 (納入 UPP 框架)】
-以下場景均適用「思維閉環」三部曲：先思考提案 → 徵詢同意 → 執行後稽核。
-
 [場景 A：建立新專案]
 當使用者要求「自動部署全端」、「做一個 App」時：
-1. **【思考】** 先說明你的技術架構選擇與潛在風險，徵得使用者同意。
-2. 呼叫 \`create_database_sheet\` 建立資料庫，取得 \`sheetId\`。
-3. 呼叫 \`deploy_fullstack_matrix\`，利用 additionalFiles 參數傳遞模組。
-4. **【稽核】** 部署後，嘗試訪問網頁確認正常，再回報結果。
+1. 呼叫 \`create_database_sheet\` 建立資料庫，取得 \`sheetId\`。
+2. 呼叫 \`deploy_fullstack_matrix\`，利用 additionalFiles 參數傳遞您拆分好的模組檔案。系統會自動幫您建立 GitHub 專案與 CI/CD 腳本。
 
 [場景 B：修改與熱更新已部署專案]
-當使用者要求「修改」時：
-1. **【思考】** 先分析影響範圍，說明只需修改哪個模組，避免破壞其他功能。
-2. 僅呼叫 \`push_to_github\` 精準覆寫特定檔案，將破壞半徑降到最低。
-3. **【稽核】** 更新後訪問網頁，確認功能正常後才回報。
+當使用者要求「修改」時：絕對不要重新建立專案！請判斷只需修改哪個模組 (例如只改 \`frontend/components.js\`)，然後只呼叫 \`push_to_github\` 去精準覆寫該特定檔案，將破壞半徑降到最低。
 
 [場景 C：災難復原 (Rollback)]
 當使用者反應「剛剛的更新壞了」、「畫面卡死」、「退回上一版」時：
-1. **【思考】** 先分析可能的錯誤原因，說明你的回退計畫。
-2. 呼叫 \`rollback_github_deployment\` 退回 Git 版本。
-3. **【稽核 + 修正方案】** 回退後訪問網頁確認，並向使用者提出根本原因與預防方案。
+立刻呼叫 \`rollback_github_deployment\` 工具退回 Git 版本。退回成功後，請深呼吸，重新思考剛剛的邏輯哪裡有問題，並向使用者提出可能的錯誤原因與修正方案。
 
 【📁 安全歸檔模式 (Safe Archive Assistant)】
 當使用者要求「整理資料夾」、「集中歸檔」多個未知檔案時，請呼叫 \`scan_and_prepare_archive\`。取得資料後，請【強制】使用以下 5 個標題回覆使用者（請原封不動使用標題字眼）：
@@ -358,30 +407,7 @@ ${customRules}
    - 禁止連續兩張投影片使用相同 Layout。
    - 每一頁的文字量不可超過 100 字，其餘內容請放入「講者備忘錄」。
    - customColors 必須根據主題情感（商務、熱情、科技）挑選對比鮮明的 HEX 色碼。
-   - imageKeyword 必須包含 'high quality', 'cinematic lighting', 'professional photography' 等修飾詞。
-
-【👑 anyGem 全域代理人核心行為準則 (Universal Proxy Protocol)】
-作為一個進化的代理人，你在執行「任何」具有影響力的工具任務前，必須遵守以下「思維閉環」三部曲：
-
-部曲一：深度思考與互動提案 (Think & Propose)
-1. **【思考鏈 (Thought Chain)】**：在採取任何行動前，你必須先用文字向使用者說明你的任務理解、採取的技術路徑、以及潛在的風險預判。
-2. **【專業討論】**：如果是文件、簡報或開發任務，你必須先提供「大綱或架構提案」，徵得使用者同意或修改建議後才能正式動手。
-3. **【重要！簡報提案嵌入標記】**：當任務為簡報時，在提案回覆的「最後一行」，你必須附加一段機器可讀的 JSON 標記，格式如下（不得更改標記名稱）：
-   '<!--OUTLINE_DATA:[{"layout":"cover","title":"標題","notes_preview":"備忘錄摘要"},{"layout":"standard_list","title":"標題2","notes_preview":"備忘錄摘要"}]-->'
-   該標記將被前端自動解析並顯示大綱確認編輯器，供使用者直接在介面上編輯大綱。
-4. 詢問使用者意見，嚴禁跳過此步直接生成。
-
-部曲二：品質預判與模擬 (Quality Pre-check)
-1. 在動手前，針對使用者的特殊需求進行邏輯模擬。
-2. 若預見到規格衝突（如頁數、字數、開發環境限制），必須主動提出並給予解決方案，而非盲目執行。
-
-部曲三：執行、稽核與自動修正 (Execute, Audit & Self-Correct)
-1. 呼叫工具執行任務。
-2. **【強制自我稽核】**：
-   - **簡報/文件**：生成後「必須讀回」內容，檢查排版、備忘錄與標題層級是否正確。
-   - **專案開發**：部署後「必須嘗試訪問」網頁，檢查是否正常顯示。
-   - **檔案整理**：完成後「必須掃描」目錄，確保結構無誤。
-3. **【補償性修正】**：若稽核發現任何不完美（漏字、錯字、功能失效），你必須「自發性」再次呼叫工具進行修正，直到你確認結果「交件即完美」後，最後才向使用者回報並附上【驗證通過報告】。`;
+   - imageKeyword 必須包含 'high quality', 'cinematic lighting', 'professional photography' 等修飾詞。`;
 }
 
 
@@ -427,7 +453,7 @@ function doPost(e) {
             targetSheet.appendRow(["🔥 Firebase Mode", "此專案空間已遷移至 Firestore，對話紀錄不再儲存於此表單，請至專屬資料庫查看。"]);
         }
 
-        if (mode === 'system') return handleSystemMode(payload, ss, wsName, db);
+        if (mode === 'system') return handleSystemMode(payload, ss, wsName, db, apiKey);
 
         if (mode === 'edit_and_regenerate') {
             const session = db.get("sessions", session_id);
@@ -942,45 +968,40 @@ function runAutonomousAgentLoop(config) {
                         case "search_drive_files":
                             try {
                                 let safeKw = args.keyword.replace(/'/g, "\\'");
+                                // 修正查詢語法：fullText 其實已經包含 title 了，使用更簡單的語法
                                 let query = `fullText contains '${safeKw}' and trashed = false`;
                                 
-                                if (args.folderId) {
-                                    let folderIdMatch = args.folderId.match(/[-\w]{25,}/);
-                                    let targetFolderId = folderIdMatch ? folderIdMatch[0] : args.folderId;
-                                    query += ` and '${targetFolderId}' in parents`;
-                                }
-                                
                                 if (args.fileType) {
-                                    let mimeTypeStr = '';
                                     const typeMap = { 'document': 'application/vnd.google-apps.document', 'spreadsheet': 'application/vnd.google-apps.spreadsheet', 'folder': 'application/vnd.google-apps.folder', 'pdf': 'application/pdf' };
                                     for (const [key, val] of Object.entries(typeMap)) {
-                                        if (args.fileType.toLowerCase().includes(key)) { mimeTypeStr = val; break; }
+                                        if (args.fileType.toLowerCase().includes(key)) { query += ` and mimeType = '${val}'`; break; }
                                     }
-                                    if (mimeTypeStr) query += ` and mimeType = '${mimeTypeStr}'`;
                                 }
                                 
-                                let listArgs = { q: query, maxResults: args.maxResults || 30 };
-                                if (args.pageToken) listArgs.pageToken = args.pageToken; 
-                                
-                                let response;
-                                try {
-                                    response = Drive.Files.list(listArgs);
-                                } catch (driveErr) {
-                                    throw new Error("請確認已在 GAS 服務中開啟 Drive API (v2)。" + driveErr.toString());
-                                }
-                                
+                                // 嘗試搜尋檔案
+                                let files = DriveApp.searchFiles(query);
                                 let results = [];
-                                if (response.items) {
-                                    response.items.forEach(f => {
-                                        let type = f.mimeType === 'application/vnd.google-apps.folder' ? 'folder' : f.mimeType;
-                                        results.push({ name: f.title, url: f.alternateLink, id: f.id, type: type });
-                                    });
+                                let count = 0;
+                                while (files.hasNext() && count < 40) {
+                                    let f = files.next();
+                                    results.push({ name: f.getName(), url: f.getUrl(), id: f.getId(), type: f.getMimeType() });
+                                    count++;
+                                }
+                                
+                                // 如果完全沒結果，嘗試只搜檔名 (有時候 fullText 在某些權限下會失效)
+                                if (results.length === 0) {
+                                    let titleQuery = `title contains '${safeKw}' and trashed = false`;
+                                    let titleFiles = DriveApp.searchFiles(titleQuery);
+                                    while (titleFiles.hasNext() && count < 40) {
+                                        let f = titleFiles.next();
+                                        results.push({ name: f.getName(), url: f.getUrl(), id: f.getId(), type: f.getMimeType() });
+                                        count++;
+                                    }
                                 }
                                 
                                 toolResult = { 
                                     status: "success", 
-                                    data: results.length > 0 ? results : "未找到符合條件的檔案或資料夾。",
-                                    nextPageToken: response.nextPageToken || null 
+                                    data: results.length > 0 ? results : "未找到符合條件的檔案或資料夾。"
                                 };
                             } catch(e) { toolResult = { status: "error", error_message: `搜尋失敗: ${e.toString()}` }; }
                             break;
@@ -1301,11 +1322,9 @@ function runAutonomousAgentLoop(config) {
                                 }
                             } catch(e) { console.error("顏色解析失敗", e); }
                             
-                            let safeSlidesData = sanitizeJson(args.slidesData);
-                            const pid = createGeometricSlides(args.topic, JSON.parse(safeSlidesData), themeToUse, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel, args.globalLogoUrl, args.contentDensity || 'detailed');
-                            const presUrl = `https://docs.google.com/presentation/d/${pid}/edit`;
-                            // 🟢 修復三：程式層面追加自我稽核提示，觸發 AI 執行 UPP 部曲三
-                            toolResult = { isTerminal: false, reply: `📊 **簡報已生成！**\n🔗 連結：${presUrl}\n\n🔍 **[系統稽核指令]** 請你立即呼叫 read_presentation 工具，讀取此簡報內容，驗證：(1)投影片頁數是否正確，(2)每頁備忘錄是否有內容。若發現問題，請直接呼叫 update_presentation 修復後再向使用者回報。`, presentationId: pid };
+                            let safeSlidesData = args.slidesData.replace(/\n/g, ' ').replace(/\r/g, '').replace(/\t/g, ' ');
+                            const pid = createGeometricSlides(args.topic, JSON.parse(safeSlidesData), themeToUse, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel);
+                            toolResult = { isTerminal: true, reply: `📊 **專屬簡報生成完畢！**\n🔗 [點擊開啟 Google 簡報](https://docs.google.com/presentation/d/${pid}/edit)` };
                             break;
                         case "update_presentation":
                             let presIdMatch = args.presentationUrl.match(/[-\w]{25,}/);
@@ -1323,11 +1342,12 @@ function runAutonomousAgentLoop(config) {
                             let processedUpdData;
                             try {
                                 if (typeof rawUpdData === 'string') {
-                                    processedUpdData = JSON.parse(sanitizeJson(rawUpdData));
+                                    let cleanS = rawUpdData.replace(/\n/g, ' ').replace(/\r/g, '').replace(/\t/g, ' ');
+                                    processedUpdData = JSON.parse(cleanS);
                                 } else { processedUpdData = rawUpdData; }
-                            } catch(e) { throw new Error("簡報資料格式錯誤，無法解析 JSON：" + e.toString()); }
+                            } catch(e) { throw new Error("簡報資料格式錯誤，無法解析 JSON"); }
 
-                            updateGeometricSlides(presIdMatch[0], args.action, processedUpdData, updTheme, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel, args.globalLogoUrl, args.contentDensity || 'detailed');
+                            updateGeometricSlides(presIdMatch[0], args.action, processedUpdData, updTheme, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel);
                             
                             let actionVerb = (String(args.action).toLowerCase().trim() === 'overwrite') ? "覆寫" : "擴充";
                             toolResult = { isTerminal: true, reply: `📊 **簡報${actionVerb}完畢！**\n\n已成功將 ${processedUpdData.length} 頁內容同步至簡報中。\n🔗 [點擊開啟驗證](https://docs.google.com/presentation/d/${presIdMatch[0]}/edit)` };
@@ -1486,7 +1506,7 @@ function logToFirebaseAndCache(db, wsName, sessionId, userMsg, aiReply) {
     } catch(e) {}
 }
 
-function handleSystemMode(payload, ss, wsName, db) {
+function handleSystemMode(payload, ss, wsName, db, apiKey) {
     const action = payload.action; 
 
     const routeHandlers = {
@@ -1558,7 +1578,7 @@ function handleSystemMode(payload, ss, wsName, db) {
             const sessions = db.querySessions(wsName);
             const formatted = sessions.map(x => ({
                 id: x.session_id,
-                title: x.customTitle || x.title,
+                title: x.customTitle || x.title || "未命名對話",
                 date: x.updated_at,
                 pinned: x.pinned
             }));
@@ -1592,6 +1612,89 @@ function handleSystemMode(payload, ss, wsName, db) {
                 db.write("sessions", payload.session_id, session);
             }
             return response({status: "success", pinned: payload.is_pinned});
+        },
+        'get_sources': () => {
+            const sources = db.querySources(wsName);
+            return response({ sources: sources });
+        },
+        'add_source': () => {
+            const id = "src_" + Math.random().toString(36).substring(2, 12);
+            const sourceData = {
+                workspace: wsName,
+                title: payload.title || "未命名來源",
+                url: payload.url || "",
+                type: payload.type || "web",
+                content: payload.content || "",
+                created_at: new Date()
+            };
+            db.write("sources", id, sourceData);
+            return response({ status: "success", id: id });
+        },
+        'remove_source': () => {
+            db.delete("sources", payload.source_id);
+            return response({ status: "success" });
+        },
+        'get_workspace_context': () => {
+            const context = db.queryContext(wsName);
+            return response({ context: context });
+        },
+        'toggle_message_sharing': () => {
+            const text = String(payload.text).trim();
+            const existing = db.queryContext(wsName).find(c => c.text.trim() === text);
+            if (existing) {
+                db.delete("context", existing.id);
+                return response({ status: "success", shared: false });
+            } else {
+                const id = "ctx_" + Math.random().toString(36).substring(2, 12);
+                db.write("context", id, { workspace: wsName, text: text, created_at: new Date() });
+                return response({ status: "success", shared: true });
+            }
+        },
+        'get_user_info': () => {
+            let email = "未知使用者";
+            try { email = Session.getEffectiveUser().getEmail() || Session.getActiveUser().getEmail(); } catch(e) {}
+            return response({ email: email });
+        },
+        'search_drive_files': () => {
+            try {
+                let safeKw = (payload.keyword || "").replace(/'/g, "\\'");
+                let query = `fullText contains '${safeKw}' and trashed = false`;
+                let files = DriveApp.searchFiles(query);
+                let results = [];
+                let count = 0;
+                while (files.hasNext() && count < 40) {
+                    let f = files.next();
+                    results.push({ name: f.getName(), url: f.getUrl(), id: f.getId(), type: f.getMimeType() });
+                    count++;
+                }
+                if (results.length === 0) {
+                    let titleFiles = DriveApp.searchFiles(`title contains '${safeKw}' and trashed = false`);
+                    while (titleFiles.hasNext() && count < 40) {
+                        let f = titleFiles.next();
+                        results.push({ name: f.getName(), url: f.getUrl(), id: f.getId(), type: f.getMimeType() });
+                        count++;
+                    }
+                }
+                return response({ status: "success", data: results });
+            } catch(e) { return response({ status: "error", error_message: e.toString() }); }
+        },
+        'read_drive_file': () => {
+            try {
+                let idMatch = payload.fileUrl.match(/[-\w]{25,}/);
+                if (!idMatch) return response({ status: "error", error_message: "無法辨識的檔案網址" });
+                const file = DriveApp.getFileById(idMatch[0]);
+                let content = extractTextFromAnyFile(file, apiKey);
+                return response({ status: "success", data: content });
+            } catch(e) { return response({ status: "error", error_message: e.toString() }); }
+        },
+        'parse_pptx': () => {
+            try {
+                const blob = Utilities.newBlob(Utilities.base64Decode(payload.file_data), "application/vnd.openxmlformats-officedocument.presentationml.presentation", payload.file_name);
+                const tempFile = DriveApp.createFile(blob);
+                const content = extractTextFromAnyFile(tempFile, apiKey);
+                tempFile.setTrashed(true);
+                return response({ status: "success", text: content });
+            } catch(e) { return response({ status: "error", message: e.toString() }); }
         }
     };
     if (routeHandlers[action]) return routeHandlers[action](); else return response({status: "error", message: "Unknown action"});
@@ -1785,96 +1888,12 @@ function fetchIconImage(keyword, colorHex, bgHex) {
     try { let cleanColor = colorHex.replace('#', ''); let bgClean = bgHex.replace('#', ''); let safeKeyword = encodeURIComponent(keyword.trim().split(' ')[0] || "star"); let url = `https://img.icons8.com/ios-filled/100/${cleanColor}/${safeKeyword}.png`; let res = UrlFetchApp.fetch(url, {muteHttpExceptions: true}); if(res.getResponseCode() === 200) return res.getBlob(); let fallbackUrl = `https://ui-avatars.com/api/?name=${safeKeyword}&background=${cleanColor}&color=${bgClean}&size=128&rounded=true&font-size=0.4`; let res2 = UrlFetchApp.fetch(fallbackUrl, {muteHttpExceptions: true}); if(res2.getResponseCode() === 200) return res2.getBlob(); } catch(e) {} return null;
 }
 
-function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl, contentDensity) {
-    let mainShape = SlidesApp.ShapeType.RECTANGLE; let coverShape = SlidesApp.ShapeType.ELLIPSE; 
-    let isMinimal = (style === 'minimalist' || style === 'style1'); 
-    let isBrief = (contentDensity === 'brief');
-    let alphaMod = (style === 'layered' || style === 'style8') ? 0.2 : 1;
-    
-    // --- 🎭 視覺風格引擎升級 (Styles 1-10) ---
-    if (style === 'rounded' || style === 'style2') { mainShape = SlidesApp.ShapeType.ROUND_RECTANGLE; coverShape = SlidesApp.ShapeType.ROUND_RECTANGLE; }
-    else if (style === 'cyber' || style === 'style3') { mainShape = SlidesApp.ShapeType.RIGHT_TRIANGLE; coverShape = SlidesApp.ShapeType.RIGHT_TRIANGLE; }
-    else if (style === 'dynamic' || style === 'style4') { mainShape = SlidesApp.ShapeType.PARALLELOGRAM; coverShape = SlidesApp.ShapeType.PARALLELOGRAM; }
-    else if (style === 'hexagon' || style === 'style5') { mainShape = SlidesApp.ShapeType.HEXAGON; coverShape = SlidesApp.ShapeType.HEXAGON; }
-    else if (style === 'elegant' || style === 'style6') { mainShape = SlidesApp.ShapeType.DIAMOND; coverShape = SlidesApp.ShapeType.DIAMOND; }
-    else if (style === 'bauhaus' || style === 'style7') { mainShape = SlidesApp.ShapeType.RECTANGLE; coverShape = SlidesApp.ShapeType.ELLIPSE; }
-    else if (style === 'layered' || style === 'style8') { mainShape = SlidesApp.ShapeType.RECTANGLE; coverShape = SlidesApp.ShapeType.RECTANGLE; }
-    else if (style === 'memphis' || style === 'style9') { mainShape = SlidesApp.ShapeType.ARC; coverShape = SlidesApp.ShapeType.TRIANGLE; }
-    else if (style === 'spotlight' || style === 'style10') { mainShape = SlidesApp.ShapeType.TRAPEZOID; coverShape = SlidesApp.ShapeType.TRAPEZOID; }
-
-    let logoBlob = null;
-    if (globalLogoUrl) { try { logoBlob = UrlFetchApp.fetch(globalLogoUrl).getBlob(); } catch(e) { console.warn("Logo 下載失敗", e); } }
+function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel) {
+    let mainShape = SlidesApp.ShapeType.RECTANGLE; let coverShape = SlidesApp.ShapeType.ELLIPSE; let isMinimal = (style === 'minimalist'); let alphaMod = (style === 'layered') ? 0.3 : 1;
+    if (style === 'rounded') { mainShape = SlidesApp.ShapeType.ROUND_RECTANGLE; coverShape = SlidesApp.ShapeType.ROUND_RECTANGLE; } else if (style === 'cyber') { mainShape = SlidesApp.ShapeType.RIGHT_TRIANGLE; coverShape = SlidesApp.ShapeType.RIGHT_TRIANGLE; } else if (style === 'dynamic') { mainShape = SlidesApp.ShapeType.PARALLELOGRAM; coverShape = SlidesApp.ShapeType.PARALLELOGRAM; }
 
     slidesData.forEach((d, i) => {
         const slide = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK); slide.getBackground().setSolidFill(theme.bg);
-        
-        // --- 🎭 繪製精緻裝飾 (Decorative Engine v2.0) ---
-        if (style === 'cyber' || style === 'style3') {
-            drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 710, 0, 10, 80, theme.accent, 0.8);
-            drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 640, 0, 80, 5, theme.accent, 0.8);
-            drawShape(slide, SlidesApp.ShapeType.RIGHT_TRIANGLE, 0, 355, 50, 50, theme.shape, 0.3).setRotation(180);
-        } else if (style === 'minimalist' || style === 'style1') {
-            // 修正：裝飾線移至標題下方，增加高級感
-            drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 80, 105, 560, 1, theme.accent, 0.5);
-        } else if (style === 'dynamic' || style === 'style4') {
-            drawShape(slide, SlidesApp.ShapeType.PARALLELOGRAM, 650, -50, 150, 550, theme.shape, 0.1).setRotation(15);
-        } else if (style === 'hexagon' || style === 'style5') {
-            drawShape(slide, SlidesApp.ShapeType.HEXAGON, 600, 300, 150, 150, theme.shape, 0.2);
-            drawShape(slide, SlidesApp.ShapeType.HEXAGON, 680, 350, 80, 80, theme.accent, 0.1);
-        } else if (style === 'elegant' || style === 'style6') {
-            const d1 = drawShape(slide, SlidesApp.ShapeType.DIAMOND, 340, 20, 40, 40, theme.accent, 0.1);
-        } else if (style === 'bauhaus' || style === 'style7') {
-            drawShape(slide, SlidesApp.ShapeType.ELLIPSE, -50, -50, 200, 200, theme.accent, 1);
-            drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 600, 300, 150, 150, theme.text, 0.1);
-        } else if (style === 'layered' || style === 'style8') {
-            drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 10, 10, 700, 385, theme.shape, 0.1);
-            drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 30, 30, 660, 345, theme.shape, 0.05);
-        } else if (style === 'memphis' || style === 'style9') {
-            drawShape(slide, SlidesApp.ShapeType.ARC, 600, 50, 80, 80, theme.accent, 0.5).setRotation(45);
-            drawShape(slide, SlidesApp.ShapeType.TRIANGLE, 50, 350, 40, 40, theme.shape, 0.8);
-        } else if (style === 'spotlight' || style === 'style10') {
-            drawShape(slide, SlidesApp.ShapeType.TRAPEZOID, 160, 0, 400, 405, theme.accent, 0.05).setRotation(180);
-        }
-
-        if (logoBlob) { try { slide.insertImage(logoBlob, 650, 20, 50, 50); } catch(e){} }
-
-        // --- 📒 寫入講者備忘錄與來源溯源 (NotebookLM Style) ---
-        try {
-            const notesPage = slide.getNotesPage();
-            // 🛡️ 欄位自動相容處理
-            let notesContent = d.speakerNotes || d.speaker_notes || d.notes || "";
-            let citationText = d.citations || d.source || "";
-            let fullNotes = (notesContent) + (citationText ? `\n\n📖 [來源溯源]:\n${citationText}` : "");
-            
-            if (fullNotes.trim()) {
-                // 🔴 修復一：優先使用 BODY 佔位符
-                let targetShape = notesPage.getPlaceholder(SlidesApp.PlaceholderType.BODY);
-                if (!targetShape) {
-                    // 過濾掉 TITLE 類型，只取真正的備忘錄文字框
-                    let placeholders = notesPage.getPlaceholders();
-                    targetShape = placeholders.find(p => p.getPlaceholderType() !== SlidesApp.PlaceholderType.TITLE) || null;
-                }
-                if (!targetShape) {
-                    // 終極回退：全新插入一個大型文字框
-                    targetShape = notesPage.insertShape(SlidesApp.ShapeType.TEXT_BOX, 18, 18, 684, 250);
-                }
-                
-                try {
-                    targetShape.asShape().getText().setText(fullNotes);
-                    console.log(`✅ 備忘錄寫入成功，字數：${fullNotes.length}`);
-                } catch(e) {
-                    console.warn("備忘錄寫入失敗，嘗試插入新文字框", e);
-                    try {
-                        let fallbackBox = notesPage.insertShape(SlidesApp.ShapeType.TEXT_BOX, 18, 18, 684, 250);
-                        fallbackBox.asShape().getText().setText(fullNotes);
-                    } catch(e2) { console.error("備忘錄徹底失敗", e2); }
-                }
-            }
-            if (citationText) {
-                addText(slide, `Source: ${citationText.substring(0, 40)}`, 480, 385, 230, 20, theme.accent, 8, false);
-            }
-        } catch(e) { console.warn("備忘錄寫入失敗", e); }
-
         let layoutType = (deck.getSlides().length === 1 && i === 0) ? 'cover' : (d.layout || 'standard_list');
         let imgBlob = null; let titleIconBlob = null; let keyword = d.imageKeyword || d.title || "presentation";
         const needsLargeImage = ['cover', 'image_right', 'image_left', 'image_top', 'image_bottom', 'profile_quote'].includes(layoutType);
@@ -1969,38 +1988,23 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
                 if (titleIconBlob) { try { slide.insertImage(titleIconBlob, 385, 45, 35, 35); } catch(e){} }
                 addText(slide, d.title || "重點項目", 425, 40, 265, 60, theme.accent, 28, true);
                 if (d.points && d.points.length > 0) {
-                    let y = 120; let pSz = (d.points.length > 5) ? 12 : 14; let step = (d.points.length > 5) ? 35 : 45;
-                    d.points.forEach(p => { addText(slide, "• " + p, 390, y, 290, 40, theme.text, pSz, false); y += step; });
+                    let y = 120;
+                    d.points.forEach(p => { addText(slide, "• " + p, 390, y, 290, 40, theme.text, 14, false); y += 45; });
                 } else { addText(slide, safeContent || "【系統提示：AI 未生成內文】", 390, 120, 290, 250, theme.text, 16, false); }
                 break;
             case 'split_column':
                 if (!isMinimal) drawShape(slide, mainShape, 0, 0, 50, 450, theme.accent, 1 * alphaMod);
                 if (titleIconBlob) { try { slide.insertImage(titleIconBlob, 40, 45, 35, 35); } catch(e){} }
-                addText(slide, d.title || "深度對比", 80, 40, 560, 60, theme.accent, 26, true);
-                if (isMinimal) drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 80, 105, 560, 1, theme.accent, 0.5);
-                
-                // 智慧型切分邏輯
-                let leftTitle = "現況/左側", leftContent = "", rightTitle = "預期/右側", rightContent = "";
-                if (d.gridItems && d.gridItems.length >= 2) {
-                    leftTitle = d.gridItems[0].title || "左側"; leftContent = d.gridItems[0].content || "";
-                    rightTitle = d.gridItems[1].title || "右側"; rightContent = d.gridItems[1].content || "";
-                } else if (d.left || d.right) {
-                    leftContent = d.left || ""; rightContent = d.right || "";
-                } else if (d.content && d.content.includes('\n')) {
-                    let parts = d.content.split(/\n\n| v\.s\. | vs | VS /);
-                    if (parts.length >= 2) {
-                        leftContent = parts[0]; rightContent = parts[1];
-                    } else {
-                        leftContent = d.content; rightContent = "補充資料請見備忘錄";
-                    }
-                } else {
-                    leftContent = d.content || ""; rightContent = "更多細節請見備忘錄";
+                addText(slide, d.title || "深度對比", 80, 40, 600, 60, theme.accent, 28, true);
+                if (isMinimal) drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 80, 100, 600, 2, theme.accent, 1);
+                if (!isMinimal) {
+                    drawShape(slide, mainShape, 80, 120, 280, 250, theme.shape, 0.2 * alphaMod);
+                    drawShape(slide, mainShape, 380, 120, 280, 250, theme.shape, 0.2 * alphaMod);
                 }
-                
-                addText(slide, leftTitle, 95, 120, 260, 40, theme.accent, 18, true);
-                addText(slide, leftContent, 95, 170, 260, 200, theme.text, 14, false);
-                addText(slide, rightTitle, 385, 120, 260, 40, theme.accent, 18, true);
-                addText(slide, rightContent, 385, 170, 260, 200, theme.text, 14, false);
+                let leftText = d.left || (d.points && d.points[0] ? d.points[0] : (d.content ? d.content : "【左側內容】"));
+                let rightText = d.right || (d.points && d.points[1] ? d.points[1] : "【右側內容】");
+                addText(slide, leftText, 95, 135, 250, 220, theme.text, 16, false);
+                addText(slide, rightText, 395, 135, 250, 220, theme.text, 16, false);
                 break;
             case 'standard_list':
             default:
@@ -2009,24 +2013,24 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
                 addText(slide, d.title || "核心摘要", 80, 40, 600, 60, theme.accent, 28, true);
                 if (isMinimal) drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 80, 100, 600, 2, theme.accent, 1);
                 if (d.points && Array.isArray(d.points) && d.points.length > 0) {
-                    let y = 120; let pSz = (d.points.length > 5) ? 12 : 14; let step = (d.points.length > 5) ? 35 : 45;
-                    d.points.forEach(p => { addText(slide, "• " + p, 80, y, 550, 40, theme.text, pSz, false); y += step; });
+                    let y = 120;
+                    d.points.forEach(p => { addText(slide, "• " + p, 80, y, 550, 40, theme.text, 14, false); y += 45; });
                 } else { addText(slide, safeContent || "【系統提示：AI 未生成內文】", 80, 120, 550, 250, theme.text, 16, false); }
                 break;
         }
     });
 }
 
-function createGeometricSlides(topic, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl, contentDensity) {
+function createGeometricSlides(topic, slidesData, theme, style, enableAutoImage, apiKey, artistModel) {
     const deck = SlidesApp.create(`PPT: ${topic}`); 
     const slides = deck.getSlides(); if (slides.length > 0) slides[0].remove();
-    appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl, contentDensity);
+    appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel);
     deck.saveAndClose(); 
     try { DriveApp.getFileById(deck.getId()).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.EDIT); } catch(e) { console.error("權限設定失敗", e); }
     return deck.getId();
 }
 
-function updateGeometricSlides(presentationId, action, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl, contentDensity) {
+function updateGeometricSlides(presentationId, action, slidesData, theme, style, enableAutoImage, apiKey, artistModel) {
     const deck = SlidesApp.openById(presentationId);
     const safeAction = String(action || "").toLowerCase().trim();
     console.log(`[SlidesService] Action: ${safeAction}, ID: ${presentationId}, Slides: ${slidesData.length}`);
@@ -2036,57 +2040,17 @@ function updateGeometricSlides(presentationId, action, slidesData, theme, style,
         const slides = deck.getSlides();
         console.log(`[SlidesService] Overwriting... Removing ${slides.length - 1} old slides.`);
         slides.forEach(s => { if (s.getObjectId() !== tempSlide.getObjectId()) s.remove(); });
-        appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl, contentDensity);
+        appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel);
         tempSlide.remove(); 
     } else {
         console.log(`[SlidesService] Appending ${slidesData.length} new slides.`);
-        appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel, globalLogoUrl, contentDensity);
+        appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel);
     }
     deck.saveAndClose();
 }
 
 function drawShape(s, t, x, y, w, h, c, a) { const sh = s.insertShape(t, x, y, w, h); sh.getBorder().setTransparent(); sh.getFill().setSolidFill(c, a); return sh; }
-function addText(s, t, x, y, w, h, c, sz, b) { 
-    if(!t) return; 
-    const box = s.insertShape(SlidesApp.ShapeType.TEXT_BOX, x, y, w, h); 
-    let finalSz = sz;
-    // 🛡️ 自動縮放邏輯：如果文字過長，自動降低字級避免溢出
-    if (t.length > 200 && sz > 14) finalSz = 14;
-    if (t.length > 500 && sz > 12) finalSz = 11;
-    if (t.length > 1000) finalSz = 10;
-    
-    box.getText().setText(t).getTextStyle().setFontSize(finalSz).setForegroundColor(c).setBold(b); 
-}
-
-function sanitizeJson(str) {
-    if (!str) return "[]";
-    // 1. 移除 Markdown 程式碼區塊標記
-    let clean = str.replace(/```json/gi, '').replace(/```/g, '').trim();
-    
-    // 2. 🛡️ 深度修復：處理 JSON 字串內部未轉義的換行符號與特殊字元
-    let result = "";
-    let inQuotes = false;
-    for (let i = 0; i < clean.length; i++) {
-        let char = clean[i];
-        // 偵測是否在引號內 (且非轉義引號)
-        if (char === '"' && (i === 0 || clean[i-1] !== '\\')) {
-            inQuotes = !inQuotes;
-        }
-        
-        if (inQuotes) {
-            if (char === '\n' || char === '\r') {
-                result += "\\n"; // 將實體換行轉為 JSON 轉義換行
-            } else if (char === '\t') {
-                result += "  ";
-            } else {
-                result += char;
-            }
-        } else {
-            result += char;
-        }
-    }
-    return result;
-}
+function addText(s, t, x, y, w, h, c, sz, b) { if(!t)return; const box = s.insertShape(SlidesApp.ShapeType.TEXT_BOX, x, y, w, h); box.getText().setText(t).getTextStyle().setFontSize(sz).setForegroundColor(c).setBold(b); }
 
 function forceAuthSetup() {
     // 不使用 try-catch，強制觸發 Google 的靜態權限掃描與授權視窗
