@@ -14,13 +14,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
     
     <style>
-        body { 
-            background-color: #131314; 
-            color: #e3e3e3; 
-            font-family: 'Inter', system-ui, -apple-system, sans-serif; 
-            height: 100vh;
-            height: 100dvh;
-        }
+        body { background-color: #131314; color: #e3e3e3; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
@@ -50,72 +44,14 @@
         .citation { color: #38bdf8; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
         .citation:hover { color: #7dd3fc; }
 
-        /* Right Panel & Resizer & Bottom Sheet for Mobile */
-        #right-panel { 
-            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s ease; 
-            border-left: 1px solid #333; 
-            position: relative; 
-            background: #1e1f22;
-        }
-        #right-panel.right-panel-open { transform: translateX(0); width: var(--right-panel-width, 340px); }
-        #right-panel.right-panel-closed { transform: translateX(100%); width: 0; border-left: none; }
+        /* Right Panel & Resizer */
+        #right-panel { transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); border-left: 1px solid #333; position: relative; }
+        .right-panel-open #right-panel { width: var(--right-panel-width, 340px); }
+        .right-panel-closed #right-panel { width: 0; border-left: none; }
         
         #right-panel-resizer { width: 4px; left: -2px; cursor: col-resize; z-index: 50; }
         #right-panel-resizer::after { content: ""; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 2px; height: 32px; background: #444; border-radius: 1px; transition: background 0.2s; }
         #right-panel-resizer:hover::after { background: #38bdf8; width: 4px; }
-
-        @media (max-width: 768px) {
-            #right-panel {
-                position: fixed;
-                bottom: 0;
-                right: 0;
-                left: 0;
-                width: 100% !important;
-                height: 85vh;
-                z-index: 100;
-                border-left: none;
-                border-top: 1px solid #333;
-                border-radius: 24px 24px 0 0;
-                transform: translateY(100%);
-            }
-            #right-panel.right-panel-open { transform: translateY(0); }
-            #right-panel.right-panel-closed { transform: translateY(100%); }
-            
-            #right-panel::before {
-                content: "";
-                position: absolute;
-                top: 8px;
-                left: 50%;
-                transform: translateX(-50%);
-                width: 40px;
-                height: 4px;
-                background: #444;
-                border-radius: 2px;
-            }
-
-            #chat-container { padding-left: 1rem; padding-right: 1rem; padding-top: 1rem; }
-            .prose { font-size: 0.95rem; }
-            
-            .message-bubble { max-width: 95% !important; }
-            
-            /* Compact Input for Mobile */
-            #user-input { font-size: 1rem; padding-top: 0.5rem; padding-bottom: 0.5rem; }
-            .input-tool-btn { padding: 0.5rem; }
-            
-            header h1 { font-size: 1rem; }
-            #mobile-title { font-size: 0.85rem; }
-
-            header {
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                z-index: 40;
-            }
-            #chat-container {
-                padding-top: calc(4.5rem + env(safe-area-inset-top)) !important;
-            }
-        }
 
         /* Source Peek Overlay */
         #source-peek { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; background: #2a2b2f; border: 1px solid #444; border-radius: 16px; padding: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); z-index: 60; display: none; animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
@@ -128,6 +64,20 @@
         @media (max-width: 1024px) {
             .right-panel-open #right-panel { width: 100vw; position: absolute; right: 0; top: 0; height: 100%; z-index: 50; }
         }
+        /* Outline Editor Modal */
+        #outline-editor-modal { position: fixed; inset: 0; z-index: 80; display: none; background: rgba(0,0,0,0.7); backdrop-filter: blur(12px); align-items: center; justify-content: center; padding: 1rem; }
+        #outline-editor-modal.open { display: flex; animation: fadeInScale 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes fadeInScale { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+        .outline-editor-inner { background: #1a1b1f; border: 1px solid #2d2e35; border-radius: 20px; width: 100%; max-width: 780px; max-height: 88vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); }
+        .outline-card { background: #22232a; border: 1px solid #2d2e35; border-radius: 14px; padding: 14px 16px; cursor: grab; transition: all 0.2s; position: relative; }
+        .outline-card:hover { border-color: #3d3e4a; background: #272830; }
+        .outline-card.dragging { opacity: 0.4; cursor: grabbing; }
+        .outline-card.drag-over { border-color: #38bdf8; box-shadow: 0 0 0 2px rgba(56,189,248,0.3); }
+        .layout-badge { display: inline-flex; align-items: center; gap: 4px; background: rgba(56,189,248,0.12); color: #38bdf8; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; border: 1px solid rgba(56,189,248,0.25); cursor: pointer; transition: all 0.2s; }
+        .layout-badge:hover { background: rgba(56,189,248,0.25); }
+        .outline-title-input { background: transparent; border: none; outline: none; color: #fff; font-size: 14px; font-weight: 600; width: 100%; padding: 2px 0; }
+        .outline-title-input:focus { color: #38bdf8; border-bottom: 1px solid #38bdf8; }
+        .notes-preview { font-size: 11px; color: #666; margin-top: 6px; line-height: 1.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden">
@@ -149,59 +99,16 @@
         </div>
     </div>
 
-    <!-- Google Drive Picker Modal -->
-    <div id="drive-picker-modal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-[#1e1f22] w-full max-w-xl rounded-2xl border border-[#333] shadow-2xl flex flex-col max-h-[80vh] overflow-hidden">
-            <div class="p-5 border-b border-[#333] flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="p-2 bg-amber-500/10 rounded-lg"><span class="material-symbols-rounded text-amber-400">add_to_drive</span></div>
-                    <h3 class="font-bold text-white text-lg">選擇雲端硬碟檔案</h3>
-                </div>
-                <button onclick="closeDrivePicker()" class="p-2 text-gray-500 hover:text-white transition-colors"><span class="material-symbols-rounded">close</span></button>
-            </div>
-            <div class="p-4 bg-[#131314]">
-                <div class="relative">
-                    <input type="text" id="drive-search-input" onkeyup="if(event.key==='Enter') performDriveSearch()" placeholder="搜尋檔名或關鍵字..." class="w-full pl-10 pr-4 py-3 bg-[#2a2b2f] border border-[#444] rounded-xl text-white text-sm outline-none focus:border-amber-500 transition-all">
-                    <span class="absolute left-3 top-3.5 material-symbols-rounded text-gray-500 text-sm">search</span>
-                    <button onclick="performDriveSearch()" class="absolute right-2 top-2 px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-lg transition-colors">搜尋</button>
-                </div>
-            </div>
-            <div id="drive-results-list" class="flex-1 overflow-y-auto p-2 space-y-1 min-h-[300px]">
-                <div class="h-full flex flex-col items-center justify-center text-gray-500 py-10">
-                    <span class="material-symbols-rounded text-4xl mb-2 opacity-20">inventory_2</span>
-                    <p class="text-sm">輸入關鍵字搜尋您的雲端硬碟</p>
-                </div>
-            </div>
-            <div id="drive-picker-footer" class="p-3 border-t border-[#333] bg-[#1e1f22] text-[10px] text-gray-500 text-center italic">
-                提示：點擊檔案即可直接將內容載入至對話框。
-            </div>
-        </div>
-    </div>
-
     <!-- Sidebar -->
     <aside id="sidebar" class="bg-[#1e1f22] border-r border-[#333] flex flex-col transition-transform duration-300 z-30 absolute md:relative h-full -translate-x-full md:translate-x-0 w-[85vw] max-w-[340px] md:w-[288px] md:max-w-none shadow-2xl md:shadow-none" style="min-width: 200px;">
         <div id="sidebar-resizer" class="hidden md:block absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-blue-500/50 z-40 transition-colors"></div>
 
-        <div class="p-6 pb-2" style="padding-top: calc(1.5rem + env(safe-area-inset-top));">
+        <div class="p-6 pb-2">
             <div class="flex items-center gap-3 mb-6">
                 <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
                     <span class="material-symbols-rounded text-white text-xl">auto_awesome</span>
                 </div>
                 <h1 class="text-xl font-bold tracking-tight text-white">anyGem Agent</h1>
-            </div>
-
-            <!-- 👤 用戶身份顯示 -->
-            <div id="user-profile" class="mb-6 p-3 bg-[#2a2b2f] rounded-xl border border-[#444] flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30">
-                    <span class="material-symbols-rounded text-indigo-400 text-lg">person</span>
-                </div>
-                <div class="flex-1 min-w-0">
-                    <div class="text-[10px] text-gray-500 uppercase font-bold tracking-tighter">當前雲端帳號</div>
-                    <div id="user-email" class="text-xs text-gray-300 truncate font-mono italic opacity-60 text-[10px]">載入中...</div>
-                    <a href="https://accounts.google.com/AccountChooser" target="_blank" class="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-0.5 mt-0.5 transition-colors">
-                        <span class="material-symbols-rounded text-[12px]">sync_alt</span> 切換帳號
-                    </a>
-                </div>
             </div>
             
             <!-- ✨ Workspace 專案隔離選擇器 -->
@@ -223,7 +130,7 @@
             </button>
         </div>
         
-        <div id="session-list" class="flex-1 overflow-y-auto px-3 space-y-1 pb-4 min-h-0"></div>
+        <div id="session-list" class="flex-1 overflow-y-auto px-3 space-y-1 pb-4"></div>
         
         <div class="px-3 pb-4 border-t border-[#333] pt-4 shrink-0">
             <button onclick="toggleBookmarks()" class="w-full flex items-center justify-between px-3 mb-1 group cursor-pointer outline-none hover:bg-[#2a2b2f] p-2 rounded-lg transition-colors">
@@ -247,7 +154,7 @@
 
     <!-- Main Chat Area -->
     <main class="flex-1 flex flex-col relative bg-[#131314] overflow-hidden w-full">
-        <header class="flex items-center justify-between px-4 border-b border-[#333] bg-[#1e1f22] shrink-0 z-20" style="padding-top: env(safe-area-inset-top); height: calc(3.5rem + env(safe-area-inset-top));">
+        <header class="h-14 flex items-center justify-between px-4 border-b border-[#333] bg-[#1e1f22] shrink-0 z-20">
             <div class="flex items-center gap-2">
                 <button onclick="toggleSidebar()" class="p-2 text-gray-400 md:hidden"><span class="material-symbols-rounded">menu</span></button>
                 <span class="font-semibold text-sm truncate md:text-base text-gray-200" id="mobile-title">新對話</span>
@@ -291,7 +198,7 @@
             </div>
         </div>
 
-        <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-[#131314] via-[#131314] to-transparent pt-12 px-2 sm:px-4 md:px-12 z-20 pointer-events-none" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom));">
+        <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-[#131314] via-[#131314] to-transparent pt-12 pb-4 sm:pb-8 px-2 sm:px-4 md:px-12 z-20 pointer-events-none">
             <div class="max-w-3xl mx-auto w-full pointer-events-auto">
                 
                 <!-- Upload Previews -->
@@ -336,28 +243,14 @@
                     </div>
                     
                     <div class="flex items-end gap-1 sm:gap-2 mt-1">
-                        <!-- Attachment Menu -->
-                <div id="attachment-menu" class="hidden absolute bottom-full left-0 mb-2 w-48 bg-[#1e1f22] border border-[#444] rounded-xl shadow-2xl overflow-hidden z-50 animate-in slide-in-from-bottom-2 duration-200">
-                    <button onclick="document.getElementById('file-upload').click(); hideAttachmentMenu();" class="w-full flex items-center gap-3 p-3 hover:bg-[#2a2b2f] text-gray-300 transition-colors">
-                        <span class="material-symbols-rounded text-blue-400">upload_file</span>
-                        <span class="text-sm font-medium">從本機上傳</span>
-                    </button>
-                    <button onclick="openDrivePicker(); hideAttachmentMenu();" class="w-full flex items-center gap-3 p-3 hover:bg-[#2a2b2f] text-gray-300 transition-colors">
-                        <span class="material-symbols-rounded text-amber-400">add_to_drive</span>
-                        <span class="text-sm font-medium">從雲端硬碟選擇</span>
-                    </button>
-                </div>
-
-                <button onclick="toggleAttachmentMenu(event)" class="input-tool-btn p-2 sm:p-3 shrink-0 text-gray-400 hover:text-white rounded-xl transition-colors">
-                    <span class="material-symbols-rounded block">attach_file</span>
-                </button>
+                        <button onclick="document.getElementById('file-upload').click()" class="p-2 sm:p-3 shrink-0 text-gray-400 hover:text-white rounded-xl transition-colors"><span class="material-symbols-rounded block">attach_file</span></button>
                         <input type="file" id="file-upload" class="hidden" onchange="handleFileUpload(event)" accept="image/*,application/pdf,text/*,.docx,.xlsx,.csv,.pptx">
                         
-                        <button id="mic-btn" type="button" onclick="toggleRecording()" class="input-tool-btn p-2 sm:p-3 shrink-0 text-gray-400 hover:text-white rounded-xl transition-all" title="點擊開始說話">
+                        <button id="mic-btn" type="button" onclick="toggleRecording()" class="p-2 sm:p-3 shrink-0 text-gray-400 hover:text-white rounded-xl transition-all" title="點擊開始說話">
                             <span class="material-symbols-rounded block">mic</span>
                         </button>
 
-                        <textarea id="user-input" rows="1" placeholder="輸入指令..." class="w-full bg-transparent border-none outline-none text-gray-100 py-2.5 sm:py-3 px-1 sm:px-2 resize-none max-h-32 sm:max-h-60 text-base sm:text-lg leading-relaxed"></textarea>
+                        <textarea id="user-input" rows="1" placeholder="輸入指令，或開啟「連續對話」直接說話..." class="w-full bg-transparent border-none outline-none text-gray-100 py-2.5 sm:py-3 px-1 sm:px-2 resize-none max-h-32 sm:max-h-60 text-base sm:text-lg leading-relaxed"></textarea>
                         
                         <button id="send-btn" class="p-2.5 sm:p-3 shrink-0 bg-white text-black rounded-xl hover:bg-gray-200 transition-all shadow-md flex items-center justify-center">
                             <span class="material-symbols-rounded block">send</span>
@@ -411,17 +304,6 @@
         let currentWorkspace = ""; 
         let currentImageData = null, currentMimeType = null, currentDocumentText = null, currentDocumentName = null, currentYouTubeId = null;
         let isWaiting = false, currentRenderCode = "", abortController = null, silenceTimer = null, currentGemsList = []; 
-        window.sharedKnowledgeSet = new Set();
-
-        // ⚙️ 全域設定狀態 (Persistent Settings)
-        const settings = {
-            drawMode: localStorage.getItem('drawMode') === 'true',
-            webSearch: localStorage.getItem('webSearch') === 'true',
-            autoImage: localStorage.getItem('autoImage') === 'true',
-            voiceOutput: localStorage.getItem('voiceOutput') === 'true',
-            continuousMode: localStorage.getItem('continuousMode') === 'true',
-            globalProfile: localStorage.getItem('globalProfile') || ""
-        };
 
         const chatContainer = document.getElementById('chat-container'), 
               userInput = document.getElementById('user-input'), 
@@ -457,7 +339,7 @@
                 if (!isRecording) return; let interim = '';
                 for (let i = event.resultIndex; i < event.results.length; ++i) event.results[i].isFinal ? finalTranscript += event.results[i][0].transcript : interim += event.results[i][0].transcript;
                 userInput.value = finalTranscript + interim; userInput.style.height = 'auto'; userInput.style.height = (userInput.scrollHeight > 240 ? 240 : userInput.scrollHeight) + 'px';
-                if (settings.continuousMode) { clearTimeout(silenceTimer); silenceTimer = setTimeout(() => { if (isRecording && userInput.value.trim() !== '') { stopRecording(); sendMessage(); } }, 1500); }
+                if (document.getElementById('continuous-mode-toggle').checked) { clearTimeout(silenceTimer); silenceTimer = setTimeout(() => { if (isRecording && userInput.value.trim() !== '') { stopRecording(); sendMessage(); } }, 1500); }
             };
             recognition.onerror = () => stopRecording(); recognition.onend = () => stopRecording();
         }
@@ -466,7 +348,7 @@
         function stopRecording() { isRecording = false; clearTimeout(silenceTimer); document.getElementById('mic-btn').classList.remove('recording-pulse', 'text-white'); document.getElementById('mic-btn').classList.add('text-gray-400'); if (recognition) try { recognition.stop(); } catch(e) {} }
 
         function speakText(text, isAutoPlay = false) {
-            if (isAutoPlay && !settings.voiceOutput) return false;
+            if (isAutoPlay && !document.getElementById('voice-output-toggle').checked) return false;
             if (!window.speechSynthesis) return false; window.speechSynthesis.cancel(); 
             const bt = String.fromCharCode(96, 96, 96);
             let cleanText = text.replace(/<thought_process>[\s\S]*?<\/thought_process>/g, '').replace(new RegExp(bt + '[\\s\\S]*?' + bt, 'g'), '').replace(new RegExp('https?:\\/\\/[^\\s]+', 'g'), '網址').replace(new RegExp('[*_#~|]', 'g'), '').trim();
@@ -476,7 +358,7 @@
             if (new RegExp('[\\u4e00-\\u9fa5]').test(cleanText)) { utterance.lang = 'zh-TW'; utterance.rate = 0.95; utterance.pitch = 0.95; sv = v.find(x => x.name.includes('Xiaoxiao') || x.name.includes('Yating') || (x.lang === 'zh-TW' && x.name.includes('Google'))) || v.find(x => x.lang === 'zh-TW'); } 
             else { utterance.lang = 'en-US'; utterance.rate = 0.9; utterance.pitch = 0.95; sv = v.find(x => x.name.includes('Samantha') || (x.lang === 'en-US' && x.name.includes('Google'))) || v.find(x => x.lang === 'en-US'); }
             if (sv) utterance.voice = sv;
-            if (isAutoPlay) utterance.onend = () => { if (settings.continuousMode && !isWaiting) startRecording(); };
+            if (isAutoPlay) utterance.onend = () => { if (document.getElementById('continuous-mode-toggle').checked && !isWaiting) startRecording(); };
             window.speechSynthesis.speak(utterance); return true;
         }
         if (window.speechSynthesis && window.speechSynthesis.onvoiceschanged !== undefined) window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
@@ -579,9 +461,9 @@
                 mode: 'edit_and_regenerate',
                 old_text: oldText, message: newText, session_id: currentSessionId, workspace: currentWorkspace,
                 file_data: null, mime_type: null, 
-                web_search: settings.webSearch, 
-                auto_image: settings.autoImage, 
-                draw_mode: settings.drawMode, 
+                web_search: document.getElementById('web-search-toggle').checked, 
+                auto_image: document.getElementById('auto-image-toggle').checked, 
+                draw_mode: document.getElementById('draw-mode-toggle').checked, 
                 youtube_id: null, 
                 gem_prompt: agp, gem_model: agm, selected_model: ms.value 
             };
@@ -593,7 +475,7 @@
                 const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload), signal: abortController.signal });
                 const data = await res.json(); removeLoading(lid);
                 if (data.status === "error") throw new Error(data.error || "伺服器錯誤");
-                if (data.reply) { appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model); if (!speakText(data.reply, true) && settings.continuousMode) setTimeout(startRecording, 500); }
+                if (data.reply) { appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model); if (!speakText(data.reply, true) && document.getElementById('continuous-mode-toggle').checked) setTimeout(startRecording, 500); }
                 loadSessions(); 
             } catch (err) { removeLoading(lid); appendMessage('ai', err.name === 'AbortError' ? `🛑 **生成已中止。**` : `❌ 執行失敗：\n\`\`\`text\n${err.message}\n\`\`\``); } 
             finally { toggleSendButton(false); abortController = null; }
@@ -626,12 +508,11 @@
             userInput.value = ''; userInput.style.height = 'auto'; finalTranscript = ''; 
             
             const payload = { 
-                message: settings.globalProfile ? `【全域個人思維偏好注入】\n${settings.globalProfile}\n\n---\n${pText}` : pText,
-                session_id: currentSessionId, workspace: currentWorkspace,
+                message: pText, session_id: currentSessionId, workspace: currentWorkspace,
                 file_data: currentImageData ? currentImageData.split(',')[1] : null, mime_type: currentMimeType, 
-                web_search: settings.webSearch, 
-                auto_image: settings.autoImage, 
-                draw_mode: settings.drawMode, 
+                web_search: document.getElementById('web-search-toggle').checked, 
+                auto_image: document.getElementById('auto-image-toggle').checked, 
+                draw_mode: document.getElementById('draw-mode-toggle').checked, 
                 youtube_id: currentYouTubeId, 
                 gem_prompt: agp, gem_model: agm, selected_model: ms.value 
             };
@@ -643,7 +524,7 @@
                 const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload), signal: abortController.signal });
                 const data = await res.json(); removeLoading(lid);
                 if (data.status === "error") throw new Error(data.error || "伺服器錯誤");
-                if (data.reply) { appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model); if (!speakText(data.reply, true) && settings.continuousMode) setTimeout(startRecording, 500); }
+                if (data.reply) { appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model); if (!speakText(data.reply, true) && document.getElementById('continuous-mode-toggle').checked) setTimeout(startRecording, 500); }
                 loadSessions(); 
             } catch (err) { removeLoading(lid); appendMessage('ai', err.name === 'AbortError' ? `🛑 **生成已中止。**` : `❌ 執行失敗：\n\`\`\`text\n${err.message}\n\`\`\``); } 
             finally { toggleSendButton(false); abortController = null; }
@@ -696,66 +577,6 @@
         function setDocPayload(n, t) { currentDocumentName = n; currentDocumentText = t; document.getElementById('doc-filename').innerText = n; document.getElementById('doc-preview').classList.remove('hidden'); document.getElementById('image-preview').classList.add('hidden'); document.getElementById('youtube-preview').classList.add('hidden'); document.getElementById('upload-preview-container').classList.remove('hidden'); }
         function clearUpload() { currentImageData = currentDocumentText = currentDocumentName = currentYouTubeId = null; document.getElementById('upload-preview-container').classList.add('hidden'); document.getElementById('file-upload').value = ''; }
 
-        function toggleAttachmentMenu(e) { e.stopPropagation(); document.getElementById('attachment-menu').classList.toggle('hidden'); }
-        function hideAttachmentMenu() { document.getElementById('attachment-menu').classList.add('hidden'); }
-        document.addEventListener('click', () => hideAttachmentMenu());
-
-        function openDrivePicker() { document.getElementById('drive-picker-modal').classList.remove('hidden'); document.getElementById('drive-search-input').focus(); }
-        function closeDrivePicker() { document.getElementById('drive-picker-modal').classList.add('hidden'); }
-
-        async function performDriveSearch() {
-            const kw = document.getElementById('drive-search-input').value.trim();
-            if(!kw) return;
-            const container = document.getElementById('drive-results-list');
-            container.innerHTML = '<div class="flex flex-col items-center justify-center py-20"><span class="material-symbols-rounded animate-spin text-amber-500 text-3xl">sync</span><p class="mt-4 text-gray-400 text-sm">正在掃描雲端硬碟...</p></div>';
-            
-            try {
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'search_drive_files', keyword: kw }) });
-                const data = await res.json();
-                if(data.status === 'success' && Array.isArray(data.data)) {
-                    container.innerHTML = '';
-                    data.data.forEach(file => {
-                        const div = document.createElement('div');
-                        div.className = "flex items-center gap-3 p-3 rounded-xl hover:bg-[#2a2b2f] cursor-pointer group transition-all border border-transparent hover:border-[#444]";
-                        div.onclick = () => selectDriveFile(file.url, file.name);
-                        div.innerHTML = `
-                            <div class="p-2 bg-amber-500/10 rounded-lg group-hover:bg-amber-500/20 transition-colors"><span class="material-symbols-rounded text-amber-400 text-[20px]">description</span></div>
-                            <div class="flex-1 min-w-0">
-                                <div class="text-sm font-medium text-gray-200 truncate">${file.name}</div>
-                                <div class="text-[10px] text-gray-500 truncate">${file.type || 'Google 雲端檔案'}</div>
-                            </div>
-                            <span class="material-symbols-rounded text-gray-600 group-hover:text-amber-500 text-sm">arrow_forward_ios</span>
-                        `;
-                        container.appendChild(div);
-                    });
-                } else if (data.status === 'error') {
-                    container.innerHTML = `<div class="text-center py-20 text-red-400 text-sm"><p>⚠️ 伺服器錯誤：<br>${data.error_message || data.message || "未知錯誤"}</p></div>`;
-                } else {
-                    container.innerHTML = `<div class="text-center py-20 text-gray-500"><p>${data.data || "找不到相關檔案"}</p></div>`;
-                }
-            } catch(e) {
-                container.innerHTML = `<div class="text-center py-20 text-red-400 text-sm"><p>搜尋失敗：${e.message}</p></div>`;
-            }
-        }
-
-        async function selectDriveFile(url, name) {
-            const lid = appendLoading(`正在從雲端讀取：${name}...`);
-            closeDrivePicker();
-            try {
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'read_drive_file', fileUrl: url }) });
-                const data = await res.json();
-                if(data.status === 'success') {
-                    setDocPayload(name, data.data);
-                } else {
-                    throw new Error(data.error_message || "讀取失敗");
-                }
-            } catch(e) {
-                alert(`雲端讀取失敗：${e.message}`);
-            } finally {
-                removeLoading(lid);
-            }
-        }
-
         function appendMessage(role, text, imageSrc = null, model = null) {
             const isAI = role === 'ai', w = document.createElement('div'); w.className = `flex gap-3 sm:gap-4 max-w-4xl mx-auto w-full group ${!isAI ? 'flex-row-reverse' : ''}`;
             let b = `<div class="flex-1 ${!isAI ? 'text-right' : ''} space-y-2 max-w-[90%] sm:max-w-[85%] relative min-w-0">`;
@@ -795,10 +616,12 @@
             b += `</div></div>`; 
             
             w.innerHTML = `<div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 shadow-lg ${isAI ? 'bg-blue-600' : 'bg-gray-700'}"><span class="material-symbols-rounded text-white text-[18px] sm:text-xl">${isAI ? 'smart_toy' : 'person'}</span></div>` + b;
-            w.classList.add('message-bubble');
             chatContainer.appendChild(w);
 
             if (isAI) { w.querySelectorAll('pre code').forEach(c => { if (c.className.includes('language-html') || c.className.includes('language-jsx') || c.className.includes('language-javascript')) { let btn = document.createElement('button'); btn.className = "absolute top-2 sm:top-3 right-2 sm:right-3 bg-blue-600 hover:bg-blue-500 text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg flex items-center gap-1 shadow-lg"; btn.innerHTML = '<span class="material-symbols-rounded text-[12px] sm:text-sm">play_circle</span> 預覽'; btn.onclick = () => openPreview(c.innerText); c.parentElement.appendChild(btn); } }); }
+            
+            // 🎯 偵測大綱資料標記，自動開啟編輯器
+            if (isAI && text) { checkForOutlineData(text); }
             
             if (isAI && text) { 
                 const sBtn = w.querySelector('.share-btn');
@@ -844,16 +667,7 @@
         function removeLoading(id) { const el = document.getElementById(id); if (el) el.remove(); }
         function scrollToBottom() { chatContainer.scrollTop = chatContainer.scrollHeight; }
         function generateUUID() { return 'xxxx-4xxx-yxxx'.replace(new RegExp('[xy]', 'g'), c => (c === 'x' ? (Math.random() * 16 | 0) : (Math.random() * 16 | 0 & 0x3 | 0x8)).toString(16)); }
-        function toggleSidebar() {
-            const s = document.getElementById('sidebar');
-            const o = document.getElementById('sidebar-overlay');
-            const isOpen = s.classList.toggle('translate-x-0');
-            s.classList.toggle('-translate-x-full');
-            if (window.innerWidth < 768) {
-                o.classList.toggle('hidden');
-                document.body.style.overflow = isOpen ? 'hidden' : '';
-            }
-        }
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('-translate-x-full'); document.getElementById('sidebar-overlay').classList.toggle('hidden'); }
         
         function startNewSession() { 
             currentSessionId = generateUUID(); 
@@ -1050,81 +864,21 @@
                                     <div class="relative"><input type="checkbox" id="continuous-mode-toggle" class="sr-only peer"><div class="w-8 h-4.5 bg-gray-600 rounded-full peer peer-checked:bg-yellow-500 after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-full"></div></div>
                                 </label>
                             </div>
-                        <section class="pt-4 border-t border-[#333]">
-                            <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 px-1">全域思維風格定義</h4>
-                            <div class="space-y-2">
-                                <p class="text-[10px] text-gray-500 px-1 leading-relaxed">在此輸入您的個人溝通習慣或決策邏輯（適用於所有專案）。</p>
-                                <textarea id="global-profile-input" rows="5" 
-                                    placeholder="例如：請優先使用條列式、說話請專業且簡潔、在提供建議時請先進行風險評估..." 
-                                    class="w-full bg-[#1e1f22] border border-[#333] rounded-xl p-3 text-xs text-gray-200 outline-none focus:border-purple-500/50 transition-all resize-none shadow-inner"></textarea>
-                            </div>
                         </section>
                     </div>
                 `;
                 // 恢復 Checkbox 狀態
-                document.getElementById('draw-mode-toggle').checked = settings.drawMode;
-                document.getElementById('web-search-toggle').checked = settings.webSearch;
-                document.getElementById('auto-image-toggle').checked = settings.autoImage;
-                document.getElementById('voice-output-toggle').checked = settings.voiceOutput;
-                document.getElementById('continuous-mode-toggle').checked = settings.continuousMode;
-                document.getElementById('global-profile-input').value = settings.globalProfile;
-
-                // 綁定文字框自動儲存
-                document.getElementById('global-profile-input').oninput = (e) => {
-                    settings.globalProfile = e.target.value;
-                    localStorage.setItem('globalProfile', e.target.value);
-                };
+                document.getElementById('draw-mode-toggle').checked = localStorage.getItem('drawMode') === 'true';
+                document.getElementById('web-search-toggle').checked = localStorage.getItem('webSearch') === 'true';
+                document.getElementById('auto-image-toggle').checked = localStorage.getItem('autoImage') === 'true';
+                document.getElementById('voice-output-toggle').checked = localStorage.getItem('voiceOutput') === 'true';
+                document.getElementById('continuous-mode-toggle').checked = localStorage.getItem('continuousMode') === 'true';
 
                 // 綁定事件
-                ['drawMode','webSearch','autoImage','voiceOutput','continuousMode'].forEach(key => {
-                    const id = key.replace(/[A-Z]/g, m => '-' + m.toLowerCase()) + '-toggle';
-                    const el = document.getElementById(id);
-                    if (el) {
-                        el.onchange = (e) => {
-                            settings[key] = e.target.checked;
-                            localStorage.setItem(key, e.target.checked);
-                        };
-                    }
+                ['draw-mode-toggle','web-search-toggle','auto-image-toggle','voice-output-toggle','continuous-mode-toggle'].forEach(id => {
+                    document.getElementById(id).onchange = (e) => localStorage.setItem(id.replace('-toggle',''), e.target.checked);
                 });
             }
-        }
-
-        async function handleAddSource() {
-            const input = document.getElementById('source-input');
-            const url = input.value.trim();
-            if (!url) return;
-            const lid = appendLoading("正在抓取並分析來源...");
-            try {
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'add_source', workspace: currentWorkspace, url: url, title: url, type: url.includes('youtube.com') ? 'youtube' : 'web' }) });
-                const d = await res.json();
-                if (d.status === 'success') { input.value = ''; loadSources(); }
-            } catch (e) {} finally { removeLoading(lid); }
-        }
-
-        async function removeSource(id) {
-            if (!confirm("確定要移除此來源嗎？")) return;
-            try { await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'remove_source', workspace: currentWorkspace, source_id: id }) }); loadSources(); } catch (e) {}
-        }
-
-        async function toggleMessageSharing(text, element, isFromChat = true) {
-            try {
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'toggle_message_sharing', workspace: currentWorkspace, text: text }) });
-                const d = await res.json();
-                if (d.status === 'success') {
-                    if (isFromChat && element) {
-                        const prose = element.querySelector('.prose');
-                        if (d.shared) {
-                            prose.classList.add('shared-message');
-                            if (!prose.querySelector('.shared-badge')) prose.innerHTML += '<span class="shared-badge">專案共用</span>';
-                        } else {
-                            prose.classList.remove('shared-message');
-                            const badge = prose.querySelector('.shared-badge');
-                            if (badge) badge.remove();
-                        }
-                    }
-                    loadWorkspaceContext();
-                }
-            } catch (e) {}
         }
 
         function toggleRightPanel() {
@@ -1133,11 +887,7 @@
             const isOpen = p.classList.toggle('right-panel-open');
             p.classList.toggle('right-panel-closed');
             
-            // 手機版：切換遮罩並鎖定捲動
-            if (window.innerWidth < 1024) {
-                o.classList.toggle('hidden');
-                document.body.style.overflow = isOpen ? 'hidden' : '';
-            }
+            if (window.innerWidth < 1024) o.classList.toggle('hidden');
             
             if (isOpen) renderRightPanelContent();
         }
@@ -1245,18 +995,164 @@
             }
         }
 
+    <!-- 大綱確認編輯器 Modal -->
+    <div id="outline-editor-modal">
+        <div class="outline-editor-inner">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-[#2d2e35]">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center">
+                        <span class="material-symbols-rounded text-white text-[16px]">edit_note</span>
+                    </div>
+                    <div>
+                        <div class="text-sm font-bold text-white">大綱確認編輯器</div>
+                        <div class="text-[10px] text-gray-500">確認或調整後，點擊「生成」開始製作簡報</div>
+                    </div>
+                </div>
+                <button onclick="closeOutlineEditor()" class="p-1.5 text-gray-500 hover:text-white hover:bg-[#333] rounded-lg transition-colors">
+                    <span class="material-symbols-rounded text-[18px]">close</span>
+                </button>
+            </div>
+            <!-- Cards List -->
+            <div class="flex-1 overflow-y-auto p-5 space-y-3" id="outline-cards-container"></div>
+            <!-- Footer -->
+            <div class="px-6 py-4 border-t border-[#2d2e35] flex items-center justify-between gap-3">
+                <button onclick="addOutlineCard()" class="flex items-center gap-1.5 px-4 py-2 text-[12px] text-gray-400 hover:text-white bg-[#2a2b2f] hover:bg-[#333] rounded-xl transition-all border border-[#3d3e4a] hover:border-[#555]">
+                    <span class="material-symbols-rounded text-[16px]">add</span>新增投影片
+                </button>
+                <div class="flex gap-3">
+                    <button onclick="closeOutlineEditor()" class="px-5 py-2 text-[12px] text-gray-400 hover:text-white hover:bg-[#333] rounded-xl transition-all">取消</button>
+                    <button onclick="confirmOutline()" class="px-6 py-2 text-[12px] font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-xl transition-all shadow-lg shadow-blue-900/40 flex items-center gap-2 active:scale-95">
+                        <span class="material-symbols-rounded text-[16px]">auto_awesome</span>確認並生成簡報
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // 大綱確認編輯器 (Outline Editor Engine)
+        // ============================================
+        const LAYOUT_OPTIONS = [
+            { value: 'cover',          label: '封面', icon: '🖼️' },
+            { value: 'title_only',     label: '金句頁', icon: '💬' },
+            { value: 'standard_list',  label: '清單頁', icon: '📋' },
+            { value: 'split_column',   label: '對比頁', icon: '⚖️' },
+            { value: 'big_data',       label: '數據頁', icon: '📊' },
+            { value: 'timeline',       label: '時間軸', icon: '🕐' },
+            { value: 'image_right',    label: '圖右文左', icon: '🖼️' },
+            { value: 'image_left',     label: '圖左文右', icon: '🖼️' },
+            { value: 'icon_grid',      label: '圖示網格', icon: '🔲' },
+            { value: 'profile_quote',  label: '人物語錄', icon: '🗣️' },
+        ];
+
+        let outlineData = [];
+        let dragSrcIndex = null;
+
+        function openOutlineEditor(slides) {
+            outlineData = slides.map((s, i) => ({ ...s, id: 'slide_' + i }));
+            renderOutlineCards();
+            document.getElementById('outline-editor-modal').classList.add('open');
+        }
+
+        function closeOutlineEditor() {
+            document.getElementById('outline-editor-modal').classList.remove('open');
+        }
+
+        function renderOutlineCards() {
+            const container = document.getElementById('outline-cards-container');
+            container.innerHTML = '';
+            outlineData.forEach((slide, index) => {
+                const card = document.createElement('div');
+                card.className = 'outline-card';
+                card.draggable = true;
+                card.dataset.index = index;
+
+                const layoutOpts = LAYOUT_OPTIONS.map(l =>
+                    `<option value="${l.value}" ${slide.layout === l.value ? 'selected' : ''}>${l.icon} ${l.label}</option>`
+                ).join('');
+
+                card.innerHTML = `
+                    <div class="flex items-start gap-3">
+                        <div class="flex flex-col items-center gap-1 pt-1 shrink-0">
+                            <span class="text-[10px] font-bold text-gray-600 w-5 text-center">${index + 1}</span>
+                            <span class="material-symbols-rounded text-gray-600 text-[16px] cursor-grab">drag_indicator</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-2">
+                                <select class="layout-select bg-[#1a1b1f] border border-[#3d3e4a] text-[11px] text-blue-400 rounded-lg px-2 py-1 outline-none cursor-pointer" data-index="${index}">${layoutOpts}</select>
+                            </div>
+                            <input class="outline-title-input" type="text" value="${slide.title || ''}" placeholder="投影片標題..." data-index="${index}">
+                            <div class="notes-preview">${slide.notes_preview || '備忘錄將在生成時自動填入...'}</div>
+                        </div>
+                        <button class="delete-slide-btn p-1.5 text-gray-600 hover:text-red-400 hover:bg-[#333] rounded-lg transition-colors shrink-0" data-index="${index}">
+                            <span class="material-symbols-rounded text-[16px]">delete</span>
+                        </button>
+                    </div>
+                `;
+
+                // Event listeners
+                card.querySelector('.layout-select').addEventListener('change', (e) => {
+                    outlineData[parseInt(e.target.dataset.index)].layout = e.target.value;
+                });
+                card.querySelector('.outline-title-input').addEventListener('input', (e) => {
+                    outlineData[parseInt(e.target.dataset.index)].title = e.target.value;
+                });
+                card.querySelector('.delete-slide-btn').addEventListener('click', (e) => {
+                    outlineData.splice(parseInt(e.currentTarget.dataset.index), 1);
+                    renderOutlineCards();
+                });
+
+                // Drag & Drop
+                card.addEventListener('dragstart', (e) => { dragSrcIndex = index; card.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; });
+                card.addEventListener('dragend', () => { card.classList.remove('dragging'); container.querySelectorAll('.outline-card').forEach(c => c.classList.remove('drag-over')); });
+                card.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; card.classList.add('drag-over'); });
+                card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+                card.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    if (dragSrcIndex === null || dragSrcIndex === index) return;
+                    const dragged = outlineData.splice(dragSrcIndex, 1)[0];
+                    outlineData.splice(index, 0, dragged);
+                    dragSrcIndex = null;
+                    renderOutlineCards();
+                });
+
+                container.appendChild(card);
+            });
+        }
+
+        function addOutlineCard() {
+            outlineData.push({ layout: 'standard_list', title: '新投影片', notes_preview: '' });
+            renderOutlineCards();
+        }
+
+        async function confirmOutline() {
+            const summary = outlineData.map((s, i) => `第 ${i+1} 頁：${s.title}（${s.layout}）`).join('、');
+            const confirmMsg = `大綱確認完成，請依照以下調整後的大綱生成簡報：\n${summary}\n\n請開始生成。`;
+            closeOutlineEditor();
+            const chatInput = document.getElementById('user-input');
+            chatInput.value = confirmMsg;
+            await sendMessage();
+        }
+
+        // 偵測 AI 回覆中的 OUTLINE_DATA 標記 (注入到 appendMessage)
+        function checkForOutlineData(text) {
+            const match = text.match(/<!--OUTLINE_DATA:(.*?)-->/);
+            if (match) {
+                try {
+                    const slides = JSON.parse(match[1]);
+                    if (Array.isArray(slides) && slides.length > 0) {
+                        setTimeout(() => openOutlineEditor(slides), 600);
+                    }
+                } catch(e) { console.warn('大綱資料解析失敗', e); }
+            }
+        }
+
         // 啟動入口
         window.onload = async () => { 
             await loadWorkspaces(); 
             loadSessions(); loadGems(); loadModels(); renderRightPanelContent();
-            
-            // 載入用戶資訊 (確認雲端帳號)
-            try {
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_user_info' }) });
-                const data = await res.json();
-                document.getElementById('user-email').innerText = data.email || "未授權帳號";
-                document.getElementById('user-email').classList.remove('italic', 'opacity-60', 'text-[10px]');
-            } catch(e) { document.getElementById('user-email').innerText = "連線失敗"; }
         };
     </script>
 </body>
