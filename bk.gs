@@ -365,6 +365,11 @@ function getSuperAgentPrompt(wsName, customRules) {
 
 如果不需要呼叫任何工具，請務必直接用文字回覆使用者，絕對不能輸出空白內容。
 
+【執行紀律 - 拒絕空話 (Action Only)】：
+1. **禁止預告**：禁止說「好的，我現在為您建立...」或「請稍候，正在生成...」等廢話。
+2. **直接呼叫**：當使用者同意執行或要求產出時，你的回覆中必須【直接包含工具呼叫】，絕對不能只有文字。
+3. **單次完成**：簡報的配色、版面、內容必須在一次工具呼叫中全部完成，禁止分段。
+
 【🗣️ 溝通與輸出格式規範 (CRITICAL)】
 1. 無論使用了什麼工具（包含行事曆、Drive 等），你的「最終回覆」必須是自然、流暢、具備溫度的「繁體中文口語化文字」。
 2. 請將系統回傳的生硬資料（如行程、檔案清單）轉化為人類容易閱讀的 Markdown 排版（如條列式、粗體）。
@@ -1325,30 +1330,35 @@ function runAutonomousAgentLoop(config) {
                             let themeToUse = PPT_THEMES['modern_blue'];
                             try {
                                 if (args.customColors) {
-                                    const rawC = typeof args.customColors === 'string' ? JSON.parse(args.customColors.replace(/```json/gi, '').replace(/```/g, '').trim()) : args.customColors;
-                                    // 確保格式符合前端期待的 colors 結構
-                                    themeToUse = { 
-                                        colors: { 
-                                            background: rawC.background || rawC.bg || "#0f172a", 
-                                            text: rawC.text || "#f8fafc", 
-                                            accent: rawC.accent || "#38bdf8", 
-                                            shape: rawC.shape || "#1e293b" 
-                                        } 
-                                    };
+                                    let rawC = args.customColors;
+                                    if (typeof rawC === 'string') {
+                                        try { rawC = JSON.parse(rawC.replace(/```json/gi, '').replace(/```/g, '').trim()); } catch(e) {}
+                                    }
+                                    if (typeof rawC === 'object') {
+                                        themeToUse = { 
+                                            colors: { 
+                                                background: rawC.background || rawC.bg || "#0f172a", 
+                                                text: rawC.text || "#f8fafc", 
+                                                accent: rawC.accent || "#38bdf8", 
+                                                shape: rawC.shape || "#1e293b" 
+                                            } 
+                                        };
+                                    }
                                 }
                             } catch(e) { console.error("顏色解析失敗", e); }
                             
                             let parsedData = [];
                             try {
-                                if (typeof args.slidesData === 'string') {
-                                    let cleanS = args.slidesData.replace(/```json/gi, '').replace(/```/g, '').trim();
-                                    parsedData = JSON.parse(cleanS.replace(/\n/g, ' ').replace(/\r/g, '').replace(/\t/g, ' '));
-                                } else if (Array.isArray(args.slidesData)) {
-                                    parsedData = args.slidesData;
-                                } else {
-                                    throw new Error("Invalid array");
+                                let rawS = args.slidesData;
+                                if (typeof rawS === 'string') {
+                                    try { rawS = JSON.parse(rawS.replace(/```json/gi, '').replace(/```/g, '').trim().replace(/\n/g, ' ').replace(/\r/g, '').replace(/\t/g, ' ')); } catch(e) {}
                                 }
-                            } catch(e) { throw new Error("簡報資料格式錯誤，無法解析 JSON"); }
+                                if (Array.isArray(rawS)) {
+                                    parsedData = rawS;
+                                } else {
+                                    throw new Error("Invalid slidesData format");
+                                }
+                            } catch(e) { throw new Error("簡報資料格式錯誤，無法解析內容"); }
                             
                             toolResult = { 
                                 isTerminal: true, 
