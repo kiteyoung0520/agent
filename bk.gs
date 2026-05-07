@@ -1974,7 +1974,9 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
     if (style === 'rounded') { mainShape = SlidesApp.ShapeType.ROUND_RECTANGLE; coverShape = SlidesApp.ShapeType.ROUND_RECTANGLE; } else if (style === 'cyber') { mainShape = SlidesApp.ShapeType.RIGHT_TRIANGLE; coverShape = SlidesApp.ShapeType.RIGHT_TRIANGLE; } else if (style === 'dynamic') { mainShape = SlidesApp.ShapeType.PARALLELOGRAM; coverShape = SlidesApp.ShapeType.PARALLELOGRAM; }
 
     slidesData.forEach((d, i) => {
-        const slide = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK); slide.getBackground().setSolidFill(theme.bg);
+        const slide = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK); 
+        const slideColors = theme.colors || theme; // 相容性處理
+        slide.getBackground().setSolidFill(slideColors.background || slideColors.bg || "#ffffff");
         let layoutType = (deck.getSlides().length === 1 && i === 0) ? 'cover' : (d.layout || 'standard_list');
         let imgBlob = null; let titleIconBlob = null; let keyword = d.imageKeyword || d.title || "presentation";
         const needsLargeImage = ['cover', 'image_right', 'image_left', 'image_top', 'image_bottom', 'profile_quote'].includes(layoutType);
@@ -1986,117 +1988,125 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
                 if (result && typeof result !== 'string') imgBlob = result;
             }
             if (d.titleIconKeyword && layoutType !== 'cover' && layoutType !== 'profile_quote') {
-                titleIconBlob = fetchIconImage(d.titleIconKeyword, theme.accent, theme.bg);
+                const iconColor = theme.colors ? theme.colors.accent : (theme.accent || "#38bdf8");
+                const iconBg = theme.colors ? theme.colors.background : (theme.bg || "#ffffff");
+                titleIconBlob = fetchIconImage(d.titleIconKeyword, iconColor, iconBg);
             }
         }
         
         let safeContent = d.content || (d.points && Array.isArray(d.points) ? d.points.join('\n') : "");
+        const c = theme.colors || theme; // 捷徑
+        const c_bg = c.background || c.bg || "#ffffff";
+        const c_text = c.text || "#000000";
+        const c_accent = c.accent || "#38bdf8";
+        const c_shape = c.shape || "#f1f5f9";
+
         switch(layoutType) {
             case 'cover':
-                if (imgBlob) { try { slide.insertImage(imgBlob, 0, 0, 720, 405); drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 0, 0, 720, 405, theme.bg, 0.75); } catch(e) {} } else { drawShape(slide, coverShape, 450, -50, 450, 450, theme.shape, 0.5 * alphaMod); drawShape(slide, mainShape, -50, 300, 200, 600, theme.accent, 0.2 * alphaMod); }
-                addText(slide, d.title || "未命名標題", 50, 150, 600, 100, theme.text, 36, true); addText(slide, d.subtitle || safeContent, 50, 260, 600, 50, theme.accent, 18, false); break;
+                if (imgBlob) { try { slide.insertImage(imgBlob, 0, 0, 720, 405); drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 0, 0, 720, 405, c_bg, 0.75); } catch(e) {} } else { drawShape(slide, coverShape, 450, -50, 450, 450, c_shape, 0.5 * alphaMod); drawShape(slide, mainShape, -50, 300, 200, 600, c_accent, 0.2 * alphaMod); }
+                addText(slide, d.title || "未命名標題", 50, 150, 600, 100, c_text, 36, true); addText(slide, d.subtitle || safeContent, 50, 260, 600, 50, c_accent, 18, false); break;
             case 'title_only':
-                if (!isMinimal) drawShape(slide, mainShape, 0, 0, 50, 450, theme.accent, 1 * alphaMod);
-                drawShape(slide, coverShape, 600, -50, 200, 200, theme.shape, 0.4);
+                if (!isMinimal) drawShape(slide, mainShape, 0, 0, 50, 450, c_accent, 1 * alphaMod);
+                drawShape(slide, coverShape, 600, -50, 200, 200, c_shape, 0.4);
                 if (titleIconBlob) { try { slide.insertImage(titleIconBlob, 40, 160, 35, 35); } catch(e){} }
-                addText(slide, d.title || "未命名金句", 80, 150, 580, 150, theme.accent, 38, true);
-                if (d.subtitle || safeContent) addText(slide, d.subtitle || safeContent, 80, 300, 580, 80, theme.text, 20, false); break;
+                addText(slide, d.title || "未命名金句", 80, 150, 580, 150, c_accent, 38, true);
+                if (d.subtitle || safeContent) addText(slide, d.subtitle || safeContent, 80, 300, 580, 80, c_text, 20, false); break;
             case 'image_top':
-                if (imgBlob) { try { slide.insertImage(imgBlob, 0, 0, 720, 160); } catch(e){} } else { drawShape(slide, mainShape, 0, 0, 720, 160, theme.shape, 0.5); }
+                if (imgBlob) { try { slide.insertImage(imgBlob, 0, 0, 720, 160); } catch(e){} } else { drawShape(slide, mainShape, 0, 0, 720, 160, c_shape, 0.5); }
                 if (titleIconBlob) { try { slide.insertImage(titleIconBlob, 15, 185, 35, 35); } catch(e){} }
-                addText(slide, d.title || "重點說明", 55, 180, 615, 50, theme.accent, 28, true); 
-                addText(slide, safeContent || "【系統提示：AI 未生成內文】", 50, 240, 620, 150, theme.text, 16, false); break;
+                addText(slide, d.title || "重點說明", 55, 180, 615, 50, c_accent, 28, true); 
+                addText(slide, safeContent || "【系統提示：AI 未生成內文】", 50, 240, 620, 150, c_text, 16, false); break;
             case 'image_bottom':
                 if (titleIconBlob) { try { slide.insertImage(titleIconBlob, 15, 35, 35, 35); } catch(e){} }
-                addText(slide, d.title || "重點說明", 55, 30, 615, 50, theme.accent, 28, true); 
-                addText(slide, safeContent || "【系統提示：AI 未生成內文】", 50, 90, 620, 100, theme.text, 16, false);
-                if (imgBlob) { try { slide.insertImage(imgBlob, 0, 205, 720, 200); } catch(e){} } else { drawShape(slide, mainShape, 0, 205, 720, 200, theme.shape, 0.5); } break;
+                addText(slide, d.title || "重點說明", 55, 30, 615, 50, c_accent, 28, true); 
+                addText(slide, safeContent || "【系統提示：AI 未生成內文】", 50, 90, 620, 100, c_text, 16, false);
+                if (imgBlob) { try { slide.insertImage(imgBlob, 0, 205, 720, 200); } catch(e){} } else { drawShape(slide, mainShape, 0, 205, 720, 200, c_shape, 0.5); } break;
             case 'profile_quote':
-                if (imgBlob) { try { slide.insertImage(imgBlob, 50, 100, 180, 180); } catch(e){} } else { drawShape(slide, coverShape, 50, 100, 180, 180, theme.shape, 0.5); }
+                if (imgBlob) { try { slide.insertImage(imgBlob, 50, 100, 180, 180); } catch(e){} } else { drawShape(slide, coverShape, 50, 100, 180, 180, c_shape, 0.5); }
                 let quoteText = safeContent || "Innovation distinguishes between a leader and a follower.";
-                addText(slide, `"${quoteText}"`, 260, 100, 420, 150, theme.text, 24, true); addText(slide, `— ${d.title || "專家語錄"}`, 260, 260, 420, 50, theme.accent, 16, false); break;
+                addText(slide, `"${quoteText}"`, 260, 100, 420, 150, c_text, 24, true); addText(slide, `— ${d.title || "專家語錄"}`, 260, 260, 420, 50, c_accent, 16, false); break;
             case 'icon_grid':
                 if (titleIconBlob) { try { slide.insertImage(titleIconBlob, 15, 35, 35, 35); } catch(e){} }
-                addText(slide, d.title || "核心要素", 55, 30, 615, 50, theme.accent, 28, true);
-                if (isMinimal) drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 50, 85, 620, 2, theme.accent, 1);
+                addText(slide, d.title || "核心要素", 55, 30, 615, 50, c_accent, 28, true);
+                if (isMinimal) drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 50, 85, 620, 2, c_accent, 1);
                 if (d.gridItems && Array.isArray(d.gridItems) && d.gridItems.length > 0) {
                     let startX = 50; let itemWidth = 180; let spacing = 35;
                     d.gridItems.forEach((item, idx) => {
                         if (idx > 2) return;
                         let x = startX + (itemWidth + spacing) * idx;
                         if (enableAutoImage) {
-                            let iconBlob = fetchIconImage(item.iconKeyword || item.title, theme.accent, theme.bg);
+                            let iconBlob = fetchIconImage(item.iconKeyword || item.title, c_accent, c_bg);
                             if (iconBlob) { try { slide.insertImage(iconBlob, x + 65, 110, 50, 50); } catch(e){} }
-                            else { drawShape(slide, coverShape, x + 65, 110, 50, 50, theme.shape, 0.8); }
-                        } else { drawShape(slide, coverShape, x + 65, 110, 50, 50, theme.shape, 0.8); }
-                        addText(slide, item.title, x, 175, itemWidth, 40, theme.accent, 18, true);
-                        addText(slide, item.content, x, 220, itemWidth, 150, theme.text, 14, false);
+                            else { drawShape(slide, coverShape, x + 65, 110, 50, 50, c_shape, 0.8); }
+                        } else { drawShape(slide, coverShape, x + 65, 110, 50, 50, c_shape, 0.8); }
+                        addText(slide, item.title, x, 175, itemWidth, 40, c_accent, 18, true);
+                        addText(slide, item.content, x, 220, itemWidth, 150, c_text, 14, false);
                     });
-                } else { addText(slide, safeContent || "【系統提示：需提供 gridItems】", 50, 150, 620, 50, theme.text, 16, false); }
+                } else { addText(slide, safeContent || "【系統提示：需提供 gridItems】", 50, 150, 620, 50, c_text, 16, false); }
                 break;
             case 'big_data':
-                drawShape(slide, coverShape, 360, 202, 300, 300, theme.shape, 0.2);
-                addText(slide, d.title || "關鍵數據", 50, 80, 620, 50, theme.accent, 24, true);
+                drawShape(slide, coverShape, 360, 202, 300, 300, c_shape, 0.2);
+                addText(slide, d.title || "關鍵數據", 50, 80, 620, 50, c_accent, 24, true);
                 let bigVal = d.value || (d.points && d.points[0] ? d.points[0] : "99%");
-                addText(slide, bigVal, 50, 140, 620, 150, theme.text, 86, true);
-                addText(slide, safeContent || "數據背景說明", 50, 300, 620, 50, theme.accent, 18, false); break;
+                addText(slide, bigVal, 50, 140, 620, 150, c_text, 86, true);
+                addText(slide, safeContent || "數據背景說明", 50, 300, 620, 50, c_accent, 18, false); break;
             case 'timeline':
                 if (titleIconBlob) { try { slide.insertImage(titleIconBlob, 15, 35, 35, 35); } catch(e){} }
-                addText(slide, d.title || "發展歷程", 55, 30, 615, 50, theme.accent, 28, true);
-                drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 50, 220, 620, 4, theme.shape, 1);
+                addText(slide, d.title || "發展歷程", 55, 30, 615, 50, c_accent, 28, true);
+                drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 50, 220, 620, 4, c_shape, 1);
                 if (d.gridItems && Array.isArray(d.gridItems)) {
                     let tCount = Math.min(d.gridItems.length, 4);
                     let tWidth = 620 / tCount;
                     d.gridItems.forEach((item, idx) => {
                         if (idx >= 4) return;
                         let tx = 50 + (idx * tWidth);
-                        drawShape(slide, coverShape, tx + (tWidth/2) - 10, 212, 20, 20, theme.accent, 1);
-                        addText(slide, item.title, tx, 160, tWidth, 40, theme.accent, 16, true);
-                        addText(slide, item.content, tx + 5, 250, tWidth - 10, 100, theme.text, 12, false);
+                        drawShape(slide, coverShape, tx + (tWidth/2) - 10, 212, 20, 20, c_accent, 1);
+                        addText(slide, item.title, tx, 160, tWidth, 40, c_accent, 16, true);
+                        addText(slide, item.content, tx + 5, 250, tWidth - 10, 100, c_text, 12, false);
                     });
                 } break;
             case 'image_right':
-                if (imgBlob) { try { slide.insertImage(imgBlob, 360, 0, 360, 405); } catch(e) {} } else { drawShape(slide, mainShape, 360, 0, 360, 405, theme.shape, 0.3); }
+                if (imgBlob) { try { slide.insertImage(imgBlob, 360, 0, 360, 405); } catch(e) {} } else { drawShape(slide, mainShape, 360, 0, 360, 405, c_shape, 0.3); }
                 if (titleIconBlob) { try { slide.insertImage(titleIconBlob, 35, 45, 35, 35); } catch(e){} }
-                addText(slide, d.title || "重點項目", 75, 40, 265, 60, theme.accent, 28, true);
+                addText(slide, d.title || "重點項目", 75, 40, 265, 60, c_accent, 28, true);
                 if (d.points && d.points.length > 0) {
                     let y = 120;
-                    d.points.forEach(p => { addText(slide, "• " + p, 40, y, 290, 40, theme.text, 14, false); y += 45; });
-                } else { addText(slide, safeContent || "【系統提示：AI 未生成內文】", 40, 120, 290, 250, theme.text, 16, false); }
+                    d.points.forEach(p => { addText(slide, "• " + p, 40, y, 290, 40, c_text, 14, false); y += 45; });
+                } else { addText(slide, safeContent || "【系統提示：AI 未生成內文】", 40, 120, 290, 250, c_text, 16, false); }
                 break;
             case 'image_left':
-                if (imgBlob) { try { slide.insertImage(imgBlob, 0, 0, 360, 405); } catch(e) {} } else { drawShape(slide, mainShape, 0, 0, 360, 405, theme.shape, 0.3); }
+                if (imgBlob) { try { slide.insertImage(imgBlob, 0, 0, 360, 405); } catch(e) {} } else { drawShape(slide, mainShape, 0, 0, 360, 405, c_shape, 0.3); }
                 if (titleIconBlob) { try { slide.insertImage(titleIconBlob, 385, 45, 35, 35); } catch(e){} }
-                addText(slide, d.title || "重點項目", 425, 40, 265, 60, theme.accent, 28, true);
+                addText(slide, d.title || "重點項目", 425, 40, 265, 60, c_accent, 28, true);
                 if (d.points && d.points.length > 0) {
                     let y = 120;
-                    d.points.forEach(p => { addText(slide, "• " + p, 390, y, 290, 40, theme.text, 14, false); y += 45; });
-                } else { addText(slide, safeContent || "【系統提示：AI 未生成內文】", 390, 120, 290, 250, theme.text, 16, false); }
+                    d.points.forEach(p => { addText(slide, "• " + p, 390, y, 290, 40, c_text, 14, false); y += 45; });
+                } else { addText(slide, safeContent || "【系統提示：AI 未生成內文】", 390, 120, 290, 250, c_text, 16, false); }
                 break;
             case 'split_column':
-                if (!isMinimal) drawShape(slide, mainShape, 0, 0, 50, 450, theme.accent, 1 * alphaMod);
+                if (!isMinimal) drawShape(slide, mainShape, 0, 0, 50, 450, c_accent, 1 * alphaMod);
                 if (titleIconBlob) { try { slide.insertImage(titleIconBlob, 40, 45, 35, 35); } catch(e){} }
-                addText(slide, d.title || "深度對比", 80, 40, 600, 60, theme.accent, 28, true);
-                if (isMinimal) drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 80, 100, 600, 2, theme.accent, 1);
+                addText(slide, d.title || "深度對比", 80, 40, 600, 60, c_accent, 28, true);
+                if (isMinimal) drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 80, 100, 600, 2, c_accent, 1);
                 if (!isMinimal) {
-                    drawShape(slide, mainShape, 80, 120, 280, 250, theme.shape, 0.2 * alphaMod);
-                    drawShape(slide, mainShape, 380, 120, 280, 250, theme.shape, 0.2 * alphaMod);
+                    drawShape(slide, mainShape, 80, 120, 280, 250, c_shape, 0.2 * alphaMod);
+                    drawShape(slide, mainShape, 380, 120, 280, 250, c_shape, 0.2 * alphaMod);
                 }
                 let leftText = d.left || (d.points && d.points[0] ? d.points[0] : (d.content ? d.content : "【左側內容】"));
                 let rightText = d.right || (d.points && d.points[1] ? d.points[1] : "【右側內容】");
-                addText(slide, leftText, 95, 135, 250, 220, theme.text, 16, false);
-                addText(slide, rightText, 395, 135, 250, 220, theme.text, 16, false);
+                addText(slide, leftText, 95, 135, 250, 220, c_text, 16, false);
+                addText(slide, rightText, 395, 135, 250, 220, c_text, 16, false);
                 break;
             case 'standard_list':
             default:
-                if (!isMinimal) drawShape(slide, mainShape, 0, 0, 50, 450, theme.accent, 1 * alphaMod);
+                if (!isMinimal) drawShape(slide, mainShape, 0, 0, 50, 450, c_accent, 1 * alphaMod);
                 if (titleIconBlob) { try { slide.insertImage(titleIconBlob, 40, 45, 35, 35); } catch(e){} }
-                addText(slide, d.title || "核心摘要", 80, 40, 600, 60, theme.accent, 28, true);
-                if (isMinimal) drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 80, 100, 600, 2, theme.accent, 1);
+                addText(slide, d.title || "核心摘要", 80, 40, 600, 60, c_accent, 28, true);
+                if (isMinimal) drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 80, 100, 600, 2, c_accent, 1);
                 if (d.points && Array.isArray(d.points) && d.points.length > 0) {
                     let y = 120;
-                    d.points.forEach(p => { addText(slide, "• " + p, 80, y, 550, 40, theme.text, 14, false); y += 45; });
-                } else { addText(slide, safeContent || "【系統提示：AI 未生成內文】", 80, 120, 550, 250, theme.text, 16, false); }
+                    d.points.forEach(p => { addText(slide, "• " + p, 80, y, 550, 40, c_text, 14, false); y += 45; });
+                } else { addText(slide, safeContent || "【系統提示：AI 未生成內文】", 80, 120, 550, 250, c_text, 16, false); }
                 break;
         }
     });
