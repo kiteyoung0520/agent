@@ -644,8 +644,7 @@
                 const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload), signal: abortController.signal });
                 const data = await res.json(); removeLoading(lid);
                 if (data.status === "error") throw new Error(data.error || "伺服器錯誤");
-                if (data.reply) { appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model); if (!speakText(data.reply, true) && settings.continuousMode) setTimeout(startRecording, 500); }
-                if (data.html_presentation) { openHtmlPresentation(data.html_presentation); }
+                if (data.reply) { appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model, data.html_presentation || null); if (!speakText(data.reply, true) && settings.continuousMode) setTimeout(startRecording, 500); }
                 loadSessions(); 
             } catch (err) { removeLoading(lid); appendMessage('ai', err.name === 'AbortError' ? `🛑 **生成已中止。**` : `❌ 執行失敗：\n\`\`\`text\n${err.message}\n\`\`\``); } 
             finally { toggleSendButton(false); abortController = null; }
@@ -758,7 +757,7 @@
             }
         }
 
-        function appendMessage(role, text, imageSrc = null, model = null) {
+        function appendMessage(role, text, imageSrc = null, model = null, htmlPresentation = null) {
             const isAI = role === 'ai', w = document.createElement('div'); w.className = `flex gap-3 sm:gap-4 max-w-4xl mx-auto w-full group ${!isAI ? 'flex-row-reverse' : ''}`;
             let b = `<div class="flex-1 ${!isAI ? 'text-right' : ''} space-y-2 max-w-[90%] sm:max-w-[85%] relative min-w-0">`;
             
@@ -779,6 +778,9 @@
                     parsedText = parsedText.replace(/\[來源\s*(\d+)\]/g, '<span class="citation" onclick="highlightSource($1)">[來源 $1]</span>');
                 }
                 b += `<div class="prose prose-invert text-gray-200 bg-[#1e1f22] p-4 sm:p-5 rounded-2xl rounded-tl-none shadow-sm text-base sm:text-lg leading-relaxed text-left ${isShared ? 'shared-message' : ''}">${parsedText}${isShared ? '<span class="shared-badge">專案共用</span>' : ''}</div>`;
+                if (htmlPresentation && isAI) {
+                    b += `<div class="mt-3"><button class="open-ppt-btn flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-3 rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 font-bold text-sm sm:text-base"><span class="material-symbols-rounded">presentation_play</span> 🎨 開啟互動簡報</button></div>`;
+                }
             }
             
             b += `<div class="flex items-center gap-2 mt-2 opacity-100 sm:opacity-50 sm:group-hover:opacity-100 transition-opacity ${!isAI ? 'justify-end' : ''}">`;
@@ -800,7 +802,14 @@
             w.classList.add('message-bubble');
             chatContainer.appendChild(w);
 
-            if (isAI) { w.querySelectorAll('pre code').forEach(c => { if (c.className.includes('language-html') || c.className.includes('language-jsx') || c.className.includes('language-javascript')) { let btn = document.createElement('button'); btn.className = "absolute top-2 sm:top-3 right-2 sm:right-3 bg-blue-600 hover:bg-blue-500 text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg flex items-center gap-1 shadow-lg"; btn.innerHTML = '<span class="material-symbols-rounded text-[12px] sm:text-sm">play_circle</span> 預覽'; btn.onclick = () => openPreview(c.innerText); c.parentElement.appendChild(btn); } }); }
+            if (isAI) { 
+                w.querySelectorAll('pre code').forEach(c => { if (c.className.includes('language-html') || c.className.includes('language-jsx') || c.className.includes('language-javascript')) { let btn = document.createElement('button'); btn.className = "absolute top-2 sm:top-3 right-2 sm:right-3 bg-blue-600 hover:bg-blue-500 text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg flex items-center gap-1 shadow-lg"; btn.innerHTML = '<span class="material-symbols-rounded text-[12px] sm:text-sm">play_circle</span> 預覽'; btn.onclick = () => openPreview(c.innerText); c.parentElement.appendChild(btn); } }); 
+                const pptBtn = w.querySelector('.open-ppt-btn');
+                if (pptBtn && htmlPresentation) {
+                    pptBtn.onclick = () => openHtmlPresentation(htmlPresentation);
+                    if (window.autoOpenPPT) { openHtmlPresentation(htmlPresentation); window.autoOpenPPT = false; }
+                }
+            }
             
             if (isAI && text) { 
                 const sBtn = w.querySelector('.share-btn');
@@ -981,6 +990,17 @@
                     removeLoading(lid);
                     alert("匯出錯誤");
                 }
+            } else if (e.data && e.data.type === 'update_presentation_data') {
+                // 背景自動儲存編輯後的簡報內容
+                fetch(GAS_URL, { 
+                    method: 'POST', 
+                    body: JSON.stringify({ 
+                        mode: 'system', 
+                        action: 'update_presentation_data', 
+                        session_id: currentSessionId,
+                        presentationData: e.data.presentationData
+                    }) 
+                });
             }
         });
 
@@ -1114,11 +1134,13 @@
         function updateSlideData(index, field, value) {
             if (field === 'content') {
                 const temp = document.createElement('div');
-                temp.innerHTML = value.replace(/<p>/g, '').replace(/<\\/p>/g, '\\n').replace(/• /g, '');
+                temp.innerHTML = value.replace(/<p>/g, '').replace(/<\\/p>/g, '\\n').replace(/• /g, '').replace(/<li>/g, '').replace(/<\\/li>/g, '\\n');
                 presentationData.slides[index][field] = temp.innerText.trim();
             } else {
                 presentationData.slides[index][field] = value;
             }
+            // 通知父視窗同步資料到資料庫
+            window.parent.postMessage({ type: 'update_presentation_data', presentationData: presentationData }, '*');
         }
 
         function exportToGoogleSlides(btn) {

@@ -540,7 +540,7 @@ function doPost(e) {
             configData: { ...CONFIG, autoImageEnabled: auto_image }
         });
 
-        logToFirebaseAndCache(db, wsName, session_id || "default", message, agentResult.reply || "執行完成");
+        logToFirebaseAndCache(db, wsName, session_id || "default", message, agentResult.reply || "執行完成", agentResult.html_presentation || null);
         return response({ status: "success", reply: agentResult.reply, model: agentResult.model || modelId, image: agentResult.image || null, mime: agentResult.mime || null, html_presentation: agentResult.html_presentation || null });
     } catch (err) { return response({ error: err.toString(), status: "error" }); }
 }
@@ -1510,7 +1510,7 @@ function getOptimizedHistoryFB(db, wsName, sessionId) {
     } catch(e) { return []; }
 }
 
-function logToFirebaseAndCache(db, wsName, sessionId, userMsg, aiReply) {
+function logToFirebaseAndCache(db, wsName, sessionId, userMsg, aiReply, htmlPresentation = null) {
     const lock = LockService.getScriptLock();
     try {
         lock.waitLock(10000);
@@ -1518,7 +1518,11 @@ function logToFirebaseAndCache(db, wsName, sessionId, userMsg, aiReply) {
         if (!session) { session = { workspace: wsName, session_id: sessionId, title: userMsg ? userMsg.substring(0, 25) : "新對話", pinned: false, history_json: [] }; }
         let hist = []; if (session.history_json) { try { hist = Array.isArray(session.history_json) ? session.history_json : JSON.parse(session.history_json); } catch(e) {} }
         if (userMsg) hist.push({ role: "user", text: userMsg }); 
-        if (aiReply) hist.push({ role: "ai", text: aiReply });
+        if (aiReply) {
+            const aiMsg = { role: "ai", text: aiReply };
+            if (htmlPresentation) aiMsg.html_presentation = htmlPresentation;
+            hist.push(aiMsg);
+        }
         session.updated_at = new Date(); session.history_json = hist; db.write("sessions", sessionId, session);
     } catch(e) {} finally { lock.releaseLock(); }
     try {
@@ -1729,6 +1733,25 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
             } catch(e) {
                 return response({ status: "error", message: e.toString() });
             }
+        },
+        'update_presentation_data': () => {
+            try {
+                const session = db.get("sessions", payload.session_id);
+                if (session && session.history_json) {
+                    let hist = Array.isArray(session.history_json) ? session.history_json : JSON.parse(session.history_json);
+                    for (let i = hist.length - 1; i >= 0; i--) {
+                        if (hist[i].role === 'ai' && hist[i].html_presentation) {
+                            hist[i].html_presentation = payload.presentationData;
+                            break;
+                        }
+                    }
+                    session.history_json = hist;
+                    db.write("sessions", payload.session_id, session);
+                    CacheService.getScriptCache().remove(`history_${wsName}_${payload.session_id}`);
+                    return response({ status: "success" });
+                }
+                return response({ status: "error", message: "Session not found" });
+            } catch(e) { return response({ status: "error", message: e.toString() }); }
         }
     };
     if (routeHandlers[action]) return routeHandlers[action](); else return response({status: "error", message: "Unknown action"});
