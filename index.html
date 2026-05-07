@@ -594,6 +594,7 @@
                 const data = await res.json(); removeLoading(lid);
                 if (data.status === "error") throw new Error(data.error || "伺服器錯誤");
                 if (data.reply) { appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model); if (!speakText(data.reply, true) && settings.continuousMode) setTimeout(startRecording, 500); }
+                if (data.html_presentation) { openHtmlPresentation(data.html_presentation); }
                 loadSessions(); 
             } catch (err) { removeLoading(lid); appendMessage('ai', err.name === 'AbortError' ? `🛑 **生成已中止。**` : `❌ 執行失敗：\n\`\`\`text\n${err.message}\n\`\`\``); } 
             finally { toggleSendButton(false); abortController = null; }
@@ -644,6 +645,7 @@
                 const data = await res.json(); removeLoading(lid);
                 if (data.status === "error") throw new Error(data.error || "伺服器錯誤");
                 if (data.reply) { appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model); if (!speakText(data.reply, true) && settings.continuousMode) setTimeout(startRecording, 500); }
+                if (data.html_presentation) { openHtmlPresentation(data.html_presentation); }
                 loadSessions(); 
             } catch (err) { removeLoading(lid); appendMessage('ai', err.name === 'AbortError' ? `🛑 **生成已中止。**` : `❌ 執行失敗：\n\`\`\`text\n${err.message}\n\`\`\``); } 
             finally { toggleSendButton(false); abortController = null; }
@@ -949,6 +951,110 @@
                      `</head><body class="bg-gray-50"><div id="root"></div><script type="text/babel">const { useState, useEffect, useRef, useMemo, useCallback } = React; try { ${cc} const root = ReactDOM.createRoot(document.getElementById('root')); root.render(<${cm ? cm[1] : 'App'} />); setTimeout(() => { if(window.lucide) window.lucide.createIcons(); }, 100); } catch(err) { document.getElementById('root').innerHTML = '<div class="p-4 text-red-700">渲染錯誤:<br>' + err.message + '</div>'; } \x3C/script></body></html>`;
             }
             currentRenderCode = rc; document.getElementById('preview-modal').classList.remove('hidden'); document.getElementById('preview-modal').classList.add('flex'); document.getElementById('preview-iframe').srcdoc = rc;
+        }
+
+        window.addEventListener('message', async (e) => {
+            if (e.data && e.data.type === 'export_google_slides') {
+                const data = e.data.payload;
+                const lid = appendLoading("正在將編輯好的版本匯出至 Google 簡報...");
+                try {
+                    const res = await fetch(GAS_URL, { 
+                        method: 'POST', 
+                        body: JSON.stringify({ 
+                            mode: 'system', 
+                            action: 'export_google_slides', 
+                            topic: data.topic,
+                            slidesData: JSON.stringify(data.slides),
+                            theme: data.theme,
+                            style: data.style
+                        }) 
+                    });
+                    const result = await res.json();
+                    removeLoading(lid);
+                    if (result.status === "success") {
+                        appendMessage('ai', `✅ **您的客製化簡報已匯出完成！**\n🔗 [點擊開啟 Google 簡報](${result.url})`);
+                        closePreview();
+                    } else {
+                        alert("匯出失敗：" + result.message);
+                    }
+                } catch(err) {
+                    removeLoading(lid);
+                    alert("匯出錯誤");
+                }
+            }
+        });
+
+        function openHtmlPresentation(data) {
+            const slidesHtml = data.slides.map((slide, index) => {
+                return `
+                    <div class="slide h-screen w-full flex flex-col justify-center items-center p-12 text-center shrink-0 snap-center relative group" style="background-color: ${data.theme.colors.background}; color: ${data.theme.colors.text}; font-family: ${data.theme.fontFamily || 'sans-serif'};">
+                        <div class="absolute top-4 right-4 text-sm opacity-30">${index + 1} / ${data.slides.length}</div>
+                        ${slide.title ? `<h1 class="text-5xl font-extrabold mb-6 outline-none hover:bg-white/10 p-2 rounded transition-colors" contenteditable="true" onblur="updateSlideData(${index}, 'title', this.innerText)">${slide.title}</h1>` : ''}
+                        ${slide.subtitle ? `<h2 class="text-2xl opacity-80 mb-8 outline-none hover:bg-white/10 p-2 rounded transition-colors" contenteditable="true" onblur="updateSlideData(${index}, 'subtitle', this.innerText)">${slide.subtitle}</h2>` : ''}
+                        ${slide.content ? `<div class="text-xl max-w-4xl text-left space-y-4 outline-none hover:bg-white/10 p-4 rounded transition-colors" contenteditable="true" onblur="updateSlideData(${index}, 'content', this.innerHTML)">${slide.content.split('\n').map(c => c.trim() ? `<p>• ${c}</p>` : '').join('')}</div>` : ''}
+                        <div class="absolute bottom-4 left-0 w-full flex justify-between px-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onclick="document.getElementById('slider').scrollBy({left: -window.innerWidth, behavior: 'smooth'})" class="p-3 bg-white/10 rounded-full hover:bg-white/20"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+                            <button onclick="document.getElementById('slider').scrollBy({left: window.innerWidth, behavior: 'smooth'})" class="p-3 bg-white/10 rounded-full hover:bg-white/20"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const rc = `<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: ${data.theme.colors.background}; }
+        #slider { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; width: 100vw; height: 100vh; }
+        #slider::-webkit-scrollbar { display: none; }
+        .toolbar { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 999px; display: flex; gap: 12px; z-index: 50; backdrop-filter: blur(10px); opacity: 0; transition: opacity 0.3s; color: white; }
+        body:hover .toolbar { opacity: 1; }
+        button { cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 4px; }
+        button:hover { transform: scale(1.05); }
+        [contenteditable]:focus { outline: 2px solid #3b82f6; background: rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <div class="toolbar text-sm font-medium">
+        <button onclick="document.documentElement.requestFullscreen()" class="hover:text-blue-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg> 播放</button>
+        <div class="w-px bg-white/20"></div>
+        <button onclick="window.print()" class="hover:text-pink-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg> 轉存 PDF</button>
+        <div class="w-px bg-white/20"></div>
+        <button onclick="exportToGoogleSlides(this)" class="hover:text-green-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> 匯出 Google 簡報</button>
+    </div>
+    <div id="slider">
+        ${slidesHtml}
+    </div>
+    <script>
+        let presentationData = ${JSON.stringify(data)};
+        
+        function updateSlideData(index, field, value) {
+            if (field === 'content') {
+                const temp = document.createElement('div');
+                temp.innerHTML = value.replace(/<p>/g, '').replace(/<\\/p>/g, '\\n').replace(/• /g, '');
+                presentationData.slides[index][field] = temp.innerText.trim();
+            } else {
+                presentationData.slides[index][field] = value;
+            }
+        }
+
+        function exportToGoogleSlides(btn) {
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> 匯出中...';
+            btn.disabled = true;
+            window.parent.postMessage({ type: 'export_google_slides', payload: presentationData }, '*');
+            setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 3000);
+        }
+    </script>
+</body>
+</html>`;
+            currentRenderCode = rc; 
+            document.getElementById('preview-modal').classList.remove('hidden'); 
+            document.getElementById('preview-modal').classList.add('flex'); 
+            document.getElementById('preview-iframe').srcdoc = rc;
         }
         function closePreview() { document.getElementById('preview-modal').classList.add('hidden'); document.getElementById('preview-modal').classList.remove('flex'); document.getElementById('preview-iframe').srcdoc = ''; }
         function refreshPreview() { if (currentRenderCode) document.getElementById('preview-iframe').srcdoc = currentRenderCode; }

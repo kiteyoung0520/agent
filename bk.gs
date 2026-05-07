@@ -541,7 +541,7 @@ function doPost(e) {
         });
 
         logToFirebaseAndCache(db, wsName, session_id || "default", message, agentResult.reply || "執行完成");
-        return response({ status: "success", reply: agentResult.reply, model: agentResult.model || modelId, image: agentResult.image || null, mime: agentResult.mime || null });
+        return response({ status: "success", reply: agentResult.reply, model: agentResult.model || modelId, image: agentResult.image || null, mime: agentResult.mime || null, html_presentation: agentResult.html_presentation || null });
     } catch (err) { return response({ error: err.toString(), status: "error" }); }
 }
 
@@ -1329,9 +1329,26 @@ function runAutonomousAgentLoop(config) {
                                 }
                             } catch(e) { console.error("顏色解析失敗", e); }
                             
-                            let safeSlidesData = args.slidesData.replace(/\n/g, ' ').replace(/\r/g, '').replace(/\t/g, ' ');
-                            const pid = createGeometricSlides(args.topic, JSON.parse(safeSlidesData), themeToUse, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel);
-                            toolResult = { isTerminal: true, reply: `📊 **專屬簡報生成完畢！**\n🔗 [點擊開啟 Google 簡報](https://docs.google.com/presentation/d/${pid}/edit)` };
+                            let safeSlidesData = args.slidesData;
+                            let parsedData = [];
+                            try {
+                                if (typeof safeSlidesData === 'string') {
+                                    parsedData = JSON.parse(safeSlidesData.replace(/\n/g, ' ').replace(/\r/g, '').replace(/\t/g, ' '));
+                                } else {
+                                    parsedData = safeSlidesData;
+                                }
+                            } catch(e) { throw new Error("簡報資料格式錯誤，無法解析 JSON"); }
+                            
+                            toolResult = { 
+                                isTerminal: true, 
+                                reply: `✨ **互動式網頁簡報已生成！**\n\n您可以直接在畫面中點擊文字進行修改。若需匯出為真正的 Google 簡報，請點擊畫面右上角的「匯出 Google 簡報」按鈕。`,
+                                html_presentation_data: {
+                                    topic: args.topic,
+                                    theme: themeToUse,
+                                    style: args.shapeStyle || 'minimalist',
+                                    slides: parsedData
+                                }
+                            };
                             break;
                         case "update_presentation":
                             let presIdMatch = args.presentationUrl.match(/[-\w]{25,}/);
@@ -1365,7 +1382,7 @@ function runAutonomousAgentLoop(config) {
                     }
                 } catch (e) { toolResult = { status: "error", error_message: e.toString() }; }
 
-                if (toolResult.isTerminal) { return { reply: toolResult.reply, model: "Agent-Executor", image: finalImage, mime: finalMime }; }
+                if (toolResult.isTerminal) { return { reply: toolResult.reply, model: "Agent-Executor", image: finalImage, mime: finalMime, html_presentation: toolResult.html_presentation_data || null }; }
                 toolResponses.push({ functionResponse: { name: fnName, response: toolResult, id: part.functionCall.id } });
             }
             currentHistory.push({ role: "user", parts: toolResponses });
@@ -1702,6 +1719,14 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
                 tempFile.setTrashed(true);
                 return response({ status: "success", text: content });
             } catch(e) { return response({ status: "error", message: e.toString() }); }
+        },
+        'export_google_slides': () => {
+            try {
+                const pid = createGeometricSlides(payload.topic, payload.slidesData, payload.theme || PPT_THEMES['modern_blue'], payload.style || 'minimalist', true, apiKey, "gemini-3.1-flash-image-preview");
+                return response({status: "success", url: `https://docs.google.com/presentation/d/${pid}/edit`});
+            } catch(e) {
+                return response({ status: "error", message: e.toString() });
+            }
         }
     };
     if (routeHandlers[action]) return routeHandlers[action](); else return response({status: "error", message: "Unknown action"});
