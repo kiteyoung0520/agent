@@ -309,9 +309,9 @@ const AGENT_TOOLS = [{
                 type: "OBJECT", 
                 properties: { 
                     topic: { type: "STRING", description: "簡報核心主題" }, 
-                    customColors: { type: "STRING", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。請依主題氛圍自主調配。" }, 
+                    customColors: { type: "OBJECT", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。請依主題氛圍自主調配。" }, 
                     shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist' (極簡), 'rounded' (圓角), 'cyber' (銳角/科技), 'dynamic' (斜切/活力), 'layered' (疊層/深邃)。" }, 
-                    slidesData: { type: "STRING", description: "簡報 JSON 陣列。格式：[{layout: 'cover|title_only|standard_list|split_column|image_right|image_left|icon_grid|timeline|big_data', title: '標題', content: '內文', points: ['重點'], left: '左欄', right: '右欄', value: '大數據值', imageKeyword: '英文生圖提示詞', gridItems: [{title:'標題', content:'內容', iconKeyword:'圖標關鍵字'}]}]。⚠️請根據內容特徵挑選最佳 layout：如果是數據則用 big_data，如果是歷程則用 timeline，如果是對比則用 split_column。" } 
+                    slidesData: { type: "ARRAY", items: { type: "OBJECT" }, description: "簡報 JSON 陣列。格式：[{layout: 'cover|title_only|standard_list|split_column|image_right|image_left|icon_grid|timeline|big_data', title: '標題', content: '內文', points: ['重點'], left: '左欄', right: '右欄', value: '大數據值', imageKeyword: '英文生圖提示詞', gridItems: [{title:'標題', content:'內容', iconKeyword:'圖標關鍵字'}]}]。⚠️請根據內容特徵挑選最佳 layout：如果是數據則用 big_data，如果是歷程則用 timeline，如果是對比則用 split_column。" } 
                 }, 
                 required: ["topic", "customColors", "shapeStyle", "slidesData"] 
             } 
@@ -324,9 +324,9 @@ const AGENT_TOOLS = [{
                 properties: { 
                     presentationUrl: { type: "STRING", description: "現有簡報的完整網址" }, 
                     action: { type: "STRING", description: "'append' (附加投影片到最後) 或 'overwrite' (清空並重新繪製整份簡報)" }, 
-                    customColors: { type: "STRING", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。" }, 
+                    customColors: { type: "OBJECT", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。" }, 
                     shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist', 'rounded', 'cyber', 'dynamic', 'layered' 擇一。" }, 
-                    slidesData: { type: "STRING", description: "要新增或覆寫的簡報 JSON 陣列。格式同 create_presentation。" } 
+                    slidesData: { type: "ARRAY", items: { type: "OBJECT" }, description: "要新增或覆寫的簡報 JSON 陣列。格式同 create_presentation。" } 
                 }, 
                 required: ["presentationUrl", "action", "slidesData"] 
             } 
@@ -1325,8 +1325,7 @@ function runAutonomousAgentLoop(config) {
                             let themeToUse = PPT_THEMES['modern_blue'];
                             try {
                                 if (args.customColors) {
-                                    let cleanColors = String(args.customColors).replace(/```json/gi, '').replace(/```/g, '').trim();
-                                    const rawC = JSON.parse(cleanColors);
+                                    const rawC = typeof args.customColors === 'string' ? JSON.parse(args.customColors.replace(/```json/gi, '').replace(/```/g, '').trim()) : args.customColors;
                                     // 確保格式符合前端期待的 colors 結構
                                     themeToUse = { 
                                         colors: { 
@@ -1339,13 +1338,15 @@ function runAutonomousAgentLoop(config) {
                                 }
                             } catch(e) { console.error("顏色解析失敗", e); }
                             
-                            let safeSlidesData = args.slidesData;
                             let parsedData = [];
                             try {
-                                if (typeof safeSlidesData === 'string') {
-                                    parsedData = JSON.parse(safeSlidesData.replace(/\n/g, ' ').replace(/\r/g, '').replace(/\t/g, ' '));
+                                if (typeof args.slidesData === 'string') {
+                                    let cleanS = args.slidesData.replace(/```json/gi, '').replace(/```/g, '').trim();
+                                    parsedData = JSON.parse(cleanS.replace(/\n/g, ' ').replace(/\r/g, '').replace(/\t/g, ' '));
+                                } else if (Array.isArray(args.slidesData)) {
+                                    parsedData = args.slidesData;
                                 } else {
-                                    parsedData = safeSlidesData;
+                                    throw new Error("Invalid array");
                                 }
                             } catch(e) { throw new Error("簡報資料格式錯誤，無法解析 JSON"); }
                             
@@ -1367,18 +1368,21 @@ function runAutonomousAgentLoop(config) {
                             let updTheme = PPT_THEMES['modern_blue'];
                             try {
                                 if (args.customColors) {
-                                    let cleanC = String(args.customColors).replace(/```json/gi, '').replace(/```/g, '').trim();
-                                    updTheme = JSON.parse(cleanC);
+                                    const rawC = typeof args.customColors === 'string' ? JSON.parse(args.customColors.replace(/```json/gi, '').replace(/```/g, '').trim()) : args.customColors;
+                                    updTheme = { colors: { background: rawC.background || rawC.bg || "#0f172a", text: rawC.text || "#f8fafc", accent: rawC.accent || "#38bdf8", shape: rawC.shape || "#1e293b" } };
                                 }
                             } catch(e) { console.warn("更新配色解析失敗", e); }
                             
-                            let rawUpdData = args.slidesData;
-                            let processedUpdData;
+                            let processedUpdData = [];
                             try {
-                                if (typeof rawUpdData === 'string') {
-                                    let cleanS = rawUpdData.replace(/\n/g, ' ').replace(/\r/g, '').replace(/\t/g, ' ');
-                                    processedUpdData = JSON.parse(cleanS);
-                                } else { processedUpdData = rawUpdData; }
+                                if (typeof args.slidesData === 'string') {
+                                    let cleanS = args.slidesData.replace(/```json/gi, '').replace(/```/g, '').trim();
+                                    processedUpdData = JSON.parse(cleanS.replace(/\n/g, ' ').replace(/\r/g, '').replace(/\t/g, ' '));
+                                } else if (Array.isArray(args.slidesData)) {
+                                    processedUpdData = args.slidesData;
+                                } else {
+                                    throw new Error("Invalid array");
+                                }
                             } catch(e) { throw new Error("簡報資料格式錯誤，無法解析 JSON"); }
 
                             updateGeometricSlides(presIdMatch[0], args.action, processedUpdData, updTheme, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel);
