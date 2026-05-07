@@ -985,9 +985,13 @@
         });
 
         function openHtmlPresentation(data) {
+            // 防錯機制：確保 theme 和 colors 存在
+            const theme = data.theme || { colors: { background: "#0f172a", text: "#f8fafc", accent: "#38bdf8", shape: "#1e293b" } };
+            const colors = theme.colors || { background: "#0f172a", text: "#f8fafc", accent: "#38bdf8", shape: "#1e293b" };
+
             const slidesHtml = data.slides.map((slide, index) => {
                 return `
-                    <div class="slide h-screen w-full flex flex-col justify-center items-center p-12 text-center shrink-0 snap-center relative group" style="background-color: ${data.theme.colors.background}; color: ${data.theme.colors.text}; font-family: ${data.theme.fontFamily || 'sans-serif'};">
+                    <div class="slide h-screen w-full flex flex-col justify-center items-center p-12 text-center shrink-0 snap-center relative group" style="background-color: ${colors.background}; color: ${colors.text}; font-family: ${theme.fontFamily || 'sans-serif'};">
                         <div class="absolute top-4 right-4 text-sm opacity-30">${index + 1} / ${data.slides.length}</div>
                         ${slide.title ? `<h1 class="text-5xl font-extrabold mb-6 outline-none hover:bg-white/10 p-2 rounded transition-colors" contenteditable="true" onblur="updateSlideData(${index}, 'title', this.innerText)">${slide.title}</h1>` : ''}
                         ${slide.subtitle ? `<h2 class="text-2xl opacity-80 mb-8 outline-none hover:bg-white/10 p-2 rounded transition-colors" contenteditable="true" onblur="updateSlideData(${index}, 'subtitle', this.innerText)">${slide.subtitle}</h2>` : ''}
@@ -1007,7 +1011,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com">\x3C/script>
     <style>
-        body { margin: 0; overflow: hidden; background: ${data.theme.colors.background}; }
+        body { margin: 0; overflow: hidden; background: ${colors.background}; }
         #slider { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; width: 100vw; height: 100vh; }
         #slider::-webkit-scrollbar { display: none; }
         .toolbar { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 999px; display: flex; gap: 12px; z-index: 50; backdrop-filter: blur(10px); opacity: 0; transition: opacity 0.3s; color: white; }

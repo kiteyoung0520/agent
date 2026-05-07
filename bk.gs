@@ -18,7 +18,7 @@ const BASE_CONFIG = {
 };
 
 const PPT_THEMES = {
-    modern_blue:  { bg: "#0f172a", text: "#f8fafc", accent: "#38bdf8", shape: "#1e293b" }
+    modern_blue:  { colors: { background: "#0f172a", text: "#f8fafc", accent: "#38bdf8", shape: "#1e293b" } }
 };
 
 // ==========================================
