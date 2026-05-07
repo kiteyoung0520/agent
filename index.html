@@ -1239,17 +1239,28 @@
         }
 
         // 啟動入口
-        window.onload = async () => { 
-            await loadWorkspaces(); 
-            loadSessions(); loadGems(); loadModels(); renderRightPanelContent();
+        window.onload = () => { 
+            // 🐛 修復：不再使用 await 阻塞整個畫面載入，改用 Promise.all 平行處理，並加上錯誤捕捉
+            loadWorkspaces()
+                .then(() => {
+                    loadSessions(); 
+                    loadGems(); 
+                    loadModels(); 
+                })
+                .catch(e => console.error("Workspace 載入失敗", e))
+                .finally(() => {
+                    // 無論如何都先渲染右側面板，避免畫面卡白
+                    renderRightPanelContent();
+                });
             
             // 載入用戶資訊 (確認雲端帳號)
-            try {
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_user_info' }) });
-                const data = await res.json();
-                document.getElementById('user-email').innerText = data.email || "未授權帳號";
-                document.getElementById('user-email').classList.remove('italic', 'opacity-60', 'text-[10px]');
-            } catch(e) { document.getElementById('user-email').innerText = "連線失敗"; }
+            fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_user_info' }) })
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('user-email').innerText = data.email || "未授權帳號";
+                    document.getElementById('user-email').classList.remove('italic', 'opacity-60', 'text-[10px]');
+                })
+                .catch(e => { document.getElementById('user-email').innerText = "連線失敗"; });
         };
     </script>
 </body>
