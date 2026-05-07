@@ -410,8 +410,8 @@ ${customRules}
    - 嚴格遵守【視覺執行與設計鐵律】。
    - 禁止連續兩張投影片使用相同 Layout。
    - 每一頁的文字量若極多，請開啟「網頁簡報模式」之滾動功能，不要擅自刪減。
-   - `customColors` 必須根據主題情感（商務、熱情、科技、皮紙/Vellum）挑選對比鮮明的 HEX 色碼。
-   - `imageKeyword` 必須包含 'high quality', 'cinematic lighting', 'professional photography' 等修飾詞。`;
+   - 'customColors' 必須根據主題情感（商務、熱情、科技、皮紙/Vellum）挑選對比鮮明的 HEX 色碼。
+   - 'imageKeyword' 必須包含 'high quality', 'cinematic lighting', 'professional photography' 等修飾詞。`;
 }
 
 
