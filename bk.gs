@@ -2061,6 +2061,7 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
             case 'split_column':
             case 'image_left':
             case 'image_right':
+                if (titleIconBlob) { try { slide.insertImage(titleIconBlob, 50, 45, 30, 30); } catch(e) {} }
                 if (imgBlob) {
                     try {
                         if (layoutType === 'image_left') {
@@ -2096,6 +2097,7 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
             case 'card_deck':
             case 'icon_grid':
             case 'grid':
+                if (titleIconBlob) { try { slide.insertImage(titleIconBlob, 50, 35, 35, 35); } catch(e) {} }
                 addText(slide, eyebrow, 50, 30, 620, 30, c_accent, 14, true);
                 addText(slide, titleText || "核心要素", 50, 60, 620, 40, c_text, 28, true);
                 if (d.gridItems && Array.isArray(d.gridItems) && d.gridItems.length > 0) {
@@ -2118,6 +2120,7 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
                 break;
             case 'standard_list':
             default:
+                if (titleIconBlob) { try { slide.insertImage(titleIconBlob, 50, 55, 35, 35); } catch(e) {} }
                 if (imgBlob) {
                     try {
                         slide.insertImage(imgBlob, 450, 60, 250, 300);
