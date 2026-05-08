@@ -2114,12 +2114,16 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
         switch(layoutType) {
             case 'cover':
             case 'title':
-                if (imgBlob) { try { slide.insertImage(imgBlob, 0, 0, 720, 405); drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 0, 0, 720, 405, c_bg, 0.75); } catch(e) {} }
+                if (imgBlob) { 
+                    try { slide.insertImage(imgBlob, 0, 0, 720, 405); drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 0, 0, 720, 405, c_bg, 0.75); } catch(e) {} 
+                } else {
+                    addMaterialIcon(slide, d.imageKeyword || d.titleIconKeyword || "co_present", 360-60, 160, 120, c_accent);
+                }
                 drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 360-15, 60, 30, 4, c_accent, 1);
                 addText(slide, eyebrow.replace(/[【】]/g, ''), 210, 80, 300, 30, c_accent, 16, true, SlidesApp.ParagraphAlignment.CENTER);
                 addText(slide, titleText || "未命名標題", 110, 140, 500, 100, c_text, 42, true, SlidesApp.ParagraphAlignment.CENTER);
                 addText(slide, d.subtitle || safeContent, 160, 260, 400, 50, c_accent, 18, false, SlidesApp.ParagraphAlignment.CENTER);
-                addText(slide, "Agent Generated", 260, 370, 200, 20, c_text, 10, false, SlidesApp.ParagraphAlignment.CENTER);
+                addText(slide, "Agent Generated Editorial", 260, 370, 200, 20, c_text, 10, false, SlidesApp.ParagraphAlignment.CENTER);
                 break;
             case 'hero_quote':
                 addText(slide, eyebrow, 50, 40, 620, 30, c_accent, 14, true);
@@ -2171,12 +2175,25 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
                         }
                     } catch(e) {}
                 } else {
-                    addText(slide, eyebrow, 50, 40, 300, 30, c_accent, 14, true);
-                    addText(slide, titleText || "深度分析", 50, 80, 250, 120, c_text, 36, true);
-                    addText(slide, d.left || d.content || "左側說明", 50, 220, 260, 150, c_text, 14, false);
-                    drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 340, 60, 2, 300, c_accent, 0.3);
-                    let rc = d.right || (d.points && d.points.length > 0 ? d.points.map(p => "■  " + p).join('\n\n') : "右側內容");
-                    addText(slide, rc, 370, 70, 300, 300, c_accent, 16, false);
+                    // 圖標增強模式：無圖時，使用大尺寸向量圖標填補視覺空缺
+                    if (layoutType === 'image_left') {
+                        addMaterialIcon(slide, d.imageKeyword || d.titleIconKeyword || "image", 100, 150, 120, c_accent);
+                        addText(slide, eyebrow, 350, 40, 320, 30, c_accent, 14, true);
+                        addText(slide, titleText, 350, 80, 320, 100, c_text, 32, true);
+                        addText(slide, safeContent, 350, 180, 320, 180, c_text, 14, false);
+                    } else if (layoutType === 'image_right') {
+                        addMaterialIcon(slide, d.imageKeyword || d.titleIconKeyword || "image", 500, 150, 120, c_accent);
+                        addText(slide, eyebrow, 50, 40, 320, 30, c_accent, 14, true);
+                        addText(slide, titleText, 50, 80, 320, 100, c_text, 32, true);
+                        addText(slide, safeContent, 50, 180, 320, 180, c_text, 14, false);
+                    } else {
+                        addText(slide, eyebrow, 50, 40, 300, 30, c_accent, 14, true);
+                        addText(slide, titleText || "深度分析", 50, 80, 250, 120, c_text, 36, true);
+                        addText(slide, d.left || d.content || "左側說明", 50, 220, 260, 150, c_text, 14, false);
+                        drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 340, 60, 2, 300, c_accent, 0.3);
+                        let rc = d.right || (d.points && d.points.length > 0 ? d.points.map(p => "■  " + p).join('\n\n') : "右側內容");
+                        addText(slide, rc, 370, 70, 300, 300, c_accent, 16, false);
+                    }
                 }
                 break;
             case 'card_deck':
@@ -2217,6 +2234,8 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
                         addText(slide, lc, 50, 150, 380, 220, c_text, 14, false);
                     } catch(e) {}
                 } else {
+                    // 圖標增強模式：右側改為大圖標
+                    addMaterialIcon(slide, d.imageKeyword || d.titleIconKeyword || "list", 520, 150, 100, c_accent);
                     addText(slide, eyebrow, 50, 40, 620, 30, c_accent, 14, true);
                     addText(slide, titleText || "核心摘要", 50, 70, 620, 40, c_text, 32, true);
                     drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 50, 120, 60, 4, c_accent, 1);
