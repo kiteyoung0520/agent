@@ -561,7 +561,7 @@ function doPost(e) {
             finalSystemInstruction += `\n\n【🎨 強制繪圖模式 (Draw Mode)】\n使用者已開啟「純繪圖模式」。請將使用者的文字轉換為精確的英文生圖 Prompt，並『強制且唯一』呼叫 \`generate_art\` 工具。不要講多餘的廢話，直接畫圖！`;
         } else if (web_search) {
             // 修正：聯網模式應與現有工具併行，而非替換
-            finalTools.push({ googleSearchRetrieval: {} });
+            finalTools.push({ google_search: {} });
             finalSystemInstruction += `\n\n【🌍 強制聯網模式】請優先使用 Google Search 工具來回答，提供最新資訊。`;
         }
 
@@ -2278,6 +2278,43 @@ function updateGeometricSlides(presentationId, action, slidesData, theme, style,
 
 function drawShape(s, t, x, y, w, h, c, a) { const sh = s.insertShape(t, x, y, w, h); sh.getBorder().setTransparent(); sh.getFill().setSolidFill(c, a); return sh; }
 function addText(s, t, x, y, w, h, c, sz, b, align) { if(!t)return; const box = s.insertShape(SlidesApp.ShapeType.TEXT_BOX, x, y, w, h); const txt = box.getText(); let safeT = String(t).replace(/\\n/g, '\n'); txt.setText(safeT).getTextStyle().setFontSize(sz).setForegroundColor(c).setBold(b); if(align) txt.getParagraphStyle().setParagraphAlignment(align); return box; }
+
+/**
+ * 插入 Google 原生 Material Icons (向量字體版)
+ */
+function addMaterialIcon(slide, keyword, x, y, size, color) {
+    const iconCode = mapKeywordToIcon(keyword);
+    const box = slide.insertShape(SlidesApp.ShapeType.TEXT_BOX, x, y, size * 1.5, size * 1.5);
+    const txt = box.getText();
+    txt.setText(iconCode);
+    const style = txt.getTextStyle();
+    style.setFontSize(size);
+    style.setForegroundColor(color);
+    style.setFontFamily("Material Icons"); // 重要：套用官方向量字型
+    box.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER);
+    return box;
+}
+
+const ICON_MAP = {
+    "image": "image", "photo": "photo_camera", "nature": "landscape", "scenery": "filter_hdr",
+    "people": "group", "success": "emoji_events", "idea": "lightbulb", "check": "check_circle",
+    "warning": "warning", "info": "info", "question": "help", "star": "star",
+    "target": "track_changes", "growth": "trending_up", "money": "payments", "tech": "memory",
+    "travel": "flight", "food": "restaurant", "health": "medical_services", "education": "school",
+    "business": "business_center", "settings": "settings", "home": "home", "search": "search",
+    "time": "schedule", "data": "bar_chart", "list": "format_list_bulleted", "map": "map",
+    "history": "history", "future": "auto_awesome", "link": "link", "cloud": "cloud",
+    "shield": "shield", "lock": "lock", "key": "key", "person": "person", "mail": "mail"
+};
+
+function mapKeywordToIcon(kw) {
+    if (!kw) return "circle";
+    const low = kw.toLowerCase().trim();
+    for (const [key, icon] of Object.entries(ICON_MAP)) {
+        if (low.includes(key)) return icon;
+    }
+    return "circle"; // 預設圖標
+}
 
 function forceAuthSetup() {
     // 不使用 try-catch，強制觸發 Google 的靜態權限掃描與授權視窗
