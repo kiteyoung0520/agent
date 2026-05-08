@@ -1406,7 +1406,16 @@ function runAutonomousAgentLoop(config) {
                             updateGeometricSlides(presIdMatch[0], args.action, processedUpdData, updTheme, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel);
                             
                             let actionVerb = (String(args.action).toLowerCase().trim() === 'overwrite') ? "覆寫" : "擴充";
-                            toolResult = { isTerminal: true, reply: `📊 **簡報${actionVerb}完畢！**\n\n已成功將 ${processedUpdData.length} 頁內容同步至簡報中。\n🔗 [點擊開啟驗證](https://docs.google.com/presentation/d/${presIdMatch[0]}/edit)` };
+                            toolResult = { 
+                                isTerminal: true, 
+                                reply: `📊 **簡報${actionVerb}完畢！**\n\n已成功將 ${processedUpdData.length} 頁內容同步至簡報中。\n🔗 [點擊開啟驗證](https://docs.google.com/presentation/d/${presIdMatch[0]}/edit)`,
+                                html_presentation_data: {
+                                    topic: "更新後的簡報",
+                                    theme: updTheme,
+                                    style: args.shapeStyle || 'minimalist',
+                                    slides: processedUpdData
+                                }
+                            };
                             break;
                             
                         default:
@@ -1537,7 +1546,9 @@ function getOptimizedHistoryFB(db, wsName, sessionId) {
         let hist = []; try { hist = Array.isArray(session.history_json) ? session.history_json : JSON.parse(session.history_json); } catch(e) {}
         const geminiHistory = []; const MAX_CHARS = 40000; let charCount = 0;
         for (let i = hist.length - 1; i >= 0; i--) {
-            const msg = hist[i]; let text = msg.text || ""; if (!text.trim()) continue;
+            const msg = hist[i]; let text = msg.text || ""; 
+            if (msg.html_presentation) text += `\n\n【系統紀錄：已生成的簡報 JSON 內容 (供修改參考)】\n${JSON.stringify(msg.html_presentation).substring(0, 15000)}`;
+            if (!text.trim()) continue;
             if (charCount + text.length > MAX_CHARS) break;
             let r = (msg.role === 'ai') ? 'model' : 'user'; geminiHistory.unshift({ role: r, content: text }); charCount += text.length;
         }
