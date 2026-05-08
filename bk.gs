@@ -2089,11 +2089,11 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
 
         if (enableAutoImage) {
             if (needsLargeImage && keyword) {
-                if (d.imageSource === 'web') {
+                if (d.imageSource !== 'ai') {
                     let result = fetchWebImage(keyword);
                     if (result) imgBlob = result;
                 }
-                if (!imgBlob && (d.imageSource !== 'web' || d.imageSource === 'ai')) {
+                if (!imgBlob) {
                     Utilities.sleep(4000); let ratio = (layoutType === 'profile_quote') ? "1:1" : "16:9";
                     let result = fetchAIImage(`Professional presentation slide asset, high quality photography, no text, ${keyword}`, apiKey, artistModel, ratio);
                     if (result && typeof result !== 'string') imgBlob = result;
