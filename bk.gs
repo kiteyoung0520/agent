@@ -311,7 +311,7 @@ const AGENT_TOOLS = [{
                     topic: { type: "STRING", description: "簡報核心主題" }, 
                     customColors: { type: "OBJECT", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。請依主題氛圍自主調配。" }, 
                     shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist' (極簡), 'rounded' (圓角), 'cyber' (銳角/科技), 'dynamic' (斜切/活力), 'layered' (疊層/深邃)。" }, 
-                    slidesData: { type: "ARRAY", items: { type: "OBJECT" }, description: "簡報 JSON 陣列。格式：[{layout: 'cover|hero_quote|standard_list|split_column|card_deck|stepper|icon_grid|timeline|big_data', title: '標題', content: '內文', points: ['重點'], left: '左欄', right: '右欄', value: '大數據值', imageKeyword: '英文生圖提示詞', gridItems: [{title:'標題', content:'內容', iconKeyword:'圖標關鍵字'}]}]。⚠️請根據內容特徵挑選最佳 layout：如果是金句用 hero_quote，如果是特點用 card_deck，如果是步驟用 stepper，如果是數據則用 big_data，如果是對比用 split_column。" } 
+                    slidesData: { type: "ARRAY", items: { type: "OBJECT" }, description: "簡報 JSON 陣列。格式：[{layout: 'cover|hero_quote|standard_list|split_column|card_deck|stepper|icon_grid|timeline|big_data', title: '標題', content: '內文', points: ['重點'], left: '左欄', right: '右欄', value: '大數據值', imageKeyword: '英文關鍵字', imageSource: 'ai' 或 'web', gridItems: [{title:'標題', content:'內容', iconKeyword:'圖標關鍵字'}]}]。⚠️請根據內容特徵挑選 layout。⚠️ imageSource：若需真實歷史人物/場景請填 'web'，若需抽象/藝術配圖請填 'ai'。" } 
                 }, 
                 required: ["topic", "customColors", "shapeStyle", "slidesData"] 
             } 
@@ -372,15 +372,17 @@ function getSuperAgentPrompt(wsName, customRules) {
 
 【視覺執行與設計鐵律 (Execution Discipline)】：
 1. **方案優先 (Discussed Plan First)**：如果在對話中與使用者討論過版面規劃（例如：第三頁用雙欄、主題色用紫色），在呼叫 'create_presentation' 時【必須】嚴格遵守。禁止使用預設主題名，請務必手動根據討論結果計算配色 JSON 填入 'customColors'。
-2. **內容保護 (Strict Content)**：對於使用者提供的教案、文案、名單、數據，必須 100% 完整保留並填入簡報中。絕對禁止自行做摘要、禁止刪減名單、禁止修改專業術語。
-3. **動態版面 (Dynamic Layout)**：捨棄呆板排版，根據內容靈活切換 'layout'。
+2. **混合圖片引擎 (Hybrid Image Engine)**：每頁簡報的 'imageKeyword' 必須填寫英文。並且根據內容性質決定 'imageSource'：
+   - 若為「真實歷史人物 (如孔子)、真實風景、歷史事件」，必須設定 \`"imageSource": "web"\`。
+   - 若為「抽象概念、科技感、幾何圖形、未來感」，必須設定 \`"imageSource": "ai"\`。
+3. **內容保護 (Strict Content)**：對於使用者提供的教案、文案、名單、數據，必須 100% 完整保留並填入簡報中。絕對禁止自行做摘要、禁止刪減名單、禁止修改專業術語。
+4. **動態版面 (Dynamic Layout)**：捨棄呆板排版，根據內容靈活切換 'layout'。
    - 金句/名言/哲理：必用 'hero_quote' (全螢幕大字)。
    - 多重點/特色：必用 'card_deck' (卡片堆疊) 或 'icon_grid'。
    - 流程/步驟/歷史：必用 'stepper' 或 'timeline'。
    - 對比/優缺點：必用 'split_column'。
    - 震撼數據：必用 'big_data'。
-4. **配色紀律**：'customColors' 的 JSON 格式必須包含：{"bg": "#...", "text": "#...", "accent": "#...", "shape": "#..."}。請依據主題氛圍（如：優雅、科技、教育）自主設計高品質配色。
-5. **生圖引導**：在 'imageKeyword' 中填入高品質的英文 Prompt，讓每張投影片都具備視覺張力。
+5. **配色紀律**：'customColors' 的 JSON 格式必須包含：{"bg": "#...", "text": "#...", "accent": "#...", "shape": "#..."}。請依據主題氛圍（如：優雅、科技、教育）自主設計高品質配色。
 
 【🗂️ 專案記憶隔離 (Workspace)】
 您目前正處於『${wsName}』的專案空間中。請針對此空間的脈絡進行連貫性對話。
@@ -2013,6 +2015,26 @@ function fetchIconImage(keyword, colorHex, bgHex) {
     try { let cleanColor = colorHex.replace('#', ''); let bgClean = bgHex.replace('#', ''); let safeKeyword = encodeURIComponent(keyword.trim().split(' ')[0] || "star"); let url = `https://img.icons8.com/ios-filled/100/${cleanColor}/${safeKeyword}.png`; let res = UrlFetchApp.fetch(url, {muteHttpExceptions: true}); if(res.getResponseCode() === 200) return res.getBlob(); let fallbackUrl = `https://ui-avatars.com/api/?name=${safeKeyword}&background=${cleanColor}&color=${bgClean}&size=128&rounded=true&font-size=0.4`; let res2 = UrlFetchApp.fetch(fallbackUrl, {muteHttpExceptions: true}); if(res2.getResponseCode() === 200) return res2.getBlob(); } catch(e) {} return null;
 }
 
+function fetchWikimediaImage(keyword) {
+    try {
+        const safeKeyword = encodeURIComponent(keyword.trim());
+        const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${safeKeyword}&gsrnamespace=6&gsrlimit=1&prop=imageinfo&iiprop=url&format=json`;
+        const res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+        if (res.getResponseCode() === 200) {
+            const data = JSON.parse(res.getContentText());
+            if (data.query && data.query.pages) {
+                const firstPageId = Object.keys(data.query.pages)[0];
+                const imageInfo = data.query.pages[firstPageId].imageinfo;
+                if (imageInfo && imageInfo.length > 0 && imageInfo[0].url) {
+                    const imgRes = UrlFetchApp.fetch(imageInfo[0].url, { muteHttpExceptions: true });
+                    if (imgRes.getResponseCode() === 200) return imgRes.getBlob();
+                }
+            }
+        }
+    } catch (e) { console.warn("Wikimedia fetch failed", e); }
+    return null;
+}
+
 function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel) {
     let mainShape = SlidesApp.ShapeType.RECTANGLE; let coverShape = SlidesApp.ShapeType.ELLIPSE; let isMinimal = (style === 'minimalist'); let alphaMod = (style === 'layered') ? 0.3 : 1;
     if (style === 'rounded') { mainShape = SlidesApp.ShapeType.ROUND_RECTANGLE; coverShape = SlidesApp.ShapeType.ROUND_RECTANGLE; } else if (style === 'cyber') { mainShape = SlidesApp.ShapeType.RIGHT_TRIANGLE; coverShape = SlidesApp.ShapeType.RIGHT_TRIANGLE; } else if (style === 'dynamic') { mainShape = SlidesApp.ShapeType.PARALLELOGRAM; coverShape = SlidesApp.ShapeType.PARALLELOGRAM; }
@@ -2027,9 +2049,15 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
 
         if (enableAutoImage) {
             if (needsLargeImage && keyword) {
-                Utilities.sleep(4000); let ratio = (layoutType === 'profile_quote') ? "1:1" : "16:9";
-                let result = fetchAIImage(`Professional presentation slide asset, high quality photography, no text, ${keyword}`, apiKey, artistModel, ratio);
-                if (result && typeof result !== 'string') imgBlob = result;
+                if (d.imageSource === 'web') {
+                    let result = fetchWikimediaImage(keyword);
+                    if (result) imgBlob = result;
+                }
+                if (!imgBlob && (d.imageSource !== 'web' || d.imageSource === 'ai')) {
+                    Utilities.sleep(4000); let ratio = (layoutType === 'profile_quote') ? "1:1" : "16:9";
+                    let result = fetchAIImage(`Professional presentation slide asset, high quality photography, no text, ${keyword}`, apiKey, artistModel, ratio);
+                    if (result && typeof result !== 'string') imgBlob = result;
+                }
             }
             if (d.titleIconKeyword && layoutType !== 'cover' && layoutType !== 'profile_quote') {
                 const iconColor = theme.colors ? theme.colors.accent : (theme.accent || "#38bdf8");
