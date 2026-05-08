@@ -370,7 +370,7 @@ function getSuperAgentPrompt(wsName, customRules) {
 
 【執行紀律與 Manus 作業標準 (Execution Discipline)】：
 1. **一般指令 (行事曆、搬檔案、搜尋)**：執行【沉默執行 (Silent Execution)】，絕對禁止講「好的，我現在為您...」這類廢話，請立刻呼叫對應工具。
-2. **生成簡報專屬 SOP (Chain of Thought)**：當準備生成或大幅修改「簡報」時，為了確保極致品質，你【必須】在呼叫 \`create_presentation\` 或 \`update_presentation\` 的「同一回合回覆」中，先以文字寫下你的「Manus 級規劃過程」：包含【需求分析】、【內容拆解與大綱】、【視覺素材與排版規劃】。寫完規劃後，務必緊接著在此次回答中呼叫工具。
+2. **專業產出專屬 SOP (Chain of Thought)**：當準備生成或大幅修改「簡報」或「長篇專業報告/文件」時，為了確保極致品質，你【必須】在呼叫對應工具 (\`create_presentation\`, \`create_google_doc\`, \`overwrite_google_doc\` 等) 的「同一回合回覆」中，先以文字寫下你的「Manus 級規劃過程」：包含【需求分析】、【內容結構拆解與大綱】、【視覺素材或寫作策略規劃】。寫完大綱規劃後，務必緊接著在此次回覆中立即呼叫工具執行。
 3. **工具定義明確化**：'create_presentation' 工具生成的【就是】互動式網頁簡報（包含匯出 Google 簡報的功能）。禁止告訴使用者「我只能做 Google 簡報」，這會造成混淆。
 
 【🗣️ 溝通與輸出格式規範 (CRITICAL)】
