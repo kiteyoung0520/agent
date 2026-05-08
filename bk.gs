@@ -1798,7 +1798,8 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
             try {
                 let sData = payload.slidesData;
                 if (typeof sData === 'string') sData = JSON.parse(sData);
-                const pid = createGeometricSlides(payload.topic, sData, payload.theme || PPT_THEMES['modern_blue'], payload.style || 'minimalist', true, apiKey, "gemini-3.1-flash-image-preview");
+                const isAutoImage = (payload.autoImage !== undefined) ? payload.autoImage : (payload.auto_image !== undefined ? payload.auto_image : true);
+                const pid = createGeometricSlides(payload.topic, sData, payload.theme || PPT_THEMES['modern_blue'], payload.style || 'minimalist', isAutoImage, apiKey, "gemini-3.1-flash-image-preview");
                 return response({status: "success", url: `https://docs.google.com/presentation/d/${pid}/edit`});
             } catch(e) {
                 return response({ status: "error", message: e.toString() });
