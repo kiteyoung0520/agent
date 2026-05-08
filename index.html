@@ -1009,7 +1009,11 @@
             const theme = data.theme || { colors: { background: "#0f172a", text: "#f8fafc", accent: "#38bdf8", shape: "#1e293b" } };
             const colors = theme.colors || { background: "#0f172a", text: "#f8fafc", accent: "#38bdf8", shape: "#1e293b" };
 
-            const renderList = (content) => content ? content.split('\\n').map(c => c.trim() ? `<li class="relative pl-6 mb-4 leading-relaxed before:content-[''] before:absolute before:left-0 before:top-2.5 before:w-1.5 before:h-1.5 before:bg-current"><span class="opacity-90">${c.replace(/^- /, '').replace(/^• /, '')}</span></li>` : '').join('') : '';
+            const renderList = (content) => {
+                if (!content) return '';
+                let arr = Array.isArray(content) ? content : String(content).split(/\\n|\n/);
+                return arr.map(c => c.trim() ? `<li class="relative pl-6 mb-4 leading-relaxed before:content-[''] before:absolute before:left-0 before:top-2.5 before:w-1.5 before:h-1.5 before:bg-current"><span class="opacity-90">${c.replace(/^- /, '').replace(/^• /, '')}</span></li>` : '').join('');
+            };
 
             const slidesHtml = data.slides.map((slide, index) => {
                 let layoutHtml = '';
