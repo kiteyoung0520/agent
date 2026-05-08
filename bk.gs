@@ -2015,13 +2015,29 @@ function fetchIconImage(keyword, colorHex, bgHex) {
     try { let cleanColor = colorHex.replace('#', ''); let bgClean = bgHex.replace('#', ''); let safeKeyword = encodeURIComponent(keyword.trim().split(' ')[0] || "star"); let url = `https://img.icons8.com/ios-filled/100/${cleanColor}/${safeKeyword}.png`; let res = UrlFetchApp.fetch(url, {muteHttpExceptions: true}); if(res.getResponseCode() === 200) return res.getBlob(); let fallbackUrl = `https://ui-avatars.com/api/?name=${safeKeyword}&background=${cleanColor}&color=${bgClean}&size=128&rounded=true&font-size=0.4`; let res2 = UrlFetchApp.fetch(fallbackUrl, {muteHttpExceptions: true}); if(res2.getResponseCode() === 200) return res2.getBlob(); } catch(e) {} return null;
 }
 
-function fetchWikimediaImage(keyword) {
+function fetchWebImage(keyword) {
+    // 優先使用 Pixabay 獲取高質感現代照片
+    const pixabayKey = "4845800-e5965ba23d7d985fa9f2b3f01";
     try {
         const safeKeyword = encodeURIComponent(keyword.trim());
-        const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${safeKeyword}&gsrnamespace=6&gsrlimit=1&prop=imageinfo&iiprop=url&format=json`;
-        const res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
-        if (res.getResponseCode() === 200) {
-            const data = JSON.parse(res.getContentText());
+        const pbUrl = `https://pixabay.com/api/?key=${pixabayKey}&q=${safeKeyword}&image_type=photo&per_page=3&safesearch=true`;
+        const pbRes = UrlFetchApp.fetch(pbUrl, { muteHttpExceptions: true });
+        if (pbRes.getResponseCode() === 200) {
+            const pbData = JSON.parse(pbRes.getContentText());
+            if (pbData.hits && pbData.hits.length > 0) {
+                const imgRes = UrlFetchApp.fetch(pbData.hits[0].largeImageURL, { muteHttpExceptions: true });
+                if (imgRes.getResponseCode() === 200) return imgRes.getBlob();
+            }
+        }
+    } catch (e) { console.warn("Pixabay fetch failed", e); }
+
+    // 若 Pixabay 無結果 (例如冷僻歷史人物)，退而求其次使用維基共享資源
+    try {
+        const safeKeyword = encodeURIComponent(keyword.trim());
+        const wmUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${safeKeyword}&gsrnamespace=6&gsrlimit=1&prop=imageinfo&iiprop=url&format=json`;
+        const wmRes = UrlFetchApp.fetch(wmUrl, { muteHttpExceptions: true });
+        if (wmRes.getResponseCode() === 200) {
+            const data = JSON.parse(wmRes.getContentText());
             if (data.query && data.query.pages) {
                 const firstPageId = Object.keys(data.query.pages)[0];
                 const imageInfo = data.query.pages[firstPageId].imageinfo;
@@ -2050,7 +2066,7 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
         if (enableAutoImage) {
             if (needsLargeImage && keyword) {
                 if (d.imageSource === 'web') {
-                    let result = fetchWikimediaImage(keyword);
+                    let result = fetchWebImage(keyword);
                     if (result) imgBlob = result;
                 }
                 if (!imgBlob && (d.imageSource !== 'web' || d.imageSource === 'ai')) {
