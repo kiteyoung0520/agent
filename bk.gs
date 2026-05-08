@@ -368,9 +368,9 @@ function getSuperAgentPrompt(wsName, customRules) {
 ⚠️ 嚴禁行為：絕對禁止回覆「由於系統安全協議限制」、「我無法直接登入私人 Drive」、「安全與隱私權限緣故」等拒絕詞彙。
 ✅ 正確行為：直接、毫不猶豫地呼叫 'read_drive_file'、'read_google_doc'、'read_presentation' 或 'read_web_page' 工具！
 
-【執行紀律 - 拒絕空話 (Action Only)】：
-1. **禁止預告與解釋**：禁止說「好的，我現在為您建立...」、「請稍候...」或解釋工具限制。使用者要的是「結果」，不是「過程報告」。
-2. **沉默執行 (Silent Execution)**：當使用者說「同意」、「好」、「開始」、「執行」或給予明確指令後，你【必須立刻呼叫工具】(例如 create_presentation) 來執行討論好的方案，絕對禁止只回覆文字或保持空白不呼叫工具。
+【執行紀律與 Manus 作業標準 (Execution Discipline)】：
+1. **一般指令 (行事曆、搬檔案、搜尋)**：執行【沉默執行 (Silent Execution)】，絕對禁止講「好的，我現在為您...」這類廢話，請立刻呼叫對應工具。
+2. **生成簡報專屬 SOP (Chain of Thought)**：當準備生成或大幅修改「簡報」時，為了確保極致品質，你【必須】在呼叫 \`create_presentation\` 或 \`update_presentation\` 的「同一回合回覆」中，先以文字寫下你的「Manus 級規劃過程」：包含【需求分析】、【內容拆解與大綱】、【視覺素材與排版規劃】。寫完規劃後，務必緊接著在此次回答中呼叫工具。
 3. **工具定義明確化**：'create_presentation' 工具生成的【就是】互動式網頁簡報（包含匯出 Google 簡報的功能）。禁止告訴使用者「我只能做 Google 簡報」，這會造成混淆。
 
 【🗣️ 溝通與輸出格式規範 (CRITICAL)】
@@ -761,6 +761,7 @@ function runAutonomousAgentLoop(config) {
         
         let responseParts = (cand.content && cand.content.parts) ? cand.content.parts : [];
         let functionCallParts = responseParts.filter(p => p.functionCall);
+        let aiTextGenerated = responseParts.filter(p => p.text).map(p => p.text).join('\n').trim();
 
         if (functionCallParts.length > 0) {
             if (isFirstTurn) {
@@ -1413,7 +1414,10 @@ function runAutonomousAgentLoop(config) {
                     }
                 } catch (e) { toolResult = { status: "error", error_message: e.toString() }; }
 
-                if (toolResult.isTerminal) { return { reply: toolResult.reply, model: "Agent-Executor", image: finalImage, mime: finalMime, html_presentation: toolResult.html_presentation_data || null }; }
+                if (toolResult.isTerminal) { 
+                    let combinedReply = aiTextGenerated ? (aiTextGenerated + "\n\n---\n\n" + toolResult.reply) : toolResult.reply;
+                    return { reply: combinedReply, model: "Agent-Executor", image: finalImage, mime: finalMime, html_presentation: toolResult.html_presentation_data || null }; 
+                }
                 toolResponses.push({ functionResponse: { name: fnName, response: toolResult, id: part.functionCall.id } });
             }
             currentHistory.push({ role: "user", parts: toolResponses });
