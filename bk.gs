@@ -2011,8 +2011,32 @@ function createDocFromContent(title, content) {
     return { url: doc.getUrl(), id: doc.getId() };
 }
 
-function fetchIconImage(keyword, colorHex, bgHex) {
-    try { let cleanColor = colorHex.replace('#', ''); let bgClean = bgHex.replace('#', ''); let safeKeyword = encodeURIComponent(keyword.trim().split(' ')[0] || "star"); let url = `https://img.icons8.com/ios-filled/100/${cleanColor}/${safeKeyword}.png`; let res = UrlFetchApp.fetch(url, {muteHttpExceptions: true}); if(res.getResponseCode() === 200) return res.getBlob(); let fallbackUrl = `https://ui-avatars.com/api/?name=${safeKeyword}&background=${cleanColor}&color=${bgClean}&size=128&rounded=true&font-size=0.4`; let res2 = UrlFetchApp.fetch(fallbackUrl, {muteHttpExceptions: true}); if(res2.getResponseCode() === 200) return res2.getBlob(); } catch(e) {} return null;
+function addMaterialIcon(slide, iconName, x, y, size, colorHex) {
+    if (!iconName) return;
+    try {
+        let safeName = iconName.trim().toLowerCase().replace(/-/g, '_').split(' ')[0];
+        const map = {
+            "idea": "lightbulb", "target": "ads_click", "goal": "flag", "time": "schedule", "people": "groups", "user": "person",
+            "check": "check_circle", "success": "task_alt", "warning": "warning", "error": "error", "data": "bar_chart", "chart": "show_chart",
+            "money": "attach_money", "document": "description", "file": "insert_drive_file", "image": "image", "video": "movie",
+            "book": "menu_book", "brain": "psychology", "heart": "favorite", "location": "location_on", "world": "public",
+            "key": "vpn_key", "lock": "lock", "unlock": "lock_open", "shield": "security", "cloud": "cloud", "mail": "mail",
+            "phone": "phone", "chat": "chat", "message": "message", "link": "link", "share": "share", "download": "download",
+            "presentation": "co_present", "team": "group_work", "handshake": "handshake", "award": "emoji_events", "star": "star"
+        };
+        safeName = map[safeName] || safeName;
+        
+        let shape = slide.insertShape(SlidesApp.ShapeType.TEXT_BOX, x, y, size + 10, size + 10);
+        shape.getBorder().setTransparent();
+        shape.getFill().setTransparent();
+        shape.setContentAlignment(SlidesApp.ContentAlignment.MIDDLE);
+        let textRange = shape.getText();
+        textRange.setText(safeName);
+        textRange.getTextStyle().setFontFamily("Material Icons");
+        textRange.getTextStyle().setFontSize(size);
+        textRange.getTextStyle().setForegroundColor(colorHex);
+        textRange.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER);
+    } catch(e) {}
 }
 
 function fetchWebImage(keyword) {
@@ -2060,7 +2084,7 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
         const slideColors = theme.colors || theme; // 相容性處理
         slide.getBackground().setSolidFill(slideColors.background || slideColors.bg || "#ffffff");
         let layoutType = (i === 0) ? 'cover' : (d.layout || 'standard_list');
-        let imgBlob = null; let titleIconBlob = null; let keyword = d.imageKeyword || d.title || "presentation";
+        let imgBlob = null; let keyword = d.imageKeyword || d.title || "presentation";
         const needsLargeImage = ['cover', 'image_right', 'image_left', 'image_top', 'image_bottom', 'profile_quote', 'split_column', 'standard_list'].includes(layoutType);
 
         if (enableAutoImage) {
@@ -2074,11 +2098,6 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
                     let result = fetchAIImage(`Professional presentation slide asset, high quality photography, no text, ${keyword}`, apiKey, artistModel, ratio);
                     if (result && typeof result !== 'string') imgBlob = result;
                 }
-            }
-            if (d.titleIconKeyword && layoutType !== 'cover' && layoutType !== 'profile_quote') {
-                const iconColor = theme.colors ? theme.colors.accent : (theme.accent || "#38bdf8");
-                const iconBg = theme.colors ? theme.colors.background : (theme.bg || "#ffffff");
-                titleIconBlob = fetchIconImage(d.titleIconKeyword, iconColor, iconBg);
             }
         }
         
@@ -2127,7 +2146,7 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
             case 'split_column':
             case 'image_left':
             case 'image_right':
-                if (titleIconBlob) { try { slide.insertImage(titleIconBlob, 50, 45, 30, 30); } catch(e) {} }
+                addMaterialIcon(slide, d.titleIconKeyword, 45, 40, 24, c_accent);
                 if (imgBlob) {
                     try {
                         if (layoutType === 'image_left') {
@@ -2163,7 +2182,7 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
             case 'card_deck':
             case 'icon_grid':
             case 'grid':
-                if (titleIconBlob) { try { slide.insertImage(titleIconBlob, 50, 35, 35, 35); } catch(e) {} }
+                addMaterialIcon(slide, d.titleIconKeyword, 45, 30, 24, c_accent);
                 addText(slide, eyebrow, 50, 30, 620, 30, c_accent, 14, true);
                 addText(slide, titleText || "核心要素", 50, 60, 620, 40, c_text, 28, true);
                 if (d.gridItems && Array.isArray(d.gridItems) && d.gridItems.length > 0) {
@@ -2173,8 +2192,9 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
                         if (idx >= 4) return;
                         let x = 50 + idx * (tWidth + spacing);
                         drawShape(slide, SlidesApp.ShapeType.RECTANGLE, x, 130, tWidth, 4, c_accent, 1);
-                        addText(slide, item.title, x, 150, tWidth, 30, c_accent, 16, true);
-                        addText(slide, item.content, x, 190, tWidth, 150, c_text, 12, false);
+                        addMaterialIcon(slide, item.iconKeyword || 'check_circle', x, 140, 20, c_accent);
+                        addText(slide, item.title, x + 30, 140, tWidth - 30, 30, c_accent, 16, true);
+                        addText(slide, item.content, x, 180, tWidth, 150, c_text, 12, false);
                     });
                 }
                 break;
@@ -2186,7 +2206,7 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
                 break;
             case 'standard_list':
             default:
-                if (titleIconBlob) { try { slide.insertImage(titleIconBlob, 50, 55, 35, 35); } catch(e) {} }
+                addMaterialIcon(slide, d.titleIconKeyword, 45, 45, 24, c_accent);
                 if (imgBlob) {
                     try {
                         slide.insertImage(imgBlob, 450, 60, 250, 300);
