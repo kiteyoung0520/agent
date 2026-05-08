@@ -1036,13 +1036,16 @@
                     case 'cover':
                     case 'title':
                         layoutHtml = `
-                            <div class="flex flex-col items-center justify-center h-full text-center max-w-5xl mx-auto px-8 relative">
+                            <div class="absolute inset-0 z-0 opacity-20 transition-opacity group-hover:opacity-30">
+                                <img src="https://source.unsplash.com/featured/?${slide.imageKeyword || slide.title || 'abstract'}" class="w-full h-full object-cover" />
+                            </div>
+                            <div class="flex flex-col items-center justify-center h-full text-center max-w-5xl mx-auto px-8 relative z-10">
                                 <div class="w-16 h-16 mb-12 flex items-center justify-center rounded border-[3px] transform rotate-6 opacity-80" style="border-color: ${colors.accent}; color: ${colors.accent}">
                                     <span class="text-2xl font-black -rotate-6">${eyebrowText.replace(/[【】]/g, '').substring(0,2) || '簡報'}</span>
                                 </div>
                                 ${titleHtml}
                                 <div class="text-xl opacity-60 mt-4 tracking-widest outline-none hover:bg-black/5 p-2 rounded" contenteditable="true" onblur="updateSlideData(${index}, 'subtitle', this.innerText)">${slide.subtitle || slide.content || ''}</div>
-                                <div class="absolute bottom-12 text-xs opacity-30 tracking-widest">Agent Generated</div>
+                                <div class="absolute bottom-12 text-xs opacity-30 tracking-widest uppercase">Agent Generated Editorial</div>
                             </div>`;
                         break;
                     case 'hero_quote':
@@ -1085,7 +1088,10 @@
                                 <div class="grid grid-cols-12 gap-16 h-full overflow-y-auto pb-24 items-start mt-4">
                                     <div class="col-span-12 md:col-span-5 flex flex-col">
                                         ${titleHtml}
-                                        <div class="text-lg opacity-70 leading-relaxed outline-none hover:bg-black/5 p-4 rounded mt-4" contenteditable="true" onblur="updateSlideData(${index}, 'left', this.innerHTML)">
+                                        <div class="aspect-video w-full rounded-lg overflow-hidden mb-6 shadow-xl transform -rotate-1">
+                                            <img src="https://source.unsplash.com/featured/?${slide.imageKeyword || slide.title || 'philosophy'}" class="w-full h-full object-cover" />
+                                        </div>
+                                        <div class="text-lg opacity-70 leading-relaxed outline-none hover:bg-black/5 p-4 rounded" contenteditable="true" onblur="updateSlideData(${index}, 'left', this.innerHTML)">
                                             ${slide.left || slide.content || ''}
                                         </div>
                                     </div>
@@ -1140,14 +1146,23 @@
                         layoutHtml = `
                             <div class="flex flex-col h-full max-w-6xl mx-auto w-full pt-16 px-12">
                                 ${eyebrowHtml}
-                                <div class="mb-10 text-left">
-                                    ${titleHtml}
-                                    ${subtitleHtml}
-                                </div>
-                                <div class="text-xl font-light text-left outline-none hover:bg-black/5 p-6 rounded transition-colors overflow-y-auto pb-24" style="color: ${colors.accent}" contenteditable="true" onblur="updateSlideData(${index}, 'content', this.innerHTML)">
-                                    <ul class="space-y-6">
-                                        ${slide.points ? renderList(slide.points.join('\\n')) : renderList(slide.content)}
-                                    </ul>
+                                <div class="grid grid-cols-12 gap-12 h-full overflow-y-auto pb-24 items-start">
+                                    <div class="col-span-12 md:col-span-8">
+                                        <div class="mb-10 text-left">
+                                            ${titleHtml}
+                                            ${subtitleHtml}
+                                        </div>
+                                        <div class="text-xl font-light text-left outline-none hover:bg-black/5 p-6 rounded transition-colors" style="color: ${colors.accent}" contenteditable="true" onblur="updateSlideData(${index}, 'content', this.innerHTML)">
+                                            <ul class="space-y-6">
+                                                ${slide.points ? renderList(slide.points.join('\\n')) : renderList(slide.content)}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="col-span-12 md:col-span-4 pt-20">
+                                        <div class="aspect-[3/4] w-full rounded-2xl overflow-hidden shadow-2xl transform rotate-2">
+                                            <img src="https://source.unsplash.com/featured/?${slide.imageKeyword || slide.title || 'wisdom'}" class="w-full h-full object-cover" />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>`;
                         break;

@@ -1999,9 +1999,9 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
         const slide = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK); 
         const slideColors = theme.colors || theme; // 相容性處理
         slide.getBackground().setSolidFill(slideColors.background || slideColors.bg || "#ffffff");
-        let layoutType = (deck.getSlides().length === 1 && i === 0) ? 'cover' : (d.layout || 'standard_list');
+        let layoutType = (i === 0) ? 'cover' : (d.layout || 'standard_list');
         let imgBlob = null; let titleIconBlob = null; let keyword = d.imageKeyword || d.title || "presentation";
-        const needsLargeImage = ['cover', 'image_right', 'image_left', 'image_top', 'image_bottom', 'profile_quote'].includes(layoutType);
+        const needsLargeImage = ['cover', 'image_right', 'image_left', 'image_top', 'image_bottom', 'profile_quote', 'split_column', 'standard_list'].includes(layoutType);
 
         if (enableAutoImage) {
             if (needsLargeImage && keyword) {
@@ -2061,14 +2061,37 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
             case 'split_column':
             case 'image_left':
             case 'image_right':
-                addText(slide, eyebrow, 50, 40, 300, 30, c_accent, 14, true);
-                addText(slide, titleText || "深度分析", 50, 80, 250, 120, c_text, 36, true);
-                addText(slide, d.left || slide.content || "左側說明", 50, 220, 260, 150, c_text, 14, false);
-                
-                drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 340, 60, 2, 300, c_accent, 0.3);
-                
-                let rightContent = d.right || (d.points && d.points.length > 0 ? d.points.map(p => "■  " + p).join('\\n\\n') : "右側內容");
-                addText(slide, rightContent, 370, 70, 300, 300, c_accent, 16, false);
+                if (imgBlob) {
+                    try {
+                        if (layoutType === 'image_left') {
+                            slide.insertImage(imgBlob, 0, 0, 320, 405);
+                            addText(slide, eyebrow, 350, 40, 320, 30, c_accent, 14, true);
+                            addText(slide, titleText, 350, 80, 320, 100, c_text, 32, true);
+                            addText(slide, safeContent, 350, 180, 320, 180, c_text, 14, false);
+                        } else if (layoutType === 'image_right') {
+                            slide.insertImage(imgBlob, 400, 0, 320, 405);
+                            addText(slide, eyebrow, 50, 40, 320, 30, c_accent, 14, true);
+                            addText(slide, titleText, 50, 80, 320, 100, c_text, 32, true);
+                            addText(slide, safeContent, 50, 180, 320, 180, c_text, 14, false);
+                        } else { // split_column with background image
+                            slide.insertImage(imgBlob, 0, 0, 720, 405);
+                            drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 0, 0, 720, 405, c_bg, 0.85);
+                            addText(slide, eyebrow, 50, 40, 300, 30, c_accent, 14, true);
+                            addText(slide, titleText || "深度分析", 50, 80, 250, 120, c_text, 36, true);
+                            addText(slide, d.left || d.content || "左側說明", 50, 220, 260, 150, c_text, 14, false);
+                            drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 340, 60, 2, 300, c_accent, 0.3);
+                            let rContent = d.right || (d.points && d.points.length > 0 ? d.points.map(p => "■  " + p).join('\\n\\n') : "右側內容");
+                            addText(slide, rContent, 370, 70, 300, 300, c_accent, 16, false);
+                        }
+                    } catch(e) {}
+                } else {
+                    addText(slide, eyebrow, 50, 40, 300, 30, c_accent, 14, true);
+                    addText(slide, titleText || "深度分析", 50, 80, 250, 120, c_text, 36, true);
+                    addText(slide, d.left || d.content || "左側說明", 50, 220, 260, 150, c_text, 14, false);
+                    drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 340, 60, 2, 300, c_accent, 0.3);
+                    let rc = d.right || (d.points && d.points.length > 0 ? d.points.map(p => "■  " + p).join('\\n\\n') : "右側內容");
+                    addText(slide, rc, 370, 70, 300, 300, c_accent, 16, false);
+                }
                 break;
             case 'card_deck':
             case 'icon_grid':
@@ -2095,17 +2118,22 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
                 break;
             case 'standard_list':
             default:
-                addText(slide, eyebrow, 50, 40, 620, 30, c_accent, 14, true);
-                addText(slide, titleText || "核心摘要", 50, 70, 620, 40, c_text, 32, true);
-                drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 50, 120, 60, 4, c_accent, 1);
-                
-                let listContent = "";
-                if (d.points && Array.isArray(d.points) && d.points.length > 0) {
-                    listContent = d.points.map(p => "■  " + p).join('\\n\\n');
+                if (imgBlob) {
+                    try {
+                        slide.insertImage(imgBlob, 450, 60, 250, 300);
+                        addText(slide, eyebrow, 50, 40, 380, 30, c_accent, 14, true);
+                        addText(slide, titleText || "核心摘要", 50, 70, 380, 40, c_text, 32, true);
+                        drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 50, 120, 60, 4, c_accent, 1);
+                        let lc = (d.points && Array.isArray(d.points) && d.points.length > 0) ? d.points.map(p => "■  " + p).join('\\n\\n') : (safeContent || "【系統提示：AI 未生成內文】");
+                        addText(slide, lc, 50, 150, 380, 220, c_text, 14, false);
+                    } catch(e) {}
                 } else {
-                    listContent = safeContent || "【系統提示：AI 未生成內文】";
+                    addText(slide, eyebrow, 50, 40, 620, 30, c_accent, 14, true);
+                    addText(slide, titleText || "核心摘要", 50, 70, 620, 40, c_text, 32, true);
+                    drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 50, 120, 60, 4, c_accent, 1);
+                    let listContent = (d.points && Array.isArray(d.points) && d.points.length > 0) ? d.points.map(p => "■  " + p).join('\\n\\n') : (safeContent || "【系統提示：AI 未生成內文】");
+                    addText(slide, listContent, 50, 150, 600, 220, c_text, 16, false);
                 }
-                addText(slide, listContent, 50, 150, 600, 220, c_text, 16, false);
                 break;
         }
     });
