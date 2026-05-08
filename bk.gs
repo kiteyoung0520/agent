@@ -554,15 +554,15 @@ function doPost(e) {
             }
         }
 
-        let finalTools;
+        let finalTools = JSON.parse(JSON.stringify(AGENT_TOOLS));
+        
         if (draw_mode) {
             finalTools = [{ functionDeclarations: AGENT_TOOLS[0].functionDeclarations.filter(t => t.name === "generate_art") }];
             finalSystemInstruction += `\n\n【🎨 強制繪圖模式 (Draw Mode)】\n使用者已開啟「純繪圖模式」。請將使用者的文字轉換為精確的英文生圖 Prompt，並『強制且唯一』呼叫 \`generate_art\` 工具。不要講多餘的廢話，直接畫圖！`;
         } else if (web_search) {
-            finalTools = [{ google_search: {} }];
+            // 修正：聯網模式應與現有工具併行，而非替換
+            finalTools.push({ googleSearchRetrieval: {} });
             finalSystemInstruction += `\n\n【🌍 強制聯網模式】請優先使用 Google Search 工具來回答，提供最新資訊。`;
-        } else {
-            finalTools = JSON.parse(JSON.stringify(AGENT_TOOLS));
         }
 
         const agentResult = runAutonomousAgentLoop({
