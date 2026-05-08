@@ -2166,7 +2166,7 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
                             addText(slide, titleText || "深度分析", 50, 80, 250, 120, c_text, 36, true);
                             addText(slide, d.left || d.content || "左側說明", 50, 220, 260, 150, c_text, 14, false);
                             drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 340, 60, 2, 300, c_accent, 0.3);
-                            let rContent = d.right || (d.points && d.points.length > 0 ? d.points.map(p => "■  " + p).join('\\n\\n') : "右側內容");
+                            let rContent = d.right || (d.points && d.points.length > 0 ? d.points.map(p => "■  " + p).join('\n\n') : "右側內容");
                             addText(slide, rContent, 370, 70, 300, 300, c_accent, 16, false);
                         }
                     } catch(e) {}
@@ -2175,7 +2175,7 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
                     addText(slide, titleText || "深度分析", 50, 80, 250, 120, c_text, 36, true);
                     addText(slide, d.left || d.content || "左側說明", 50, 220, 260, 150, c_text, 14, false);
                     drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 340, 60, 2, 300, c_accent, 0.3);
-                    let rc = d.right || (d.points && d.points.length > 0 ? d.points.map(p => "■  " + p).join('\\n\\n') : "右側內容");
+                    let rc = d.right || (d.points && d.points.length > 0 ? d.points.map(p => "■  " + p).join('\n\n') : "右側內容");
                     addText(slide, rc, 370, 70, 300, 300, c_accent, 16, false);
                 }
                 break;
@@ -2213,14 +2213,14 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
                         addText(slide, eyebrow, 50, 40, 380, 30, c_accent, 14, true);
                         addText(slide, titleText || "核心摘要", 50, 70, 380, 40, c_text, 32, true);
                         drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 50, 120, 60, 4, c_accent, 1);
-                        let lc = (d.points && Array.isArray(d.points) && d.points.length > 0) ? d.points.map(p => "■  " + p).join('\\n\\n') : (safeContent || "【系統提示：AI 未生成內文】");
+                        let lc = (d.points && Array.isArray(d.points) && d.points.length > 0) ? d.points.map(p => "■  " + p).join('\n\n') : (safeContent || "【系統提示：AI 未生成內文】");
                         addText(slide, lc, 50, 150, 380, 220, c_text, 14, false);
                     } catch(e) {}
                 } else {
                     addText(slide, eyebrow, 50, 40, 620, 30, c_accent, 14, true);
                     addText(slide, titleText || "核心摘要", 50, 70, 620, 40, c_text, 32, true);
                     drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 50, 120, 60, 4, c_accent, 1);
-                    let listContent = (d.points && Array.isArray(d.points) && d.points.length > 0) ? d.points.map(p => "■  " + p).join('\\n\\n') : (safeContent || "【系統提示：AI 未生成內文】");
+                    let listContent = (d.points && Array.isArray(d.points) && d.points.length > 0) ? d.points.map(p => "■  " + p).join('\n\n') : (safeContent || "【系統提示：AI 未生成內文】");
                     addText(slide, listContent, 50, 150, 600, 220, c_text, 16, false);
                 }
                 break;
@@ -2257,7 +2257,7 @@ function updateGeometricSlides(presentationId, action, slidesData, theme, style,
 }
 
 function drawShape(s, t, x, y, w, h, c, a) { const sh = s.insertShape(t, x, y, w, h); sh.getBorder().setTransparent(); sh.getFill().setSolidFill(c, a); return sh; }
-function addText(s, t, x, y, w, h, c, sz, b, align) { if(!t)return; const box = s.insertShape(SlidesApp.ShapeType.TEXT_BOX, x, y, w, h); const txt = box.getText(); txt.setText(t).getTextStyle().setFontSize(sz).setForegroundColor(c).setBold(b); if(align) txt.getParagraphStyle().setParagraphAlignment(align); return box; }
+function addText(s, t, x, y, w, h, c, sz, b, align) { if(!t)return; const box = s.insertShape(SlidesApp.ShapeType.TEXT_BOX, x, y, w, h); const txt = box.getText(); let safeT = String(t).replace(/\\n/g, '\n'); txt.setText(safeT).getTextStyle().setFontSize(sz).setForegroundColor(c).setBold(b); if(align) txt.getParagraphStyle().setParagraphAlignment(align); return box; }
 
 function forceAuthSetup() {
     // 不使用 try-catch，強制觸發 Google 的靜態權限掃描與授權視窗
