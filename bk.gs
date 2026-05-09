@@ -528,7 +528,7 @@ function doPost(e) {
             finalSystemInstruction += `\n\n【💎 當前切換的 Gem 角色設定】\n使用者目前已切換為特定的 Gem 角色。請你完全沉浸並遵守以下角色設定與指示：\n<gem_role>\n${actualGemPrompt}\n</gem_role>`;
         }
 
-        let fallbackModel = "gemini-2.5-flash";
+        let fallbackModel = "gemini-1.5-flash";
         try {
             const modelSheet = ss.getSheetByName("Models");
             if (modelSheet && modelSheet.getLastRow() > 1) {
@@ -561,7 +561,7 @@ function doPost(e) {
             finalSystemInstruction += `\n\n【🎨 強制繪圖模式 (Draw Mode)】\n使用者已開啟「純繪圖模式」。請將使用者的文字轉換為精確的英文生圖 Prompt，並『強制且唯一』呼叫 \`generate_art\` 工具。不要講多餘的廢話，直接畫圖！`;
         } else if (web_search) {
             // 修正：聯網模式應與現有工具併行，而非替換
-            finalTools.push({ google_search: {} });
+            finalTools.push({ googleSearch: {} });
             finalSystemInstruction += `\n\n【🌍 強制聯網模式】請優先使用 Google Search 工具來回答，提供最新資訊。`;
         }
 
@@ -2284,14 +2284,17 @@ function addText(s, t, x, y, w, h, c, sz, b, align) { if(!t)return; const box = 
  */
 function addMaterialIcon(slide, keyword, x, y, size, color) {
     const iconCode = mapKeywordToIcon(keyword);
-    const box = slide.insertShape(SlidesApp.ShapeType.TEXT_BOX, x, y, size * 1.5, size * 1.5);
+    // 放大容器避免圖標被切斷，並啟用垂直居中
+    const box = slide.insertShape(SlidesApp.ShapeType.TEXT_BOX, x, y, size * 2, size * 2);
     const txt = box.getText();
     txt.setText(iconCode);
     const style = txt.getTextStyle();
     style.setFontSize(size);
     style.setForegroundColor(color);
-    style.setFontFamily("Material Icons"); // 重要：套用官方向量字型
+    style.setFontFamily("Material Icons"); 
     box.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER);
+    box.setContentAlignment(SlidesApp.ContentAlignment.MIDDLE);
+    return box;
     return box;
 }
 
