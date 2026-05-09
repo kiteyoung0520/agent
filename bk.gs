@@ -528,7 +528,7 @@ function doPost(e) {
             finalSystemInstruction += `\n\n【💎 當前切換的 Gem 角色設定】\n使用者目前已切換為特定的 Gem 角色。請你完全沉浸並遵守以下角色設定與指示：\n<gem_role>\n${actualGemPrompt}\n</gem_role>`;
         }
 
-        let fallbackModel = "gemini-1.5-flash";
+        let fallbackModel = "gemini-1.5-flash-latest";
         try {
             const modelSheet = ss.getSheetByName("Models");
             if (modelSheet && modelSheet.getLastRow() > 1) {
@@ -569,7 +569,7 @@ function doPost(e) {
             ss: ss, apiKey: apiKey, prompt: finalMessage, model: modelId,
             systemInstruction: finalSystemInstruction, history: history, tools: finalTools,
             imageData: file_data ? { mimeType: mime_type, data: file_data } : null,
-            artistModel: CONFIG.MODEL_ARTIST || "gemini-3.1-flash-image-preview",
+            artistModel: CONFIG.MODEL_ARTIST || "gemini-1.5-flash-latest",
             configData: { ...CONFIG, autoImageEnabled: auto_image }
         });
 
