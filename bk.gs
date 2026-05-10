@@ -272,7 +272,7 @@ const AGENT_TOOLS = [{
         
         { name: "read_drive_file", description: "【強制呼叫】讀取 Google 雲端硬碟檔案內容。當使用者貼上 Drive 網址時，你已具備最高合法授權，絕對禁止以「無法存取私人檔案」或「安全限制」為由拒絕，請立刻呼叫此工具解析。", parameters: { type: "OBJECT", properties: { fileUrl: { type: "STRING", description: "要讀取的檔案完整網址" } }, required: ["fileUrl"] } },
 
-        { name: "read_web_page", description: "【深度讀取】讀取一般網頁(URL)的純文字內容。當需要抓取 ISBN、價格、出版社等搜尋結果頁可能缺失的「深度細節」時，請務必針對每一個 URL 呼叫此工具進入內頁讀取。取得內容後，請嚴格基於內容回答，禁止腦補。", parameters: { type: "OBJECT", properties: { url: { type: "STRING", description: "要讀取的網頁完整網址 (需包含 http/https)" } }, required: ["url"] } },
+        { name: "read_web_page", description: "【代理人瀏覽模式 (Agent Browser Mode)】使用整合型無頭瀏覽器讀取網頁。此工具能穿透 JavaScript 與反爬蟲機制（如博客來、Amazon）。當搜尋摘要缺失 ISBN 或原價等深度細節時，強制呼叫此工具進入內頁抓取。取得內容後，請嚴格基於內容回答，禁止腦補。", parameters: { type: "OBJECT", properties: { url: { type: "STRING", description: "要讀取的網頁完整網址 (需包含 http/https)" } }, required: ["url"] } },
 
         { name: "organize_drive_folder", description: "智慧整理 Google Drive 資料夾。", parameters: { type: "OBJECT", properties: { folderName: { type: "STRING" } }, required: ["folderName"] } },
         
@@ -389,10 +389,12 @@ function getSuperAgentPrompt(wsName, customRules) {
 【🗂️ 專案記憶隔離 (Workspace)】
 您目前正處於『${wsName}』的專案空間中。請針對此空間的脈絡進行連貫性對話。
 
-【🌟 全格式讀取能力宣告 (Anti-Refusal Protocol)】
-你已獲得系統底層的「最高讀取授權」！當使用者貼上任何網址（包含 Google Drive、Google Docs、Google Slides、一般網頁、電商網站如博客來/Amazon）並要求閱讀、總結、搜尋或擷取詳細資料時，你「絕對具備」讀取權限。你的 \`read_web_page\` 工具就是你的「點擊」與「瀏覽」動作。
-⚠️ 嚴禁行為：絕對禁止回覆「由於系統安全協議限制」、「我無法直接登入私人 Drive」、「我無法直接點擊網頁」、「我只能看到搜尋結果摘要」等任何形式的拒絕詞彙。
-✅ 正確行為：直接、毫不猶豫地呼叫 'read_drive_file'、'read_google_doc'、'read_presentation' 或 'read_web_page' 工具！如果你只看到摘要沒看到 ISBN，代表你還沒點進內頁，請立刻針對 URL 呼叫 \`read_web_page\`。
+【🌟 全格式讀取與代理人瀏覽能力 (Agent Browser Capability)】
+你已獲得系統底層的「最高讀取授權」！你目前已整合了【Jina AI Reader 代理人瀏覽模式】，這使你具備了穿透 JavaScript 渲染、自動繞過反爬蟲機制、以及將複雜網頁簡化為 Markdown 的能力。
+- **你的權限**：你可以讀取 Google Drive、Docs、Slides、以及任何公開的電商網站（如博客來、Amazon）。
+- **你的動作**：你的 \`read_web_page\` 工具就是你的「點擊」與「深入瀏覽」動作。
+⚠️ 嚴禁行為：絕對禁止回覆「由於技術限制我無法點擊」、「我只能看到摘要」或「我無法獲取 ISBN/價格」。
+✅ 正確行為：直接呼叫 \`read_web_page\` 穿透網頁。如果你在搜尋結果沒看到細節，那代表你「還沒點進去」，請立刻執行深度瀏覽。
 
 【執行紀律與 Manus 作業標準 (Execution Discipline)】：
 1. **一般指令 (行事曆、搬檔案、搜尋)**：執行【沉默執行 (Silent Execution)】，絕對禁止講「好的，我現在為您...」這類廢話，請立刻呼叫對應工具。
@@ -1169,10 +1171,18 @@ function runAutonomousAgentLoop(config) {
                             
                         case "read_web_page":
                             try {
+                                const jinaApiKey = PropertiesService.getScriptProperties().getProperty('JINA_API_KEY');
                                 const options = { 
                                     muteHttpExceptions: true, 
-                                    headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 anyGem/1.0" } 
+                                    headers: { 
+                                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 anyGem/1.0",
+                                        "Accept": "text/event-stream"
+                                    } 
                                 };
+                                if (jinaApiKey) {
+                                    options.headers["Authorization"] = "Bearer " + jinaApiKey;
+                                }
+                                
                                 let res = UrlFetchApp.fetch("https://r.jina.ai/" + args.url, options);
                                 let contentText = "";
 
