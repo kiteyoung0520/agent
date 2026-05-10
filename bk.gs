@@ -330,6 +330,19 @@ const AGENT_TOOLS = [{
                 }, 
                 required: ["presentationUrl", "action", "slidesData"] 
             } 
+        },
+        { 
+            name: "execute_dynamic_tool", 
+            description: "【Manus 級代碼執行器】當現有工具無法滿足複雜需求（如數據分析、自定義計算、互動式圖表、動態模擬）時使用。AI 會撰寫一段封裝好的 HTML/JS/CSS 工具並在沙盒中執行。請確保代碼自帶必要的 CDN（如 Chart.js, Tailwind, D3.js）。", 
+            parameters: { 
+                type: "OBJECT", 
+                properties: { 
+                    tool_name: { type: "STRING", description: "工具名稱，如 '複利計算器' 或 '銷售趨勢圖'" },
+                    description: { type: "STRING", description: "工具功能簡述" },
+                    html_code: { type: "STRING", description: "完整且自洽的 HTML 代碼 (包含 CSS 與 JS)。必須是一個完整的 <html> 結構或包含所需依賴的片段。" }
+                }, 
+                required: ["tool_name", "description", "html_code"] 
+            } 
         }
     ]
 }];
@@ -427,6 +440,13 @@ ${customRules}
 [場景 C：災難復原 (Rollback)]
 當使用者反應「剛剛的更新壞了」、「畫面卡死」、「退回上一版」時：
 立刻呼叫 \`rollback_github_deployment\` 工具退回 Git 版本。退回成功後，請深呼吸，重新思考剛剛的邏輯哪裡有問題，並向使用者提出可能的錯誤原因與修正方案。
+
+[場景 D：動態工具合成 (Manus 級代碼執行器)]
+當使用者提出需要自定義計算、數據視覺化、互動式儀表板，或現有工具無法直接解決的複雜數據任務時：
+1. 分析任務所需之邏輯與介面。
+2. 呼叫 \`execute_dynamic_tool\`，合成一段包含 HTML/JS/CSS 的代碼。
+3. 代碼中應包含必要的 CDN（如 Chart.js, Tailwind, D3.js），並確保具備高品質的 UI/UX 設計。
+4. 最終呈現一個能在側邊欄操作的「即時工具」，這將極大提升任務完成的專業感與效率。
 
 【📁 安全歸檔模式 (Safe Archive Assistant)】
 當使用者要求「整理資料夾」、「集中歸檔」多個未知檔案時，請呼叫 \`scan_and_prepare_archive\`。取得資料後，請【強制】使用以下 5 個標題回覆使用者（請原封不動使用標題字眼）：
@@ -587,8 +607,8 @@ function doPost(e) {
             configData: { ...CONFIG, autoImageEnabled: auto_image }
         });
 
-        logToFirebaseAndCache(db, wsName, session_id || "default", message, agentResult.reply || "執行完成", agentResult.html_presentation || null);
-        return response({ status: "success", reply: agentResult.reply, model: agentResult.model || modelId, image: agentResult.image || null, mime: agentResult.mime || null, html_presentation: agentResult.html_presentation || null });
+        logToFirebaseAndCache(db, wsName, session_id || "default", message, agentResult.reply || "執行完成", agentResult.html_presentation || null, agentResult.html_artifact || null);
+        return response({ status: "success", reply: agentResult.reply, model: agentResult.model || modelId, image: agentResult.image || null, mime: agentResult.mime || null, html_presentation: agentResult.html_presentation || null, html_artifact: agentResult.html_artifact || null });
     } catch (err) { return response({ error: err.toString(), status: "error" }); }
 }
 
@@ -1464,6 +1484,18 @@ function runAutonomousAgentLoop(config) {
                             };
                             break;
                             
+                        case "execute_dynamic_tool":
+                            toolResult = { 
+                                isTerminal: true, 
+                                reply: `✨ **動態工具「${args.tool_name}」已合成並啟動！**\n\n功能：${args.description}\n\n您可以直接在畫面中操作此工具。`,
+                                html_artifact_data: {
+                                    name: args.tool_name,
+                                    description: args.description,
+                                    code: args.html_code
+                                }
+                            };
+                            break;
+                            
                         default:
                             toolResult = { status: "success", reply: `工具 ${fnName} 已處理` };
                     }
@@ -1471,7 +1503,7 @@ function runAutonomousAgentLoop(config) {
 
                 if (toolResult.isTerminal) { 
                     let combinedReply = aiTextGenerated ? (aiTextGenerated + "\n\n---\n\n" + toolResult.reply) : toolResult.reply;
-                    return { reply: combinedReply, model: "Agent-Executor", image: finalImage, mime: finalMime, html_presentation: toolResult.html_presentation_data || null }; 
+                    return { reply: combinedReply, model: "Agent-Executor", image: finalImage, mime: finalMime, html_presentation: toolResult.html_presentation_data || null, html_artifact: toolResult.html_artifact_data || null }; 
                 }
                 toolResponses.push({ functionResponse: { name: fnName, response: toolResult, id: part.functionCall.id } });
             }
@@ -1602,7 +1634,7 @@ function getOptimizedHistoryFB(db, wsName, sessionId) {
     } catch(e) { return []; }
 }
 
-function logToFirebaseAndCache(db, wsName, sessionId, userMsg, aiReply, htmlPresentation = null) {
+function logToFirebaseAndCache(db, wsName, sessionId, userMsg, aiReply, htmlPresentation = null, htmlArtifact = null) {
     const lock = LockService.getScriptLock();
     try {
         lock.waitLock(10000);
@@ -1613,6 +1645,7 @@ function logToFirebaseAndCache(db, wsName, sessionId, userMsg, aiReply, htmlPres
         if (aiReply) {
             const aiMsg = { role: "ai", text: aiReply };
             if (htmlPresentation) aiMsg.html_presentation = htmlPresentation;
+            if (htmlArtifact) aiMsg.html_artifact = htmlArtifact;
             hist.push(aiMsg);
         }
         session.updated_at = new Date(); session.history_json = hist; db.write("sessions", sessionId, session);
