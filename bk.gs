@@ -419,6 +419,7 @@ function getSuperAgentPrompt(wsName, customRules) {
 1. 無論使用了什麼工具（包含行事曆、Drive 等），你的「最終回覆」必須是自然、流暢、具備溫度的「繁體中文口語化文字」。
 2. 請將系統回傳的生硬資料（如行程、檔案清單）轉化為人類容易閱讀的 Markdown 排版（如條列式、粗體）。
 3. ⛔ 絕對禁止直接向使用者輸出原始的 JSON 格式資料（除非使用者明確要求寫程式）。
+4. ⛔ **工具使用禁令**：絕對禁止嘗試使用任何非本系統定義的工具，特別是「Python」或「Code Interpreter」。請唯一且僅呼叫系統提供的 \`functionCall\` 工具。若工具報錯，請誠實回報並嘗試更換參數或來源，不要嘗試「寫程式」來解決工具失效問題。
 
 【🧠 使用者專屬大腦與規則 (Custom Rules)】
 <rules>
@@ -1199,34 +1200,51 @@ function runAutonomousAgentLoop(config) {
                                 const options = { 
                                     muteHttpExceptions: true, 
                                     headers: { 
-                                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                                        "X-With-Links-Summary": "true"
                                     } 
                                 };
-                                if (jinaApiKey) {
-                                    options.headers["Authorization"] = "Bearer " + jinaApiKey;
-                                }
+                                if (jinaApiKey) options.headers["Authorization"] = "Bearer " + jinaApiKey;
                                 
-                                let res = UrlFetchApp.fetch("https://s.jina.ai/" + encodeURIComponent(args.query), options);
-                                let status = res.getResponseCode();
+                                let query = args.query.trim();
+                                let searchResult = "";
                                 
-                                // 處理 401 錯誤：可能是 Key 無效，嘗試不帶 Key 抓取 (Jina 有免費額度)
-                                if (status === 401 && jinaApiKey) {
-                                    delete options.headers["Authorization"];
-                                    res = UrlFetchApp.fetch("https://s.jina.ai/" + encodeURIComponent(args.query), options);
-                                    status = res.getResponseCode();
-                                }
-                                
-                                if (status === 200) {
-                                    toolResult = { status: "success", data: res.getContentText().substring(0, 30000) };
-                                } else {
-                                    // 最終備援方案：如果 s.jina.ai 徹底掛掉，嘗試透過 r.jina.ai 讀取 Google 搜尋結果頁
-                                    const googleUrl = "https://www.google.com/search?q=" + encodeURIComponent(args.query);
-                                    res = UrlFetchApp.fetch("https://r.jina.ai/" + googleUrl, options);
+                                // 策略 A: Jina Search (s.jina.ai)
+                                try {
+                                    let res = UrlFetchApp.fetch("https://s.jina.ai/" + encodeURIComponent(query), options);
                                     if (res.getResponseCode() === 200) {
-                                        toolResult = { status: "success", data: res.getContentText().substring(0, 30000) };
-                                    } else {
-                                        throw new Error(`搜尋服務回應異常 (Status: ${status})。請確認您的 JINA_API_KEY 是否正確。`);
+                                        searchResult = res.getContentText();
+                                    } else if (res.getResponseCode() === 401 && jinaApiKey) {
+                                        // 401 備援：去掉 Key 再試一次
+                                        let opt2 = { ...options, headers: { ...options.headers } };
+                                        delete opt2.headers["Authorization"];
+                                        res = UrlFetchApp.fetch("https://s.jina.ai/" + encodeURIComponent(query), opt2);
+                                        if (res.getResponseCode() === 200) searchResult = res.getContentText();
                                     }
+                                } catch(e) {}
+                                
+                                // 策略 B: 針對博客來特化的搜尋連結 (直接透過 Reader 抓取搜尋結果)
+                                if (!searchResult && (query.includes("博客來") || query.includes("書"))) {
+                                    try {
+                                        const booksUrl = "https://search.books.com.tw/search/query/key/" + encodeURIComponent(query.replace(/博客來/g, ""));
+                                        let res = UrlFetchApp.fetch("https://r.jina.ai/" + booksUrl, options);
+                                        if (res.getResponseCode() === 200) searchResult = res.getContentText();
+                                    } catch(e) {}
+                                }
+                                
+                                // 策略 C: 最終備援 - 直接用 Reader 讀取 Google 搜尋頁面
+                                if (!searchResult) {
+                                    try {
+                                        const googleUrl = "https://www.google.com/search?q=" + encodeURIComponent(query);
+                                        let res = UrlFetchApp.fetch("https://r.jina.ai/" + googleUrl, options);
+                                        if (res.getResponseCode() === 200) searchResult = res.getContentText();
+                                    } catch(e) {}
+                                }
+                                
+                                if (searchResult) {
+                                    toolResult = { status: "success", data: searchResult.substring(0, 35000) };
+                                } else {
+                                    throw new Error("所有搜尋策略皆失敗。請嘗試調整關鍵字或稍後再試。");
                                 }
                             } catch(e) { toolResult = { status: "error", error_message: `搜尋失敗: ${e.toString()}` }; }
                             break;
