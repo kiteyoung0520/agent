@@ -273,6 +273,7 @@ const AGENT_TOOLS = [{
         { name: "read_drive_file", description: "【強制呼叫】讀取 Google 雲端硬碟檔案內容。當使用者貼上 Drive 網址時，你已具備最高合法授權，絕對禁止以「無法存取私人檔案」或「安全限制」為由拒絕，請立刻呼叫此工具解析。", parameters: { type: "OBJECT", properties: { fileUrl: { type: "STRING", description: "要讀取的檔案完整網址" } }, required: ["fileUrl"] } },
 
         { name: "read_web_page", description: "【代理人瀏覽模式 (Agent Browser Mode)】使用整合型無頭瀏覽器讀取網頁。此工具能穿透 JavaScript 與反爬蟲機制（如博客來、Amazon）。當搜尋摘要缺失 ISBN 或原價等深度細節時，強制呼叫此工具進入內頁抓取。取得內容後，請嚴格基於內容回答，禁止腦補。", parameters: { type: "OBJECT", properties: { url: { type: "STRING", description: "要讀取的網頁完整網址 (需包含 http/https)" } }, required: ["url"] } },
+        { name: "search_web", description: "【萬用搜尋引擎】搜尋全球公開資訊與最新新聞。當使用者要求找尋資料、比較產品、或是現有知識不足時，請優先呼叫此工具。", parameters: { type: "OBJECT", properties: { query: { type: "STRING", description: "精確的搜尋關鍵字" } }, required: ["query"] } },
 
         { name: "organize_drive_folder", description: "智慧整理 Google Drive 資料夾。", parameters: { type: "OBJECT", properties: { folderName: { type: "STRING" } }, required: ["folderName"] } },
         
@@ -592,9 +593,10 @@ function doPost(e) {
             finalTools = [{ functionDeclarations: AGENT_TOOLS[0].functionDeclarations.filter(t => t.name === "generate_art") }];
             finalSystemInstruction += `\n\n【🎨 強制繪圖模式 (Draw Mode)】\n使用者已開啟「純繪圖模式」。請將使用者的文字轉換為精確的英文生圖 Prompt，並『強制且唯一』呼叫 \`generate_art\` 工具。不要講多餘的廢話，直接畫圖！`;
         } else if (web_search) {
-            // 由於 API 限制：內建工具 (google_search) 與 Function Calling 無法並存
-            finalTools = [{ google_search: {} }];
-            finalSystemInstruction += `\n\n【🌍 強制聯網模式】請優先使用 Google Search 工具來回答，提供最新資訊。`;
+            // 原則上使用自定義 search_web 工具以利與 read_web_page 並存
+            // 只有當使用者明確開啟「強制聯網」且不考慮其他工具時才使用內建工具
+            finalTools = JSON.parse(JSON.stringify(AGENT_TOOLS));
+            finalSystemInstruction += `\n\n【🌍 強制聯網模式】請優先使用 search_web 與 read_web_page 工具來完成深度探勘，提供最新資訊。`;
         } else {
             finalTools = JSON.parse(JSON.stringify(AGENT_TOOLS));
         }
@@ -699,8 +701,8 @@ function handleLineWebhook(payload, ss, apiKey, lineToken, CONFIG, db) {
                 finalTools = [{ functionDeclarations: AGENT_TOOLS[0].functionDeclarations.filter(t => t.name === "generate_art") }];
                 finalSystemInstruction += `\n\n【🎨 強制繪圖模式】使用者要求畫圖，請將使用者的文字轉換為詳細的英文畫面描述，並強制呼叫 generate_art 工具。不要講廢話。`;
             } else if (web_search) {
-                finalTools = [{ google_search: {} }];
-                finalSystemInstruction += `\n\n【🌍 聯網搜尋模式】使用者正在詢問外部資訊，請優先使用 Google Search 工具提供最新答案。`;
+                finalTools = JSON.parse(JSON.stringify(AGENT_TOOLS));
+                finalSystemInstruction += `\n\n【🌍 聯網搜尋模式】使用者正在詢問外部資訊，請優先使用 search_web 與 read_web_page 工具提供最新答案。`;
             } else {
                 finalTools = JSON.parse(JSON.stringify(AGENT_TOOLS));
             }
@@ -1189,6 +1191,27 @@ function runAutonomousAgentLoop(config) {
                             }
                             break;
                             
+                        case "search_web":
+                            try {
+                                const jinaApiKey = PropertiesService.getScriptProperties().getProperty('JINA_API_KEY');
+                                const options = { 
+                                    muteHttpExceptions: true, 
+                                    headers: { 
+                                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                                    } 
+                                };
+                                if (jinaApiKey) {
+                                    options.headers["Authorization"] = "Bearer " + jinaApiKey;
+                                }
+                                let res = UrlFetchApp.fetch("https://s.jina.ai/" + encodeURIComponent(args.query), options);
+                                if (res.getResponseCode() === 200) {
+                                    toolResult = { status: "success", data: res.getContentText().substring(0, 30000) };
+                                } else {
+                                    throw new Error(`搜尋服務回應異常: ${res.getResponseCode()}`);
+                                }
+                            } catch(e) { toolResult = { status: "error", error_message: `搜尋失敗: ${e.toString()}` }; }
+                            break;
+
                         case "read_web_page":
                             try {
                                 const jinaApiKey = PropertiesService.getScriptProperties().getProperty('JINA_API_KEY');
