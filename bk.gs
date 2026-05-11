@@ -1192,38 +1192,58 @@ function runAutonomousAgentLoop(config) {
                         case "read_web_page":
                             try {
                                 const jinaApiKey = PropertiesService.getScriptProperties().getProperty('JINA_API_KEY');
-                                const options = { 
+                                const targetUrl = args.url.trim();
+                                
+                                // 嘗試使用 Jina Reader (優先)
+                                const jinaOptions = { 
                                     muteHttpExceptions: true, 
                                     headers: { 
-                                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 anyGem/1.0",
-                                        "Accept": "text/event-stream"
+                                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                                        "X-Return-Format": "markdown",
+                                        "X-With-Images-Summary": "true"
                                     } 
                                 };
                                 if (jinaApiKey) {
-                                    options.headers["Authorization"] = "Bearer " + jinaApiKey;
+                                    jinaOptions.headers["Authorization"] = "Bearer " + jinaApiKey;
                                 }
                                 
-                                let res = UrlFetchApp.fetch("https://r.jina.ai/" + args.url, options);
+                                let response = UrlFetchApp.fetch("https://r.jina.ai/" + targetUrl, jinaOptions);
+                                let status = response.getResponseCode();
                                 let contentText = "";
-
-                                if (res.getResponseCode() === 200 && res.getContentText().length > 100) {
-                                    contentText = res.getContentText();
+                                
+                                // 若 Jina 成功且內容長度足夠
+                                if (status === 200 && response.getContentText().length > 200) {
+                                    contentText = response.getContentText();
                                 } else {
-                                    res = UrlFetchApp.fetch(args.url, options);
-                                    if (res.getResponseCode() === 200) {
-                                        let htmlContent = res.getContentText();
-                                        htmlContent = htmlContent.replace(/<(script|style|nav|footer|header|aside)\b[^<]*(?:(?!<\/\1>)<[^<]*)*<\/\1>/gi, ' ');
-                                        contentText = htmlContent.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                                    // 備用方案：直接抓取
+                                    const directOptions = {
+                                        muteHttpExceptions: true,
+                                        headers: {
+                                            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
+                                            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8"
+                                        }
+                                    };
+                                    response = UrlFetchApp.fetch(targetUrl, directOptions);
+                                    status = response.getResponseCode();
+                                    
+                                    if (status === 200) {
+                                        let html = response.getContentText();
+                                        html = html.replace(/<(script|style|nav|footer|header|aside|iframe|canvas)\b[^<]*(?:(?!<\/\1>)<[^<]*)*<\/\1>/gi, ' ');
+                                        const mainMatch = html.match(/<(main|article|div id="content"|div class="main")[^>]*>([\s\S]*?)<\/\1>/i);
+                                        const source = mainMatch ? mainMatch[2] : html;
+                                        contentText = source.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
                                     } else {
-                                        throw new Error(`伺服器回應狀態碼: ${res.getResponseCode()}`);
+                                        throw new Error(`Jina Error (${status}) & Direct Fetch Error (${status})。`);
                                     }
                                 }
 
-                                let finalContent = `【系統強制指令：以下為網頁擷取的真實內容。請「嚴格基於」此內容回答。若內容中未提及使用者的問題，請明確回覆「網頁中未提及此資訊」，絕對禁止腦補或自行發揮。】\n\n---\n${contentText.substring(0, 30000)}`;
-                                
+                                let finalContent = `【系統強制指令：以下為網頁擷取的真實內容。】\n\n網址：${targetUrl}\n---\n${contentText.substring(0, 35000)}`;
                                 toolResult = { status: "success", data: finalContent };
                             } catch(e) {
-                                toolResult = { status: "error", error_message: `網頁讀取失敗: ${e.toString()} (可能遭遇反爬蟲機制或網址無效)` };
+                                toolResult = { 
+                                    status: "error", 
+                                    error_message: `網頁穿透失敗: ${e.toString()}。建議：請 AI 嘗試搜尋其他來源網址。` 
+                                };
                             }
                             break;
 
