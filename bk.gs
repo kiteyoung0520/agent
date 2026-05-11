@@ -398,7 +398,7 @@ function getSuperAgentPrompt(wsName, customRules) {
    - 對比/優缺點：必用 'split_column'。
    - 震撼數據：必用 'big_data'。
 5. **配色紀律**：'customColors' 的 JSON 格式必須包含：{"bg": "#...", "text": "#...", "accent": "#...", "shape": "#..."}。請依據主題氛圍（如：優雅、科技、教育）自主設計高品質配色。
-6. **資料探勘紀律 (Data Mining)**：當要求抓取具備「唯一性」或「精確性」的資料（如 ISBN、原價、出版社、規格參數）時，禁止僅依賴 \`google_search\` 的結果片段。你必須：(1) 先搜尋取得清單；(2) 針對清單中的關鍵網址，逐一呼叫 \`read_web_page\` 進入內頁；(3) 彙整內頁真實數據。若因次數限制無法抓取全部，請誠實告知已抓取的部分，絕對禁止腦補。
+6. **資料探勘紀律 (Data Mining)**：當要求抓取具備「唯一性」或「精確性」的資料（如 ISBN、原價、出版社、規格參數）時，禁止僅依賴 \`search_web\` 的結果片段。你必須：(1) 先搜尋取得清單；(2) 針對清單中的關鍵網址，逐一呼叫 \`read_web_page\` 進入內頁；(3) 彙整內頁真實數據。若因次數限制無法抓取全部，請誠實告知已抓取的部分，絕對禁止腦補。
 
 【🗂️ 專案記憶隔離 (Workspace)】
 您目前正處於『${wsName}』的專案空間中。請針對此空間的脈絡進行連貫性對話。
@@ -470,10 +470,10 @@ ${customRules}
    - 'customColors' 必須根據主題情感（商務、熱情、科技、皮紙/Vellum）挑選對比鮮明的 HEX 色碼。
    - 'imageKeyword' 必須包含 'high quality', 'cinematic lighting', 'professional photography' 等修飾詞。
 
-[場景 D：深度資料探勘 (Deep Research)]
+[場景 E：深度資料探勘 (Deep Research)]
 當使用者要求「搜尋特定產品清單」、「整理書籍資訊 (含 ISBN/價格)」等任務時，你必須切換至【研究員人格】：
 1. 立即規劃「多步探勘計畫」，並在回覆中顯性列出。
-2. 第一步：使用 \`google_search\` 找出標的網站 (如博客來、Amazon) 的搜尋結果。
+2. 第一步：使用 \`search_web\` 找出標的網站 (如博客來、Amazon) 的搜尋結果。
 3. 第二步：分析搜尋結果，提取每一個產品的「詳細頁面 URL」。
 4. 第三步：【核心強制】針對這些 URL，逐一呼叫 \`read_web_page\` 進入內頁。**絕對禁止**只依賴搜尋結果的 Snippet。
 5. 第四步：彙整為 Markdown 表格交付。
@@ -1193,7 +1193,9 @@ function runAutonomousAgentLoop(config) {
                             
                         case "search_web":
                             try {
-                                const jinaApiKey = PropertiesService.getScriptProperties().getProperty('JINA_API_KEY');
+                                let jinaApiKey = PropertiesService.getScriptProperties().getProperty('JINA_API_KEY');
+                                if (jinaApiKey === "undefined" || jinaApiKey === "null" || !jinaApiKey) jinaApiKey = null;
+                                
                                 const options = { 
                                     muteHttpExceptions: true, 
                                     headers: { 
@@ -1203,11 +1205,28 @@ function runAutonomousAgentLoop(config) {
                                 if (jinaApiKey) {
                                     options.headers["Authorization"] = "Bearer " + jinaApiKey;
                                 }
+                                
                                 let res = UrlFetchApp.fetch("https://s.jina.ai/" + encodeURIComponent(args.query), options);
-                                if (res.getResponseCode() === 200) {
+                                let status = res.getResponseCode();
+                                
+                                // 處理 401 錯誤：可能是 Key 無效，嘗試不帶 Key 抓取 (Jina 有免費額度)
+                                if (status === 401 && jinaApiKey) {
+                                    delete options.headers["Authorization"];
+                                    res = UrlFetchApp.fetch("https://s.jina.ai/" + encodeURIComponent(args.query), options);
+                                    status = res.getResponseCode();
+                                }
+                                
+                                if (status === 200) {
                                     toolResult = { status: "success", data: res.getContentText().substring(0, 30000) };
                                 } else {
-                                    throw new Error(`搜尋服務回應異常: ${res.getResponseCode()}`);
+                                    // 最終備援方案：如果 s.jina.ai 徹底掛掉，嘗試透過 r.jina.ai 讀取 Google 搜尋結果頁
+                                    const googleUrl = "https://www.google.com/search?q=" + encodeURIComponent(args.query);
+                                    res = UrlFetchApp.fetch("https://r.jina.ai/" + googleUrl, options);
+                                    if (res.getResponseCode() === 200) {
+                                        toolResult = { status: "success", data: res.getContentText().substring(0, 30000) };
+                                    } else {
+                                        throw new Error(`搜尋服務回應異常 (Status: ${status})。請確認您的 JINA_API_KEY 是否正確。`);
+                                    }
                                 }
                             } catch(e) { toolResult = { status: "error", error_message: `搜尋失敗: ${e.toString()}` }; }
                             break;
