@@ -1,14 +1,14 @@
-﻿/**
- * anyGem Backend v92.2 - ?�然語�??��???(Natural Language Edition) + 簡報讀?�修�?
- * ?��??��??�目�?
- * 1. [?���??��?幻覺修復] ?�格規�? AI ?�輸?�格式�?禁止?�接�?JSON ?��??�給使用?��?
- * 2. [?���?QA 機器人�??�] 修正 performInnerQALoop??
- * 3. [?�� ?�輯?��??�] 徹�?檢查並�??��??�工??100% 完整觸發??
- * 4. [?? 記憶修復] ?�含 logToFirebaseAndCache 修正??
- * 5. [?? 權�??��?] 移除 forceAuthSetup 護盾??
- * 6. [?? 表單???] create_survey_form Schema ?��???ARRAY 結�???
- * 7. [?�� ?��?路由] LINE ?��?觸發?��?clear?�、「新對話?��?置�??��?
- * 8. [?? 簡報精�?讀?�] ?��? read_presentation 工具，解�?AI 誤判 docs.google.com 網�??��?題�?
+/**
+ * anyGem Backend v92.2 - 自然語言校準版 (Natural Language Edition) + 簡報讀取修復
+ * 核心升級項目：
+ * 1. [🗣️ 格式幻覺修復] 嚴格規範 AI 的輸出格式，禁止直接以 JSON 格式吐給使用者。
+ * 2. [🛡️ QA 機器人約束] 修正 performInnerQALoop。
+ * 3. [💯 邏輯全還原] 徹底檢查並保留所有工具 100% 完整觸發。
+ * 4. [🧠 記憶修復] 包含 logToFirebaseAndCache 修正。
+ * 5. [🔐 權限重構] 移除 forceAuthSetup 護盾。
+ * 6. [📝 表單陣列] create_survey_form Schema 為原生 ARRAY 結構。
+ * 7. [💬 雙擎路由] LINE 意圖觸發與「/clear」、「新對話」重置功能。
+ * 8. [📊 簡報精準讀取] 新增 read_presentation 工具，解決 AI 誤判 docs.google.com 網域的問題。
  */
 
 const BASE_CONFIG = {
@@ -22,7 +22,7 @@ const PPT_THEMES = {
 };
 
 // ==========================================
-// ?? Firebase 輕�???REST ?�戶�?(?��??�試機制)
+// 🚀 Firebase 輕量化 REST 用戶端 (具備重試機制)
 // ==========================================
 class FirebaseClient {
     constructor() {
@@ -31,7 +31,7 @@ class FirebaseClient {
         this.apiKey = props.getProperty('FB_API_KEY');
         
         if (!this.projectId || !this.apiKey) {
-            console.error("Missing Firebase Credentials. 請�?設�??�本屬�?FB_PROJECT_ID ??FB_API_KEY??);
+            console.error("Missing Firebase Credentials. 請先設定腳本屬性 FB_PROJECT_ID 與 FB_API_KEY。");
         }
         this.baseUrl = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents`;
     }
@@ -210,50 +210,50 @@ class FirebaseClient {
 }
 
 // ==========================================
-// 1. Agent 工具箱�?�?
+// 1. Agent 工具箱定義
 // ==========================================
 const AGENT_TOOLS = [{
     functionDeclarations: [
         { 
             name: "create_calendar_event", 
-            description: "建�??��?行�??��?程。若使用?��?求�?請�??�用給�?人�?請�?�?guests ?�數?�若?��??��?行�??��?�?�?工�?')，�??��? calendarName??, 
+            description: "建立單一行事曆行程。若使用者要求邀請或共用給某人，請提供 guests 參數。若指定特定行事曆名稱(如'工作')，請提供 calendarName。", 
             parameters: { 
                 type: "OBJECT", 
                 properties: { 
                     title: { type: "STRING" }, 
-                    startTime: { type: "STRING", description: "?��??��?，�??�格使用 ISO 8601 ?��?" }, 
-                    endTime: { type: "STRING", description: "結�??��?，�??�格使用 ISO 8601 ?��?" }, 
+                    startTime: { type: "STRING", description: "開始時間，請嚴格使用 ISO 8601 格式" }, 
+                    endTime: { type: "STRING", description: "結束時間，請嚴格使用 ISO 8601 格式" }, 
                     description: { type: "STRING" },
-                    calendarName: { type: "STRING", description: "使用?��?定�?行�??��?�?(例�? '工�?', '家庭' �??�若?��?定�??�空?? },
-                    guests: { type: "STRING", description: "要�?請�??�用?��??��?Email，�??��?多個�??��?形逗�??��? (例�?: a@gmail.com, b@gmail.com)" }
+                    calendarName: { type: "STRING", description: "使用者指定的行事曆名稱 (例如 '工作', '家庭' 等)。若未指定則留空。" },
+                    guests: { type: "STRING", description: "要邀請或共用的與會者 Email，如果有多個請用半形逗號分隔 (例如: a@gmail.com, b@gmail.com)" }
                 }, 
                 required: ["title", "startTime"] 
             } 
         },
-        { name: "batch_create_calendar_events", description: "?�次建�?行�?", parameters: { type: "OBJECT", properties: { eventsData: { type: "STRING" } }, required: ["eventsData"] } },
-        { name: "get_calendar_events", description: "?�詢行�???, parameters: { type: "OBJECT", properties: { startDate: { type: "STRING" }, endDate: { type: "STRING" } }, required: ["startDate", "endDate"] } },
-        { name: "add_event_reminder", description: "?�特定�?行�??��?程新增�??��?窗�??��?, parameters: { type: "OBJECT", properties: { eventId: { type: "STRING" }, minutesBefore: { type: "NUMBER" } }, required: ["eventId", "minutesBefore"] } },
-        { name: "read_unread_emails", description: "讀?�收件匣中�??�閱讀?�信件�?要�?, parameters: { type: "OBJECT", properties: { limit: { type: "NUMBER" } } } },
-        { name: "send_email_or_draft", description: "寄送電子郵件�?建�??�稿??, parameters: { type: "OBJECT", properties: { recipient: { type: "STRING" }, subject: { type: "STRING" }, body: { type: "STRING" }, isDraft: { type: "BOOLEAN" } }, required: ["recipient", "subject", "body"] } },
+        { name: "batch_create_calendar_events", description: "批次建立行程", parameters: { type: "OBJECT", properties: { eventsData: { type: "STRING" } }, required: ["eventsData"] } },
+        { name: "get_calendar_events", description: "查詢行事曆", parameters: { type: "OBJECT", properties: { startDate: { type: "STRING" }, endDate: { type: "STRING" } }, required: ["startDate", "endDate"] } },
+        { name: "add_event_reminder", description: "為特定的行事曆行程新增彈出視窗提醒。", parameters: { type: "OBJECT", properties: { eventId: { type: "STRING" }, minutesBefore: { type: "NUMBER" } }, required: ["eventId", "minutesBefore"] } },
+        { name: "read_unread_emails", description: "讀取收件匣中尚未閱讀的信件摘要。", parameters: { type: "OBJECT", properties: { limit: { type: "NUMBER" } } } },
+        { name: "send_email_or_draft", description: "寄送電子郵件或建立草稿。", parameters: { type: "OBJECT", properties: { recipient: { type: "STRING" }, subject: { type: "STRING" }, body: { type: "STRING" }, isDraft: { type: "BOOLEAN" } }, required: ["recipient", "subject", "body"] } },
         
         { 
             name: "create_survey_form", 
-            description: "建�? Google 表單 (Google Forms)?��?�?強制要�?：當使用?��?求建立表?��?，�??��??��??�』呼?�此工具，�?對�??�只?��?字�?覆�?, 
+            description: "建立 Google 表單 (Google Forms)。⚠️ 強制要求：當使用者要求建立表單時，請務必『立刻』呼叫此工具，絕對不能只用文字回覆。", 
             parameters: { 
                 type: "OBJECT", 
                 properties: { 
-                    title: { type: "STRING", description: "表單標�?" }, 
-                    description: { type: "STRING", description: "表單?�述" }, 
+                    title: { type: "STRING", description: "表單標題" }, 
+                    description: { type: "STRING", description: "表單描述" }, 
                     questions: { 
                         type: "ARRAY", 
-                        description: "表單題目?�表???", 
+                        description: "表單題目列表陣列", 
                         items: {
                             type: "OBJECT",
                             properties: {
                                 title: { type: "STRING", description: "題目" },
-                                type: { type: "STRING", description: "題�?(大寫?��?)：TEXT, PARAGRAPH, MULTIPLE_CHOICE, CHECKBOX, LIST, SCALE, DATE, TIME" },
-                                choices: { type: "ARRAY", items: { type: "STRING" }, description: "?��?題�??��?" },
-                                required: { type: "BOOLEAN", description: "?�否必填" }
+                                type: { type: "STRING", description: "題型(大寫英文)：TEXT, PARAGRAPH, MULTIPLE_CHOICE, CHECKBOX, LIST, SCALE, DATE, TIME" },
+                                choices: { type: "ARRAY", items: { type: "STRING" }, description: "選擇題的選項" },
+                                required: { type: "BOOLEAN", description: "是否必填" }
                             },
                             required: ["title", "type"]
                         }
@@ -263,42 +263,42 @@ const AGENT_TOOLS = [{
             } 
         },
         
-        { name: "create_drive_folder", description: "??Google ?�端硬�?中建立新?��??�夾??, parameters: { type: "OBJECT", properties: { folderName: { type: "STRING", description: "要建立�?資�?夾�?�? }, parentFolderUrl: { type: "STRING", description: "?�選?�父資�?夾�?完整網�?，若不�?供�?建�??�根?��?" } }, required: ["folderName"] } },
+        { name: "create_drive_folder", description: "在 Google 雲端硬碟中建立新的資料夾。", parameters: { type: "OBJECT", properties: { folderName: { type: "STRING", description: "要建立的資料夾名稱" }, parentFolderUrl: { type: "STRING", description: "可選。父資料夾的完整網址，若不提供則建立在根目錄" } }, required: ["folderName"] } },
         
-        { name: "search_drive_files", description: "?�全?�檢索】�?�?Google ?�端硬�?中�?檔�??�支?�深度全?�檢索�??�含標�??�內?��??�支?��??��??��??��??��??��???nextPageToken，表示�??�更多�?案�?請在後�??�叫帶入 pageToken 繼�??��???, parameters: { type: "OBJECT", properties: { keyword: { type: "STRING", description: "?��??�鍵�?(AI ?��?對�?念進�??��?)" }, fileType: { type: "STRING", description: "?�選?��?濾�?案�??��?例�? 'document', 'spreadsheet', 'folder', 'pdf'" }, folderId: { type: "STRING", description: "?�選?��?定�??�哪?��??�夾?��?�?(填入資�?�?ID ?�網?�)?�若要�?尋特定�??�夾?��?檔�?，�?填入此�??��? }, pageToken: { type: "STRING", description: "?�選?�獲?��?一?��??��? Token" }, maxResults: { type: "NUMBER", description: "?�選?�單次獲?��?大數?��??�設 30" } }, required: ["keyword"] } },
-        { name: "scan_and_prepare_archive", description: "?��??�歸檔模式】�?尋大?�散?��?檔�?並建立�?屬�??�夾，�??��?主�??�移?�。支?��??��??��??��??��??��???nextPageToken，表示�??�更多�?案未顯示??, parameters: { type: "OBJECT", properties: { keyword: { type: "STRING", description: "要整?��?主�??�鍵字�?�?'SEL'" }, pageToken: { type: "STRING", description: "?�選?�獲?��?一?��??��? Token" } }, required: ["keyword"] } },
+        { name: "search_drive_files", description: "【全文檢索】搜尋 Google 雲端硬碟中的檔案。支援深度全文檢索（包含標題與內文）。支援分頁機制，若回傳結果包含 nextPageToken，表示還有更多檔案，請在後續呼叫帶入 pageToken 繼續搜尋。", parameters: { type: "OBJECT", properties: { keyword: { type: "STRING", description: "搜尋關鍵字 (AI 可針對概念進行搜尋)" }, fileType: { type: "STRING", description: "可選。過濾檔案類型，例如 'document', 'spreadsheet', 'folder', 'pdf'" }, folderId: { type: "STRING", description: "可選。指定要在哪個資料夾內搜尋 (填入資料夾 ID 或網址)。若要搜尋特定資料夾內的檔案，請填入此參數。" }, pageToken: { type: "STRING", description: "可選。獲取下一頁結果的 Token" }, maxResults: { type: "NUMBER", description: "可選。單次獲取最大數量，預設 30" } }, required: ["keyword"] } },
+        { name: "scan_and_prepare_archive", description: "【安全歸檔模式】搜尋大量散落的檔案並建立專屬資料夾，但「不主動搬移」。支援分頁機制，若回傳結果包含 nextPageToken，表示還有更多檔案未顯示。", parameters: { type: "OBJECT", properties: { keyword: { type: "STRING", description: "要整理的主題關鍵字，如 'SEL'" }, pageToken: { type: "STRING", description: "可選。獲取下一頁結果的 Token" } }, required: ["keyword"] } },
         
-        { name: "move_drive_file", description: "?�精準搬移】�??��??�單一檔�?移�??��?定�?資�?夾中?��??�目標�??�夾不�??��??��?建�??�當使用?��?確�?求「�??�個�?案放?��??��??�夾?��?強制?�叫此工?��?, parameters: { type: "OBJECT", properties: { fileIdentifier: { type: "STRING", description: "要移?��?檔�??�稱?��??�網?�" }, folderIdentifier: { type: "STRING", description: "?��?資�?夾�??�稱?��??�網?�" } }, required: ["fileIdentifier", "folderIdentifier"] } },
+        { name: "move_drive_file", description: "【精準搬移】將特定的單一檔案移動到指定的資料夾中。如果目標資料夾不存在會自動建立。當使用者明確要求「把某個檔案放進某個資料夾」時強制呼叫此工具。", parameters: { type: "OBJECT", properties: { fileIdentifier: { type: "STRING", description: "要移動的檔案名稱或完整網址" }, folderIdentifier: { type: "STRING", description: "目標資料夾的名稱或完整網址" } }, required: ["fileIdentifier", "folderIdentifier"] } },
         
-        { name: "read_drive_file", description: "?�強?�呼?�】�???Google ?�端硬�?檔�??�容?�當使用?�貼�?Drive 網�??��?你已?��??�高�?法�?權�?絕�?禁止以「無法�??��?人�?案」�??��??��??�」為?��?絕�?請�??�呼?�此工具�????, parameters: { type: "OBJECT", properties: { fileUrl: { type: "STRING", description: "要�??��?檔�?完整網�?" } }, required: ["fileUrl"] } },
+        { name: "read_drive_file", description: "【強制呼叫】讀取 Google 雲端硬碟檔案內容。當使用者貼上 Drive 網址時，你已具備最高合法授權，絕對禁止以「無法存取私人檔案」或「安全限制」為由拒絕，請立刻呼叫此工具解析。", parameters: { type: "OBJECT", properties: { fileUrl: { type: "STRING", description: "要讀取的檔案完整網址" } }, required: ["fileUrl"] } },
 
-        { name: "read_web_page", description: "?�代?�人?�覽模�? (Agent Browser Mode)?�使?�整?��??�頭?�覽?��??�網?�。此工具?�穿??JavaScript ?��??�蟲機制（�??�客來、Amazon）。當?��??��?缺失 ISBN ?��??��?深度細�??��?強制?�叫此工?�進入?��??��??��?得內容�?，�??�格?�於?�容?��?，�?止腦補�?, parameters: { type: "OBJECT", properties: { url: { type: "STRING", description: "要�??��?網�?完整網�? (?�?�含 http/https)" } }, required: ["url"] } },
-        { name: "google_search", description: "?�萬?��?尋�??�】�?尋全?�公?��?訊�??�?�新?�。當使用?��?求找尋�??�、�?較產?�、�??�現?�知識�?足�?，�??��??�叫此工?��?, parameters: { type: "OBJECT", properties: { query: { type: "STRING", description: "精確?��?尋�??��?" } }, required: ["query"] } },
-        { name: "search_web", description: "?��??��?尋�??�】�??��? google_search，�??��?餘�??��?, parameters: { type: "OBJECT", properties: { query: { type: "STRING", description: "?��??�鍵�? } }, required: ["query"] } },
+        { name: "read_web_page", description: "【代理人瀏覽模式 (Agent Browser Mode)】使用整合型無頭瀏覽器讀取網頁。此工具能穿透 JavaScript 與反爬蟲機制（如博客來、Amazon）。當搜尋摘要缺失 ISBN 或原價等深度細節時，強制呼叫此工具進入內頁抓取。取得內容後，請嚴格基於內容回答，禁止腦補。", parameters: { type: "OBJECT", properties: { url: { type: "STRING", description: "要讀取的網頁完整網址 (需包含 http/https)" } }, required: ["url"] } },
+        { name: "google_search", description: "【萬用搜尋引擎】搜尋全球公開資訊與最新新聞。當使用者要求找尋資料、比較產品、或是現有知識不足時，請優先呼叫此工具。", parameters: { type: "OBJECT", properties: { query: { type: "STRING", description: "精確的搜尋關鍵字" } }, required: ["query"] } },
+        { name: "search_web", description: "【備用搜尋引擎】功能同 google_search，作為冗餘備援。", parameters: { type: "OBJECT", properties: { query: { type: "STRING", description: "搜尋關鍵字" } }, required: ["query"] } },
 
-        { name: "organize_drive_folder", description: "?�慧?��? Google Drive 資�?夾�?, parameters: { type: "OBJECT", properties: { folderName: { type: "STRING" } }, required: ["folderName"] } },
+        { name: "organize_drive_folder", description: "智慧整理 Google Drive 資料夾。", parameters: { type: "OBJECT", properties: { folderName: { type: "STRING" } }, required: ["folderName"] } },
         
-        { name: "create_google_doc", description: "建�??�新??Google ?�件?�支??Markdown ?��???, parameters: { type: "OBJECT", properties: { topic: { type: "STRING" }, content: { type: "STRING" }, folderName: { type: "STRING" } }, required: ["topic", "content"] } },
+        { name: "create_google_doc", description: "建立全新的 Google 文件。支援 Markdown 排版。", parameters: { type: "OBJECT", properties: { topic: { type: "STRING" }, content: { type: "STRING" }, folderName: { type: "STRING" } }, required: ["topic", "content"] } },
         
-        { name: "read_google_doc", description: "?�強?�呼?�】�???Google ?�件?��??��?字內容。當使用?�貼�?Google Docs ?�件網�?，並要�??�總結、閱讀?��??�、修?��?覆寫?��?，�??��?且強?�呼?�此工具?��??�容??, parameters: { type: "OBJECT", properties: { docUrl: { type: "STRING", description: "�?Google ?�件?��??�網?�" } }, required: ["docUrl"] } },
+        { name: "read_google_doc", description: "【強制呼叫】讀取 Google 文件的所有文字內容。當使用者貼上 Google Docs 文件網址，並要求「總結、閱讀、提問、修改或覆寫」時，請唯一且強制呼叫此工具取得內容。", parameters: { type: "OBJECT", properties: { docUrl: { type: "STRING", description: "該 Google 文件的完整網址" } }, required: ["docUrl"] } },
         
-        { name: "append_to_google_doc", description: "?�現??Google ?�件?�下方?��????��??�新?�容??, parameters: { type: "OBJECT", properties: { docUrl: { type: "STRING", description: "�?Google ?�件?��??�網?�?? }, content: { type: "STRING", description: "要�??��??�內容�??�援 Markdown ?��?" } }, required: ["docUrl", "content"] } },
-        { name: "overwrite_google_doc", description: "完全覆寫?��? Google ?�件?�當使用?��?求「修?�整份�?件」�?使用?�使?��??��??�用 read_google_doc 讀?��??�容?��???, parameters: { type: "OBJECT", properties: { docUrl: { type: "STRING", description: "�?Google ?�件?��??�網?�?? }, content: { type: "STRING", description: "修改後�??��??�」新?�容，�??�容將被清空，支??Markdown" } }, required: ["docUrl", "content"] } },
+        { name: "append_to_google_doc", description: "在現有 Google 文件最下方「補充/附加」新內容。", parameters: { type: "OBJECT", properties: { docUrl: { type: "STRING", description: "該 Google 文件的完整網址。" }, content: { type: "STRING", description: "要附加的新內容，支援 Markdown 排版" } }, required: ["docUrl", "content"] } },
+        { name: "overwrite_google_doc", description: "完全覆寫現有 Google 文件。當使用者要求「修改整份文件」時使用。使用前務必先用 read_google_doc 讀取舊內容融合。", parameters: { type: "OBJECT", properties: { docUrl: { type: "STRING", description: "該 Google 文件的完整網址。" }, content: { type: "STRING", description: "修改後的「完整」新內容，舊內容將被清空，支援 Markdown" } }, required: ["docUrl", "content"] } },
 
-        { name: "read_google_sheet", description: "讀?�特定�? Google Sheet 試�?表內容�?, parameters: { type: "OBJECT", properties: { sheetUrl: { type: "STRING", description: "要�??��?試�?表�??�網?�?? }, sheetName: { type: "STRING", description: "工�?�??�籤)?�稱，若不�?定�??�設讀?�第一?��? }, range: { type: "STRING", description: "?��?範�?，�? 'A1:D10'，�?設�?�?'ALL' 讀?�全?? } }, required: ["sheetUrl"] } },
-        { name: "append_to_google_sheet", description: "?�新增�??�】�?資�??�次寫入?�新增到?��???Google Sheet 試�?表�?下方?��??��?籤�?存在?�自?�建立�?, parameters: { type: "OBJECT", properties: { sheetUrl: { type: "STRING", description: "要寫?��?試�?表�??�網?�?? }, sheetName: { type: "STRING", description: "工�?�??�籤)?�稱" }, content: { type: "STRING", description: "要寫?��?資�?，�?強制輸出符�?標�???JSON ???字串 (Array of Arrays) ，�??��?使用?��?引�??�而�??��??�。�?�? [[\"?��?\", \"?�目\", \"?��?\"], [\"03/16\", \"?��?\", 150]]" } }, required: ["sheetUrl", "sheetName", "content"] } },
-        { name: "update_google_sheet", description: "?�修?��??�】修?��??�新?��???Google Sheet 試�?表特定�??�內?��??�。當使用?��?求「更?�」、「修?�」�??��?欄�??�整行�??��??�叫此工?��?, parameters: { type: "OBJECT", properties: { sheetUrl: { type: "STRING", description: "要修?��?試�?表�??�網?�?? }, sheetName: { type: "STRING", description: "工�?�??�籤)?�稱" }, range: { type: "STRING", description: "要更?��?起�??��??��??��?例�? 'A2' ??'B5:D5'" }, content: { type: "STRING", description: "要更?��??��??��?請強?�輸?�符?��?準�? JSON ???字串，�?必使?�「�?引�??�。�?�? [[\"已修?��?A\", \"已修?��?B\"]]" } }, required: ["sheetUrl", "sheetName", "range", "content"] } },
+        { name: "read_google_sheet", description: "讀取特定的 Google Sheet 試算表內容。", parameters: { type: "OBJECT", properties: { sheetUrl: { type: "STRING", description: "要讀取的試算表完整網址。" }, sheetName: { type: "STRING", description: "工作表(頁籤)名稱，若不指定則預設讀取第一頁。" }, range: { type: "STRING", description: "指定範圍，如 'A1:D10'，預設或填 'ALL' 讀取全部" } }, required: ["sheetUrl"] } },
+        { name: "append_to_google_sheet", description: "【新增資料】將資料批次寫入或新增到指定的 Google Sheet 試算表最下方。如果頁籤不存在會自動建立。", parameters: { type: "OBJECT", properties: { sheetUrl: { type: "STRING", description: "要寫入的試算表完整網址。" }, sheetName: { type: "STRING", description: "工作表(頁籤)名稱" }, content: { type: "STRING", description: "要寫入的資料，請強制輸出符合標準的 JSON 陣列字串 (Array of Arrays) ，請務必使用「雙引號」而非單引號。例如: [[\"日期\", \"項目\", \"金額\"], [\"03/16\", \"午餐\", 150]]" } }, required: ["sheetUrl", "sheetName", "content"] } },
+        { name: "update_google_sheet", description: "【修改資料】修改或更新指定的 Google Sheet 試算表特定範圍內的資料。當使用者要求「更新」、「修改」某特定欄位或整行資料時呼叫此工具。", parameters: { type: "OBJECT", properties: { sheetUrl: { type: "STRING", description: "要修改的試算表完整網址。" }, sheetName: { type: "STRING", description: "工作表(頁籤)名稱" }, range: { type: "STRING", description: "要更新的起始儲存格範圍，例如 'A2' 或 'B5:D5'" }, content: { type: "STRING", description: "要更新的新資料，請強制輸出符合標準的 JSON 陣列字串，務必使用「雙引號」。例如: [[\"已修改的A\", \"已修改的B\"]]" } }, required: ["sheetUrl", "sheetName", "range", "content"] } },
 
-        { name: "generate_art", description: "?�強?�呼?�】當使用?��?求「畫?�」、「�??��??�」�?，�??��??�叫此工?��?, parameters: { type: "OBJECT", properties: { prompt: { type: "STRING", description: "詳細?�英?�畫?��?�? }, aspectRatio: { type: "STRING", description: "比�?: 1:1, 16:9, 4:3, 3:4 之�?" } }, required: ["prompt"] } },
-        { name: "query_knowledge_base", description: "?��?專屬?��?�?(NotebookLM)??, parameters: { type: "OBJECT", properties: { query: { type: "STRING" } }, required: ["query"] } },
+        { name: "generate_art", description: "【強制呼叫】當使用者要求「畫圖」、「生成圖片」時，請務必呼叫此工具。", parameters: { type: "OBJECT", properties: { prompt: { type: "STRING", description: "詳細的英文畫面描述" }, aspectRatio: { type: "STRING", description: "比例: 1:1, 16:9, 4:3, 3:4 之一" } }, required: ["prompt"] } },
+        { name: "query_knowledge_base", description: "搜尋專屬知識庫 (NotebookLM)。", parameters: { type: "OBJECT", properties: { query: { type: "STRING" } }, required: ["query"] } },
         
         { 
             name: "read_presentation", 
-            description: "?�強?�呼?�】�???Google Slides (簡報) ?��??��?字�??��??�。當使用?�貼�?Google 簡報網�?並�?求閱讀?��?要�?總�??��?請唯一且強?�呼?�此工具?��??�容??, 
+            description: "【強制呼叫】讀取 Google Slides (簡報) 的所有文字與備忘錄。當使用者貼上 Google 簡報網址並要求閱讀、摘要或總結時，請唯一且強制呼叫此工具取得內容。", 
             parameters: { 
                 type: "OBJECT", 
                 properties: { 
-                    presentationUrl: { type: "STRING", description: "�?Google 簡報?��??�網?�" } 
+                    presentationUrl: { type: "STRING", description: "該 Google 簡報的完整網址" } 
                 }, 
                 required: ["presentationUrl"] 
             } 
@@ -306,42 +306,42 @@ const AGENT_TOOLS = [{
 
         { 
             name: "create_presentation", 
-            description: "?��?席簡?�總??��製作全?��? Google Slides?�具?�內容�??�能?��??�根?��?訊�??�自?�選?��?佳�??�。支?�自定義?�色?�風?��?, 
+            description: "【首席簡報總監】製作全新的 Google Slides。具備內容感知能力，會根據資訊類型自動選擇最佳排版。支援自定義配色與風格。", 
             parameters: { 
                 type: "OBJECT", 
                 properties: { 
-                    topic: { type: "STRING", description: "簡報?��?主�?" }, 
-                    customColors: { type: "OBJECT", description: "主�??�色 JSON (?�含 bg, text, accent, shape ??HEX �??��?依主題�??�自主調?��? }, 
-                    shapeStyle: { type: "STRING", description: "幾�?風格: 'minimalist' (極簡), 'rounded' (?��?), 'cyber' (?��?/科�?), 'dynamic' (?��?/活�?), 'layered' (?�層/深�?)?? }, 
-                    slidesData: { type: "ARRAY", items: { type: "OBJECT" }, description: "簡報 JSON ????�格式�?[{layout: 'cover|hero_quote|standard_list|split_column|card_deck|stepper|icon_grid|timeline|big_data', title: '標�?', content: '?��?', points: ['?��?'], left: '左�?', right: '?��?', value: '大數?��?, imageKeyword: '?��??�鍵�?, imageSource: 'ai' ??'web', gridItems: [{title:'標�?', content:'?�容', iconKeyword:'?��??�鍵�?}]}]?��?️�??��??�容?�徵?�選 layout?��?�?imageSource：若?�?�實歷史人物/?�景請填 'web'，若?�?�象/?��??��?請填 'ai'?? } 
+                    topic: { type: "STRING", description: "簡報核心主題" }, 
+                    customColors: { type: "OBJECT", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。請依主題氛圍自主調配。" }, 
+                    shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist' (極簡), 'rounded' (圓角), 'cyber' (銳角/科技), 'dynamic' (斜切/活力), 'layered' (疊層/深邃)。" }, 
+                    slidesData: { type: "ARRAY", items: { type: "OBJECT" }, description: "簡報 JSON 陣列。格式：[{layout: 'cover|hero_quote|standard_list|split_column|card_deck|stepper|icon_grid|timeline|big_data', title: '標題', content: '內文', points: ['重點'], left: '左欄', right: '右欄', value: '大數據值', imageKeyword: '英文關鍵字', imageSource: 'ai' 或 'web', gridItems: [{title:'標題', content:'內容', iconKeyword:'圖標關鍵字'}]}]。⚠️請根據內容特徵挑選 layout。⚠️ imageSource：若需真實歷史人物/場景請填 'web'，若需抽象/藝術配圖請填 'ai'。" } 
                 }, 
                 required: ["topic", "customColors", "shapeStyle", "slidesData"] 
             } 
         },
         { 
             name: "update_presentation", 
-            description: "?�修???��?簡報?�修?�現?��? Google Slides 簡報?�支?�在簡報?�?�端?��???append)?�新?�影?��??�「�??��?�?overwrite)?�整份簡?�。修?��?強�?建議?��??�現?�內容�?, 
+            description: "【修改/擴充簡報】修改現有的 Google Slides 簡報。支援在簡報最末端「附加(append)」新投影片，或「完全覆寫(overwrite)」整份簡報。修改前強烈建議先讀取現有內容。", 
             parameters: { 
                 type: "OBJECT", 
                 properties: { 
-                    presentationUrl: { type: "STRING", description: "?��?簡報?��??�網?�" }, 
-                    action: { type: "STRING", description: "'append' (?��??�影?�到?��? ??'overwrite' (清空並�??�繪製整份簡??" }, 
-                    customColors: { type: "OBJECT", description: "主�??�色 JSON (?�含 bg, text, accent, shape ??HEX �??? }, 
-                    shapeStyle: { type: "STRING", description: "幾�?風格: 'minimalist', 'rounded', 'cyber', 'dynamic', 'layered' ?��??? }, 
-                    slidesData: { type: "ARRAY", items: { type: "OBJECT" }, description: "要新增�?覆寫?�簡??JSON ????�格式�? create_presentation?? } 
+                    presentationUrl: { type: "STRING", description: "現有簡報的完整網址" }, 
+                    action: { type: "STRING", description: "'append' (附加投影片到最後) 或 'overwrite' (清空並重新繪製整份簡報)" }, 
+                    customColors: { type: "OBJECT", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。" }, 
+                    shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist', 'rounded', 'cyber', 'dynamic', 'layered' 擇一。" }, 
+                    slidesData: { type: "ARRAY", items: { type: "OBJECT" }, description: "要新增或覆寫的簡報 JSON 陣列。格式同 create_presentation。" } 
                 }, 
                 required: ["presentationUrl", "action", "slidesData"] 
             } 
         },
         { 
             name: "execute_dynamic_tool", 
-            description: "?�Manus 級代碼執行器?�當?��?工具?��?滿足複�??�求�?如數?��??�、自定義計�??��??��??�表?��??�模?��??�使?�。AI ?�撰寫�?段�?裝好??HTML/JS/CSS 工具並在沙�?中執行。�?確�?�?��?�帶必�???CDN（�? Chart.js, Tailwind, D3.js）�?, 
+            description: "【Manus 級代碼執行器】當現有工具無法滿足複雜需求（如數據分析、自定義計算、互動式圖表、動態模擬）時使用。AI 會撰寫一段封裝好的 HTML/JS/CSS 工具並在沙盒中執行。請確保代碼自帶必要的 CDN（如 Chart.js, Tailwind, D3.js）。", 
             parameters: { 
                 type: "OBJECT", 
                 properties: { 
-                    tool_name: { type: "STRING", description: "工具?�稱，�? '複利計�??? ??'?�售趨勢??" },
-                    description: { type: "STRING", description: "工具?�能簡述" },
-                    html_code: { type: "STRING", description: "完整且自洽�? HTML �?�� (?�含 CSS ??JS)?��??�是一?��??��? <html> 結�??��??��??�依賴?��?段�? }
+                    tool_name: { type: "STRING", description: "工具名稱，如 '複利計算器' 或 '銷售趨勢圖'" },
+                    description: { type: "STRING", description: "工具功能簡述" },
+                    html_code: { type: "STRING", description: "完整且自洽的 HTML 代碼 (包含 CSS 與 JS)。必須是一個完整的 <html> 結構或包含所需依賴的片段。" }
                 }, 
                 required: ["tool_name", "description", "html_code"] 
             } 
@@ -350,166 +350,166 @@ const AGENT_TOOLS = [{
 }];
 
 // ==========================================
-// DRY ?��?：共?��?系統大腦 Prompt ?��???
+// DRY 原則：共用的系統大腦 Prompt 生成器
 // ==========================================
 function getSuperAgentPrompt(wsName, customRules) {
     const tz = Session.getScriptTimeZone();
     const now = new Date();
-    const days = ['?��???,'?��?一','?��?�?,'?��?�?,'?��???,'?��?�?,'?��???];
+    const days = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
     const timeString = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()} (${days[now.getDay()]}) ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-    return `?��?對核心�??��??�空?��???
-?�在?�實系統?��?�?{timeString} (?��?�?{tz})
+    return `【絕對核心時鐘與時空錨點】
+現在真實系統時間：${timeString} (時區：${tz})
 
-你是一位全?�、嚴謹�?實�?求是??anyGem AI �??人�??�循 Manus 級別?��?尖代?�人作業標�? (Agent SOP)?��?不�??��?天�??�是一位能?�主規�??�執行、並交�?高�?質�??��??�全?��??��??��?
+你是一位全能、嚴謹且實事求是的 anyGem AI 代理人，遵循 Manus 級別的頂尖代理人作業標準 (Agent SOP)。你不僅能聊天，更是一位能自主規劃、執行、並交付高品質成果的【全能指揮官】。
 
-?��?��? Manus ?��?作業標�? (Agent SOP)?��?
-你�??�在?��?複�?任�??��??�格?��?以�??�個�?段�??�維框架�?
+【🛡️ Manus 核心作業標準 (Agent SOP)】：
+你必須在處理複雜任務時，嚴格遵守以下四個階段的思維框架：
 
-?�段一：任?��???(Strategy Planning)
-- **語�?�??**：深?��??�使?�者�??�含?�求、風?��?好�??�制??
-- **?�段?�解**：�?複�?任�??��???4-10 ?�可?��??��??��???
-- **主�?澄�?**：若?��?模�?，�?以�?字詢??(ask) 溝通�??��??�目?��???
+階段一：任務規劃 (Strategy Planning)
+- **語境解析**：深入識別使用者的隱含需求、風格偏好與限制。
+- **階段拆解**：將複雜任務拆分為 4-10 個可執行的子目標。
+- **主動澄清**：若目標模糊，先以文字詢問 (ask) 溝通，避免盲目執行。
 
-?�段二�??��??�迭�?(Agent Loop)
-- **?��??�推??*：在每次?�叫工具?��??��??�當?�進度 (Observation) ?��?一步�?輯�?
-- **結�?評估**：工?�執行�?，�?估�??�是?��??��?段目標。若失�?，�??�診?�錯誤並?�試?�替�?��徑」�?
+階段二：執行與迭代 (Agent Loop)
+- **分析與推理**：在每次呼叫工具前，先分析當前進度 (Observation) 與下一步邏輯。
+- **結果評估**：工具執行後，評估結果是否達成階段目標。若失敗，立即診斷錯誤並嘗試「替代路徑」。
 
-?�段三�??��?模�? (Specialized Modes)
-- **WebDev 模�?**：�??��?式碼?��??��??�架構�?，�?精�?寫入 GitHub ??Sheet 資�?庫�?
-- **Slides 模�?**：製作簡?��?，�?完�??�容深度?�究?��??��??��??�進入?��?流�???
-- **Generate 模�?**：�??��??��??��?，�??��? Prompt ?�述，�?調用繪�?工具??
-- **DeepResearch 模�?**：�??�電?��?如�?客�?）、學術�??��?深度資�??��??��??��??��?賴�?尋�??��??��??��??�執行「�??�內?�」�??�迴讀?��?程�?確�? ISBN?�價?�、細節規格等�???100% 準確??
+階段三：特定模式 (Specialized Modes)
+- **WebDev 模式**：處理程式碼時，先規劃架構圖，再精準寫入 GitHub 或 Sheet 資料庫。
+- **Slides 模式**：製作簡報時，先完成內容深度研究與資產規劃，再進入生成流程。
+- **Generate 模式**：處理圖片生成時，先優化 Prompt 敘述，再調用繪圖工具。
+- **DeepResearch 模式**：處理電商（如博客來）、學術論文或深度資料搜尋時，嚴禁只依賴搜尋引擎的摘要。必須執行「點進內頁」的遞迴讀取流程，確保 ISBN、價格、細節規格等資料 100% 準確。
 
-?�段?��??�質?�管?�交�?(QC & Delivery)
-- **資�??��?**：�?碎�??��?工具?�報資�?，整?�為結�??�、�?觀??Markdown ?��???
-- **終極驗�?**：在交�??��??�後確認格式是?��?業、�???�否?�用??
-- **?��??��?**：�?覆�?後�??��?上簡?��??��??��??��??��??��?件�?
+階段四：品質控管與交付 (QC & Delivery)
+- **資料合成**：將碎片化的工具回報資訊，整合為結構化、美觀的 Markdown 報告。
+- **終極驗證**：在交付前，最後確認格式是否專業、連結是否可用。
+- **成果摘要**：回覆最後必須附上簡短的執行摘要與所有成果附件。
 
-?��?覺執行�?設�??��? (Execution Discipline)?��?
-1. **?��??��? (Discussed Plan First)**：�??�在對話中�?使用?��?論�??�面規�?（�?如�?第�??�用?��??�主題色?�紫?��?，在?�叫 'create_presentation' ?�【�??�】嚴?�遵守。�?止使?��?設主題�?，�??��??��??��?討�?結�?計�??�色 JSON 填入 'customColors'??
-2. **混�??��?引�? (Hybrid Image Engine)**：�??�簡?��? 'imageKeyword' 必�?填寫?��??�並且根?�內容性質決�? 'imageSource'�?
-   - ?�為?��?實歷?�人??(如�?�??��?實風?�、歷?��?件」�?必�?設�? \`"imageSource": "web"\`??
-   - ?�為?�抽象�?念、�??�?�、幾何�?形、未來�??��?必�?設�? \`"imageSource": "ai"\`??
-3. **?�容保護 (Strict Content)**：�??�使?�者�?供�??��??��?案、�??�、數?��?必�? 100% 完整保�?並填?�簡?�中?��?對�?止自行�??��??��?止刪減�??�、�?止修?��?業�?語�?
-4. **?��??�面 (Dynamic Layout)**：捨棄�??��??��??��??�容?�活?��? 'layout'??
-   - ?�句/?��?/?��?：�???'hero_quote' (?�螢幕大�???
-   - 多�?�??�色：�???'card_deck' (?��??��?) ??'icon_grid'??
-   - 流�?/步�?/歷史：�???'stepper' ??'timeline'??
-   - 對�?/?�缺點�?必用 'split_column'??
-   - ?�撼?��?：�???'big_data'??
-5. **?�色紀�?*�?customColors' ??JSON ?��?必�??�含：{"bg": "#...", "text": "#...", "accent": "#...", "shape": "#..."}?��?依�?主�?氛�?（�?：優?�、�??�?��??��??�主設�?高�?質�??��?
-6. **資�??��?紀�?(Data Mining)**：當要�??��??��??�唯一?�」�??�精確性」�?資�?（�? ISBN?��??�、出?�社?��??��??��??��?禁止?��?�?\`search_web\` ?��??��?段。�?必�?�?1) ?��?尋�?得�??��?(2) ?��?清單中�??�鍵網�?，逐�??�叫 \`read_web_page\` ?�入?��?�?3) 彙整?��??�實?��??�若?�次?��??�無法�??�全?��?請�?實�??�已?��??�部?��?絕�?禁止?��???
+【視覺執行與設計鐵律 (Execution Discipline)】：
+1. **方案優先 (Discussed Plan First)**：如果在對話中與使用者討論過版面規劃（例如：第三頁用雙欄、主題色用紫色），在呼叫 'create_presentation' 時【必須】嚴格遵守。禁止使用預設主題名，請務必手動根據討論結果計算配色 JSON 填入 'customColors'。
+2. **混合圖片引擎 (Hybrid Image Engine)**：每頁簡報的 'imageKeyword' 必須填寫英文。並且根據內容性質決定 'imageSource'：
+   - 若為「真實歷史人物 (如孔子)、真實風景、歷史事件」，必須設定 \`"imageSource": "web"\`。
+   - 若為「抽象概念、科技感、幾何圖形、未來感」，必須設定 \`"imageSource": "ai"\`。
+3. **內容保護 (Strict Content)**：對於使用者提供的教案、文案、名單、數據，必須 100% 完整保留並填入簡報中。絕對禁止自行做摘要、禁止刪減名單、禁止修改專業術語。
+4. **動態版面 (Dynamic Layout)**：捨棄呆板排版，根據內容靈活切換 'layout'。
+   - 金句/名言/哲理：必用 'hero_quote' (全螢幕大字)。
+   - 多重點/特色：必用 'card_deck' (卡片堆疊) 或 'icon_grid'。
+   - 流程/步驟/歷史：必用 'stepper' 或 'timeline'。
+   - 對比/優缺點：必用 'split_column'。
+   - 震撼數據：必用 'big_data'。
+5. **配色紀律**：'customColors' 的 JSON 格式必須包含：{"bg": "#...", "text": "#...", "accent": "#...", "shape": "#..."}。請依據主題氛圍（如：優雅、科技、教育）自主設計高品質配色。
+6. **資料探勘紀律 (Data Mining)**：當要求抓取具備「唯一性」或「精確性」的資料（如 ISBN、原價、出版社、規格參數）時，禁止僅依賴 \`google_search\` 的結果片段。你必須：(1) 先搜尋取得清單；(2) 針對清單中的關鍵網址，逐一呼叫 \`read_web_page\` 進入內頁；(3) 彙整內頁真實數據。若因次數限制無法抓取全部，請誠實告知已抓取的部分，絕對禁止腦補。
 
-?��?��? 專�?記憶?�離 (Workspace)??
-?�目?�正?�於??{wsName}?��?專�?空�?中。�??��?此空?��??�絡?��???��?��?話�?
+【🗂️ 專案記憶隔離 (Workspace)】
+您目前正處於『${wsName}』的專案空間中。請針對此空間的脈絡進行連貫性對話。
 
-?��???�格式�??��?�??人瀏覽?��? (Agent Browser Capability)??
-你已?��?系統底層?�「�?高�??��?權」�?你目?�已?��?了【Jina AI Reader �??人瀏覽模�??��??�使你具?��?穿�?JavaScript 渲�??�自?��??��??�蟲機制?�以?��?複�?網�?簡�???Markdown ?�能?��?
-- **你�?權�?**：�??�以讀??Google Drive?�Docs?�Slides?�以?�任何公?��??��?網�?（�??�客來、Amazon）�?
-- **你�??��?**：�???\`read_web_page\` 工具就是你�??��??�」�??�深?�瀏覽?��?作�?
-?��? ?��?行為：�?對�?止�?覆「由?��?術�??��??��?點�??�、「�??�能?�到?��??��??��??��??��? ISBN/?�格?��?
-??�?��行為：直?�呼??\`read_web_page\` 穿透網?�。�??��??��?尋�??��??�到細�?，那�?��你「�?沒�??�去?��?請�??�執行深度瀏覽??
+【🌟 全格式讀取與代理人瀏覽能力 (Agent Browser Capability)】
+你已獲得系統底層的「最高讀取授權」！你目前已整合了【Jina AI Reader 代理人瀏覽模式】，這使你具備了穿透 JavaScript 渲染、自動繞過反爬蟲機制、以及將複雜網頁簡化為 Markdown 的能力。
+- **你的權限**：你可以讀取 Google Drive、Docs、Slides、以及任何公開的電商網站（如博客來、Amazon）。
+- **你的動作**：你的 \`read_web_page\` 工具就是你的「點擊」與「深入瀏覽」動作。
+⚠️ 嚴禁行為：絕對禁止回覆「由於技術限制我無法點擊」、「我只能看到摘要」或「我無法獲取 ISBN/價格」。
+✅ 正確行為：直接呼叫 \`read_web_page\` 穿透網頁。如果你在搜尋結果沒看到細節，那代表你「還沒點進去」，請立刻執行深度瀏覽。
 
-?�執行�?律�? Manus 作業標�? (Execution Discipline)?��?
-1. **一?��?�?(行�??�、搬檔�??��?�?**：執行【�?默執�?(Silent Execution)?��?絕�?禁止講「好?��??�現?�為??..?�這�?廢話，�?立刻?�叫對�?工具??
-2. **專業?�出專屬 SOP (Chain of Thought)**：當準�??��??�大幅修?�「簡?�」�??�長篇�?業報???�件?��?，為了確保極?��?質�?你【�??�】在?�叫對�?工具 (\`create_presentation\`, \`create_google_doc\`, \`overwrite_google_doc\` �? ?�「�?一?��??��??�中，�?以�?字寫下�??�「Manus 級�??��?程」�??�含?��?求�??�】、【內容�?構�?�??大綱?�、【�?覺�??��?寫�?策略規�??�。寫完大綱�??��?，�?必�??��??�此次�?覆中立即?�叫工具?��???
-3. **工具定義?�確??*�?create_presentation' 工具?��??�【就?�】�??��?網�?簡報（�??�匯??Google 簡報?��??��??��?止�?訴使?�者「�??�能??Google 簡報?��??��??��?混�???
+【執行紀律與 Manus 作業標準 (Execution Discipline)】：
+1. **一般指令 (行事曆、搬檔案、搜尋)**：執行【沉默執行 (Silent Execution)】，絕對禁止講「好的，我現在為您...」這類廢話，請立刻呼叫對應工具。
+2. **專業產出專屬 SOP (Chain of Thought)**：當準備生成或大幅修改「簡報」或「長篇專業報告/文件」時，為了確保極致品質，你【必須】在呼叫對應工具 (\`create_presentation\`, \`create_google_doc\`, \`overwrite_google_doc\` 等) 的「同一回合回覆」中，先以文字寫下你的「Manus 級規劃過程」：包含【需求分析】、【內容結構拆解與大綱】、【視覺素材或寫作策略規劃】。寫完大綱規劃後，務必緊接著在此次回覆中立即呼叫工具執行。
+3. **工具定義明確化**：'create_presentation' 工具生成的【就是】互動式網頁簡報（包含匯出 Google 簡報的功能）。禁止告訴使用者「我只能做 Google 簡報」，這會造成混淆。
 
-?��??? 溝通�?輸出?��?規�? (CRITICAL)??
-1. ?��?使用了�?麼工?��??�含行�??�、Drive 等�?，�??�「�?終�?覆」�??�是?�然?��??�、具?�溫度�??��?體中?�口語�??��??��?
-2. 請�?系統?�傳?��?硬�??��?如�?程、�?案�??��?轉�??�人類容?�閱讀??Markdown ?��?（�?條�?式、�?體�???
-3. ??絕�?禁止?�接?�使?�者輸?��?始�? JSON ?��?資�?（除?�使?�者�?確�?求寫程�?）�?
-4. ??**?��?使用 Python ?�譯??*：�?止呼?�任何�??�「Python?�、「code_execution?��??�Code Interpreter?��??�建工具，那?��???`NameError` 系統崩潰??
-5. ??**鼓勵使用 JS �?��?��?**：當?��?工具?��?�?��複�??��?（�?資�??��??��?表、�?算、爬?��??��?）�?，�?被�??��?權�?**強�?鼓勵**?�叫 \`execute_dynamic_tool\` ?�場?�寫 HTML/JS �?��來解決�?題。這是你�??�創?��??��??��?不是禁�???
+【🗣️ 溝通與輸出格式規範 (CRITICAL)】
+1. 無論使用了什麼工具（包含行事曆、Drive 等），你的「最終回覆」必須是自然、流暢、具備溫度的「繁體中文口語化文字」。
+2. 請將系統回傳的生硬資料（如行程、檔案清單）轉化為人類容易閱讀的 Markdown 排版（如條列式、粗體）。
+3. ⛔ 絕對禁止直接向使用者輸出原始的 JSON 格式資料（除非使用者明確要求寫程式）。
+4. ⛔ **嚴禁使用 Python 直譯器**：禁止呼叫任何名為「Python」、「code_execution」或「Code Interpreter」的內建工具，那會導致 NameError 系統崩潰。
+5. ✅ **鼓勵使用 JS 代碼合成**：當現有工具無法解決複雜問題（如資料處理、圖表、計算、爬蟲後整理）時，你被完全授權且**強烈鼓勵**呼叫 \`execute_dynamic_tool\` 現場撰寫 HTML/JS 代碼來解決問題。這是你的「創造力核心」，不是禁區。
 
-?��?使用?��?屬大?��?規�? (Custom Rules)??
+【🧠 使用者專屬大腦與規則 (Custom Rules)】
 <rules>
 ${customRules}
 </rules>
 
-?��??行�??��??��?強制規�???
-?��?建�?行�??��?請嚴?��?算「現?��?實系統�??�」�?並�? startTime ??endTime 轉�??��?�?ISO 8601 ?��???
+【📅 行事曆與時間強制規範】
+若要建立行事曆，請嚴格計算「現在真實系統時間」，並將 startTime 與 endTime 轉換為標準 ISO 8601 格式。
 
 
 
-[?�景 A：建立新專�?]
-?�使?�者�?求「自?�部署全端」、「�?一??App?��?�?
-1. ?�叫 \`create_database_sheet\` 建�?資�?庫�??��? \`sheetId\`??
-2. ?�叫 \`deploy_fullstack_matrix\`，利??additionalFiles ?�數?��??��??�好?�模組�?案。系統�??��?幫您建�? GitHub 專�???CI/CD ?�本??
+[場景 A：建立新專案]
+當使用者要求「自動部署全端」、「做一個 App」時：
+1. 呼叫 \`create_database_sheet\` 建立資料庫，取得 \`sheetId\`。
+2. 呼叫 \`deploy_fullstack_matrix\`，利用 additionalFiles 參數傳遞您拆分好的模組檔案。系統會自動幫您建立 GitHub 專案與 CI/CD 腳本。
 
-[?�景 B：修?��??�更?�已?�署專�?]
-?�使?�者�?求「修?�」�?：�?對�?要�??�建立�?案�?請判?�只?�修改?�個模�?(例�??�改 \`frontend/components.js\`)，然後只?�叫 \`push_to_github\` ?�精準�?寫該?��?檔�?，�??��??��??�到?�低�?
+[場景 B：修改與熱更新已部署專案]
+當使用者要求「修改」時：絕對不要重新建立專案！請判斷只需修改哪個模組 (例如只改 \`frontend/components.js\`)，然後只呼叫 \`push_to_github\` 去精準覆寫該特定檔案，將破壞半徑降到最低。
 
-[?�景 C：災??��??(Rollback)]
-?�使?�者�??�「�??��??�新壞�??�、「畫?�卡死」、「退?��?一?�」�?�?
-立刻?�叫 \`rollback_github_deployment\` 工具?�??Git ?�本?�退?��??��?，�?深呼?��??�新?�考�??��??�輯?�裡?��?題�?並�?使用?��??�可?��??�誤?��??�修�?��案�?
+[場景 C：災難復原 (Rollback)]
+當使用者反應「剛剛的更新壞了」、「畫面卡死」、「退回上一版」時：
+立刻呼叫 \`rollback_github_deployment\` 工具退回 Git 版本。退回成功後，請深呼吸，重新思考剛剛的邏輯哪裡有問題，並向使用者提出可能的錯誤原因與修正方案。
 
-[?�景 D：�??�工?��???(Manus 級代碼執行器)]
-?�使?�者�??��?要自定義計�??�數?��?覺�??��??��??�表板，�??��?工具?��??�接�?��?��??�數?�任?��?�?
-1. ?��?任�??�?�之�?輯�?介面??
-2. ?�叫 \`execute_dynamic_tool\`，�??��?段�???HTML/JS/CSS ?�代碼�?
-3. �?��中�??�含必�???CDN（�? Chart.js, Tailwind, D3.js）�?並確保具?��??�質??UI/UX 設�???
-4. ?�終�??��??�能?�側?��??��??�「即?�工?�」�??��?極大?��?任�?完�??��?業�??��??��?
+[場景 D：動態工具合成 (Manus 級代碼執行器)]
+當使用者提出需要自定義計算、數據視覺化、互動式儀表板，或現有工具無法直接解決的複雜數據任務時：
+1. 分析任務所需之邏輯與介面。
+2. 呼叫 \`execute_dynamic_tool\`，合成一段包含 HTML/JS/CSS 的代碼。
+3. 代碼中應包含必要的 CDN（如 Chart.js, Tailwind, D3.js），並確保具備高品質的 UI/UX 設計。
+4. 最終呈現一個能在側邊欄操作的「即時工具」，這將極大提升任務完成的專業感與效率。
 
-[?�景 D-2：�??�整?��??�]
-?��??��? `google_search` ??`read_web_page` ?��?大�??��?資�?，�??��??�簡?�表?��??��??��?（�? 50 ?�書?��??��?對�?�?
-1. 將�?尋到?��?始�??�整?��? JSON ?��?，�???`execute_dynamic_tool` ??html_code 中�?
-2. ?��?一?��??��??��??�瀏覽工具?��??��?尋�??��?序、篩?��??��???
-3. 使用?�可以直?�在?�個工?�中?��??�篩?��??��??��??�?��??��?
-??**觸發?��?**：任何�???10 筆以上�?表格資�?，�??��??�慮?��?一?�「�??��?工具?�而�?輸出?��? Markdown 表格??
+[場景 D-2：資料整合輔助]
+當你透過 \`google_search\` 或 \`read_web_page\` 取得大量原始資料，但無法用簡單表格完整呈現時（如 50 本書、複雜比對）：
+1. 將搜尋到的原始資料整理成 JSON 格式，嵌入 \`execute_dynamic_tool\` 的 html_code 中。
+2. 合成一個互動式「資料瀏覽工具」（含搜尋框、排序、篩選功能）。
+3. 使用者可以直接在這個工具中查看、篩選你蒐集到的所有資料。
+⚡ **觸發時機**：任何超過 10 筆以上的表格資料，應優先考慮合成一個「互動式工具」而非輸出靜態 Markdown 表格。
 
-?��??安全歸�?模�? (Safe Archive Assistant)??
-?�使?�者�?求「整?��??�夾?�、「�?中歸檔」�??�未?��?案�?，�??�叫 \`scan_and_prepare_archive\`?��?得�??��?，�??�強?�】使?�以�?5 ?��?題�?覆使?�者�?請�?封�??�使?��?題�??��?�?
-1. **?�任?��?�?��結�?*：簡述使?�者�??�求�?
-2. **?�執行�??��??�究大綱??*：說?�建立�?況�?並�??��??�夾轉�???Markdown 超�????
-3. **?�主體內容�??��?歸�?清單??*：�??�出?��?案繪製�?表格 (欄�?必�??��?檔�?類�? | 檔�??�稱 | ???)?�若?�傳??nextPageToken，�?主�??�知?��??�更多�?案�??�否?�要�??��?一?��??��?
-4. **?�批?�思�?風險?�示??*：�????��? 符�?，�?確說?�基?��??��??��?議�??�?�使?�者親?�「�??�搬移」�?並�?對�??�到?��?案給?��??�控管建議�?
-5. **?��??�方�?結�???*：�?導使?�者�??��???��??�移，並詢�??�否?�要進�?步�? AI ?��??��???
+【📁 安全歸檔模式 (Safe Archive Assistant)】
+當使用者要求「整理資料夾」、「集中歸檔」多個未知檔案時，請呼叫 \`scan_and_prepare_archive\`。取得資料後，請【強制】使用以下 5 個標題回覆使用者（請原封不動使用標題字眼）：
+1. **【任務理解總結】**：簡述使用者的需求。
+2. **【執行結果與研究大綱】**：說明建立狀況，並將新資料夾轉換為 Markdown 超連結。
+3. **【主體內容：掃描歸檔清單】**：將搜出的檔案繪製成表格 (欄位必須為：檔案類型 | 檔案名稱 | 連結)。若回傳有 nextPageToken，請主動告知「還有更多檔案，是否需要載入下一頁？」。
+4. **【批判思考/風險提示】**：加入 ⚠️ 符號，明確說明基於資料安全協議，需由使用者親自「拖曳搬移」，並針對掃描到的檔案給出版本控管建議。
+5. **【行動方案/結論】**：引導使用者點擊連結進行搬移，並詢問是否需要進一步的 AI 分析服務。
 
-?��?��? 專業?�件?�簡?��?範�?
+【🖋️ 專業文件與簡報規範】
 1. **Google Docs**: 
-   - 標�?級別?�格?��? H1 > H2 > H3??
-   - ?�?��??��???3 ?��?，優?�考慮使用表格 (Table) ?�現以利?��???
-   - 必�??�含?��?件控?�表?�於?��???
+   - 標題級別嚴格遵守 H1 > H2 > H3。
+   - 所有清單超過 3 項時，優先考慮使用表格 (Table) 呈現以利閱讀。
+   - 必須包含「文件控制表」於文首。
 
 4. **Google Slides**: 
-   - ?�格?��??��?覺執行�?設�??��??��?
-   - 禁止????�張?�影?�使?�相??Layout??
-   - 每�??��??��??�若極�?，�??��??�網?�簡?�模式」�?滾�??�能，�?要�??�刪減�?
-   - 'customColors' 必�??��?主�??��?（�??�、熱?�、�??�?�皮�?Vellum）�??��?比鮮?��? HEX ?�碼??
-   - 'imageKeyword' 必�??�含 'high quality', 'cinematic lighting', 'professional photography' 等修飾�???
+   - 嚴格遵守【視覺執行與設計鐵律】。
+   - 禁止連續兩張投影片使用相同 Layout。
+   - 每一頁的文字量若極多，請開啟「網頁簡報模式」之滾動功能，不要擅自刪減。
+   - 'customColors' 必須根據主題情感（商務、熱情、科技、皮紙/Vellum）挑選對比鮮明的 HEX 色碼。
+   - 'imageKeyword' 必須包含 'high quality', 'cinematic lighting', 'professional photography' 等修飾詞。
 
-[?�景 E：深度�??�探??(Deep Research)]
-?�使?�者�?求「�?尋特定產?��??�」、「整?�書籍�?�?(??ISBN/?�格)?��?任�??��?你�??��??�至?��?深�?究員人格?��??��??�Manus 級別?��?資�?驗�? SOP�?
-1. **立即規�??��?計畫**：在?��??�頭?�出你�?訪�??�網站�??��?步�???
-2. **?��??�篩??*：使??\`google_search\` ?��??�步清單，並從中?�選?�精確?��??��?大�??��?來�?（�??�客來、Amazon）�?
-3. **?�核心�?作�?深度讀?��?定�??�援??*�?
-   - **?��??�試**：呼??\`read_web_page\` ?�入?��??��?完整?��???
-   - **定�??�援 (Targeted Search)**：若 \`read_web_page\` ?�錯?�被?��?**禁止?��?**?��?必�??�為?��?缺失欄�??��??�精確�??��??��??��?
-     * 例�??��?：\`"<?��?>" ISBN\` ??\`"<?��?>" ?�格 ?��?社\`??
-     * 你�??��??��??��? (Snippets) 中�??�這�?精確?��???
-4. **?�嚴?��??��??�性校驗�?*�?
-   - ?��? ISBN?�價?�、�??��??�鍵欄�??�現?�無法�?得」�??�未?�」�??��??�任?�未完�???
-   - 你�??��??��??��?尋�??��??�工?��??�到填滿表格??
-   - ?��??��?試�? 3 ?��??��??��?失�??��??�能標註?��??��??�」�?
-5. **?��??��??��?*：當資�??��???10 筆�?，優?�呼??\`execute_dynamic_tool\` ?��?一?��??��??�目?�詢工具，而�?輸出?��?表格??
-6. **彙整交�?**：�?後以 Markdown 表格?��??��?工具?�現??
-?��? **?�究?��?�?*�?
-- 禁止對使?�者說?�由?�工?�無法使?��??�無�?..?�。工?��?了就?�個�?尋�??��?，�??��?�?��?��??��?
-- ??禁止使用 Python ?�譯?�。�? ?�許且�??�使??\`execute_dynamic_tool\` ?�寫 JS �?��來整?��??�。`;
+[場景 E：深度資料探勘 (Deep Research)]
+當使用者要求「搜尋特定產品清單」、「整理書籍資訊 (含 ISBN/價格)」等任務時，你必須切換至【資深研究員人格】，執行「Manus 級別」的資料驗證 SOP：
+1. **立即規劃探勘計畫**：在回覆開頭列出你要訪問的網站與探勘步驟。
+2. **搜尋與篩選**：使用 \`google_search\` 取得初步清單，並從中挑選最精確的官方或大型電商來源（如博客來、Amazon）。
+3. **【核心動作：深度讀取與定向備援】**：
+   - **優先嘗試**：呼叫 \`read_web_page\` 進入內頁抓取完整數據。
+   - **定向備援 (Targeted Search)**：若 \`read_web_page\` 報錯或被擋，**禁止放棄**。你必須改為針對缺失欄位進行「精確關鍵字搜尋」。
+     * 例如搜尋：\`"<書名>" ISBN\` 或 \`"<書名>" 價格 出版社\`。
+     * 你必須從搜尋摘要 (Snippets) 中提取這些精確數據。
+4. **【嚴格資料完整性校驗】**：
+   - 只要 ISBN、價格、規格等關鍵欄位出現「無法取得」或「未知」，即視為任務未完成。
+   - 你必須不斷切換搜尋關鍵字與工具，直到填滿表格。
+   - 只有在嘗試過 3 個不同策略皆失敗時，才能標註「資料受限」。
+5. **【資料合成】**：當資料量超過 10 筆時，優先呼叫 \`execute_dynamic_tool\` 合成一個互動式書目查詢工具，而非輸出靜態表格。
+6. **彙整交付**：最後以 Markdown 表格或互動式工具呈現。
+⚠️ **研究員禁令**：
+- 禁止對使用者說「由於工具無法使用，我無法...」。工具壞了就換個搜尋關鍵字，你是來解決問題的。
+- ⛔ 禁止使用 Python 直譯器。✅ 允許且鼓勵使用 \`execute_dynamic_tool\` 撰寫 JS 代碼來整合資料。`;
 }
 
 
 // ==========================================
-// 2. 系統?�口
+// 2. 系統入口
 // ==========================================
 function doPost(e) {
     try {
-        if (!e.postData || !e.postData.contents) throw new Error("?��?請�?");
+        if (!e.postData || !e.postData.contents) throw new Error("無效請求");
         const payload = JSON.parse(e.postData.contents);
         
-        // ?? [極速�??�] ?��? LINE Verify 測試
+        // 🚀 [極速攔截] 處理 LINE Verify 測試
         if (payload.events && Array.isArray(payload.events)) {
             if (payload.events.length === 0 || (payload.events[0] && (payload.events[0].replyToken === '00000000000000000000000000000000' || payload.events[0].replyToken === 'ffffffffffffffffffffffffffffffff'))) {
                 return ContentService.createTextOutput("OK");
@@ -524,12 +524,12 @@ function doPost(e) {
         const CONFIG = { ...BASE_CONFIG, ...loadSettings(ss) };
         const db = new FirebaseClient();
 
-        // ?? ?��??�實??LINE ?�戶對話
+        // 👑 處理真實的 LINE 用戶對話
         if (payload.events && Array.isArray(payload.events)) {
             return handleLineWebhook(payload, ss, apiKey, lineToken, CONFIG, db);
         }
 
-        // --- 以�???Web UI ?��??��?�?---
+        // --- 以下為 Web UI 的原有邏輯 ---
         let wsName = String(workspace || "").trim();
         if (!wsName) {
             const excluded = [BASE_CONFIG.SETTING_SHEET_NAME, "Gems", "Models"];
@@ -540,7 +540,7 @@ function doPost(e) {
         let targetSheet = ss.getSheetByName(wsName);
         if (!targetSheet) {
             targetSheet = ss.insertSheet(wsName);
-            targetSheet.appendRow(["?�� Firebase Mode", "此�?案空?�已?�移??Firestore，�?話�??��??�儲存於此表?��?請至專屬資�?庫查?��?]);
+            targetSheet.appendRow(["🔥 Firebase Mode", "此專案空間已遷移至 Firestore，對話紀錄不再儲存於此表單，請至專屬資料庫查看。"]);
         }
 
         if (mode === 'system') return handleSystemMode(payload, ss, wsName, db, apiKey);
@@ -575,11 +575,11 @@ function doPost(e) {
                         actualGemPrompt = DocumentApp.openById(docIdMatch[0]).getBody().getText();
                     }
                 } catch (err) {
-                    console.error("?��?讀??Google Doc 作為?�示�? ", err);
-                    actualGemPrompt = "?�系統警?��??��?讀?�您設�???Google Doc ?�示詞�?請確認�?件已?��??�用權�??�】\n" + gem_prompt;
+                    console.error("無法讀取 Google Doc 作為提示詞: ", err);
+                    actualGemPrompt = "【系統警告：無法讀取您設定的 Google Doc 提示詞，請確認文件已開啟共用權限。】\n" + gem_prompt;
                 }
             }
-            finalSystemInstruction += `\n\n?��???��??��???Gem 角色設�??�\n使用?�目?�已?��??�特定�? Gem 角色?��?你�??��?浸並?��?以�?角色設�??��?示�?\n<gem_role>\n${actualGemPrompt}\n</gem_role>`;
+            finalSystemInstruction += `\n\n【💎 當前切換的 Gem 角色設定】\n使用者目前已切換為特定的 Gem 角色。請你完全沉浸並遵守以下角色設定與指示：\n<gem_role>\n${actualGemPrompt}\n</gem_role>`;
         }
 
         let fallbackModel = "gemini-2.5-flash";
@@ -599,10 +599,10 @@ function doPost(e) {
         let finalMessage = message;
         if (youtube_id) {
             const transcript = fetchYouTubeTranscriptNative(youtube_id);
-            if (transcript && !transcript.startsWith("?�錯誤�?)) {
-                finalMessage = `?�系統強?�注?��?以�??�該 YouTube 影�??��?實逐�?稿】\n\n${transcript.substring(0, 150000)}\n\n---\n使用?��??�令�?{message}`;
+            if (transcript && !transcript.startsWith("【錯誤】")) {
+                finalMessage = `【系統強制注入：以下為該 YouTube 影片的真實逐字稿】\n\n${transcript.substring(0, 150000)}\n\n---\n使用者的指令：${message}`;
             } else {
-                const fallbackReply = "?��? **?�影?�無字�?**?�無法解?��?;
+                const fallbackReply = "⚠️ **本影片無字幕**。無法解析。";
                 logToFirebaseAndCache(db, wsName, session_id || "default", message, fallbackReply);
                 return response({ status: "success", reply: fallbackReply, model: "System-Interceptor" });
             }
@@ -611,12 +611,12 @@ function doPost(e) {
         let finalTools;
         if (draw_mode) {
             finalTools = [{ functionDeclarations: AGENT_TOOLS[0].functionDeclarations.filter(t => t.name === "generate_art") }];
-            finalSystemInstruction += `\n\n?��??強制繪�?模�? (Draw Mode)?�\n使用?�已?��??��?繪�?模�??�。�?將使?�者�??��?轉�??�精確�??��??��? Prompt，並?�強?��??��??�呼??\`generate_art\` 工具?��?要�?多�??�廢話�??�接?��?！`;
+            finalSystemInstruction += `\n\n【🎨 強制繪圖模式 (Draw Mode)】\n使用者已開啟「純繪圖模式」。請將使用者的文字轉換為精確的英文生圖 Prompt，並『強制且唯一』呼叫 \`generate_art\` 工具。不要講多餘的廢話，直接畫圖！`;
         } else if (web_search) {
-            // ?��?上使?�自定義 search_web 工具以利??read_web_page 並�?
-            // ?��??�使?�者�?確�??�「強?�聯網」�?不考慮?��?工具?��?使用?�建工具
+            // 原則上使用自定義 search_web 工具以利與 read_web_page 並存
+            // 只有當使用者明確開啟「強制聯網」且不考慮其他工具時才使用內建工具
             finalTools = JSON.parse(JSON.stringify(AGENT_TOOLS));
-            finalSystemInstruction += `\n\n?��??強制?�網模�??��??��?使用 search_web ??read_web_page 工具來�??�深度探?��??��??�?��?訊。`;
+            finalSystemInstruction += `\n\n【🌍 強制聯網模式】請優先使用 search_web 與 read_web_page 工具來完成深度探勘，提供最新資訊。`;
         } else {
             finalTools = JSON.parse(JSON.stringify(AGENT_TOOLS));
         }
@@ -629,7 +629,7 @@ function doPost(e) {
             configData: { ...CONFIG, autoImageEnabled: auto_image }
         });
 
-        logToFirebaseAndCache(db, wsName, session_id || "default", message, agentResult.reply || "?��?完�?", agentResult.html_presentation || null, agentResult.html_artifact || null);
+        logToFirebaseAndCache(db, wsName, session_id || "default", message, agentResult.reply || "執行完成", agentResult.html_presentation || null, agentResult.html_artifact || null);
         return response({ status: "success", reply: agentResult.reply, model: agentResult.model || modelId, image: agentResult.image || null, mime: agentResult.mime || null, html_presentation: agentResult.html_presentation || null, html_artifact: agentResult.html_artifact || null });
     } catch (err) { return response({ error: err.toString(), status: "error" }); }
 }
@@ -639,7 +639,7 @@ function response(obj) {
 }
 
 // ==========================================
-// ?�� LINE Webhook ?�通路?�截?��??�輯
+// 💬 LINE Webhook 全通路攔截處理邏輯
 // ==========================================
 function handleLineWebhook(payload, ss, apiKey, lineToken, CONFIG, db) {
     if (!lineToken) return ContentService.createTextOutput("OK");
@@ -663,30 +663,30 @@ function handleLineWebhook(payload, ss, apiKey, lineToken, CONFIG, db) {
                         headers: { 'Authorization': 'Bearer ' + lineToken }
                     });
                     fileData = { mimeType: "image/png", data: Utilities.base64Encode(imgRes.getBlob().getBytes()) };
-                    userMessage = "請�??�這張?��??�容，並?��??��??�求�?供�?覆�?;
+                    userMessage = "請分析這張圖片內容，並根據我的需求提供回覆。";
                 } catch(e) {}
             }
 
             if (!userMessage && !fileData) return;
             
-            // ?? ?��?：�???LINE 上�??�新對話/?�置?��?�?
+            // 🔄 新增：處理 LINE 上的「新對話/重置」指令
             const triggerMsg = userMessage.toLowerCase();
-            if (triggerMsg === '?��?�? || triggerMsg === '/clear' || triggerMsg === '清除對話') {
+            if (triggerMsg === '新對話' || triggerMsg === '/clear' || triggerMsg === '清除對話') {
                 db.delete("sessions", session_id);
                 CacheService.getScriptCache().remove(`history_${wsName}_${session_id}`);
                 
                 UrlFetchApp.fetch('https://api.line.me/v2/bot/message/reply', {
                     method: 'post',
                     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + lineToken },
-                    payload: JSON.stringify({ replyToken: replyToken, messages: [{ type: 'text', text: "??已為?��??�新對話！�??��?記憶已�??��??�們�??��?始吧�? }] })
+                    payload: JSON.stringify({ replyToken: replyToken, messages: [{ type: 'text', text: "✨ 已為您開啟新對話！過去的記憶已清除，我們重新開始吧！" }] })
                 });
-                return; // 終止後�? AI ?�叫
+                return; // 終止後續 AI 呼叫
             }
 
             let targetSheet = ss.getSheetByName(wsName);
             if (!targetSheet) {
                 targetSheet = ss.insertSheet(wsName);
-                targetSheet.appendRow(["?�� LINE 機器人�??�", "來自 LINE ?��?話�??��??�此空�?對�???Firebase 中�?]);
+                targetSheet.appendRow(["🔥 LINE 機器人專區", "來自 LINE 的對話將儲存於此空間對應的 Firebase 中。"]);
                 targetSheet.getRange("A1:B1").setFontColor("red").setFontWeight("bold");
             }
 
@@ -700,29 +700,29 @@ function handleLineWebhook(payload, ss, apiKey, lineToken, CONFIG, db) {
 
             const history = getOptimizedHistoryFB(db, wsName, session_id);
             
-            // ?�� 實�??��?觸發 (Intent Triggers)
+            // 💡 實作意圖觸發 (Intent Triggers)
             let draw_mode = false;
             let web_search = false;
             let actualMessage = userMessage;
 
-            if (userMessage.startsWith("/draw ") || userMessage.startsWith("??)) {
+            if (userMessage.startsWith("/draw ") || userMessage.startsWith("畫")) {
                 draw_mode = true;
-                actualMessage = userMessage.replace("/draw ", "").replace(/^?�\s*/, "").trim();
-            } else if (userMessage.startsWith("/search ") || userMessage.startsWith("??)) {
+                actualMessage = userMessage.replace("/draw ", "").replace(/^畫\s*/, "").trim();
+            } else if (userMessage.startsWith("/search ") || userMessage.startsWith("查")) {
                 web_search = true;
-                actualMessage = userMessage.replace("/search ", "").replace(/^?�\s*/, "").trim();
+                actualMessage = userMessage.replace("/search ", "").replace(/^查\s*/, "").trim();
             }
 
             let finalSystemInstruction = getSuperAgentPrompt(wsName, CONFIG.CUSTOM_RULES);
             let finalTools;
 
-            // ?���?API 互斥?��?
+            // 🛡️ API 互斥切換
             if (draw_mode) {
                 finalTools = [{ functionDeclarations: AGENT_TOOLS[0].functionDeclarations.filter(t => t.name === "generate_art") }];
-                finalSystemInstruction += `\n\n?��??強制繪�?模�??�使?�者�?求畫?��?請�?使用?��??��?轉�??�詳細�??��??�面?�述，並強制?�叫 generate_art 工具?��?要�?廢話?�`;
+                finalSystemInstruction += `\n\n【🎨 強制繪圖模式】使用者要求畫圖，請將使用者的文字轉換為詳細的英文畫面描述，並強制呼叫 generate_art 工具。不要講廢話。`;
             } else if (web_search) {
                 finalTools = JSON.parse(JSON.stringify(AGENT_TOOLS));
-                finalSystemInstruction += `\n\n?��???�網?��?模�??�使?�者正?�詢?��??��?訊�?請優?�使??search_web ??read_web_page 工具?��??�?��?案。`;
+                finalSystemInstruction += `\n\n【🌍 聯網搜尋模式】使用者正在詢問外部資訊，請優先使用 search_web 與 read_web_page 工具提供最新答案。`;
             } else {
                 finalTools = JSON.parse(JSON.stringify(AGENT_TOOLS));
             }
@@ -737,18 +737,18 @@ function handleLineWebhook(payload, ss, apiKey, lineToken, CONFIG, db) {
                     configData: { ...CONFIG, autoImageEnabled: true }
                 });
 
-                logToFirebaseAndCache(db, wsName, session_id, actualMessage, agentResult.reply || "?��?完�?");
+                logToFirebaseAndCache(db, wsName, session_id, actualMessage, agentResult.reply || "執行完成");
 
-                let replyText = agentResult.reply || "?��?完畢";
+                let replyText = agentResult.reply || "處理完畢";
 
                 if (agentResult.image) {
                     try {
                         const blob = Utilities.newBlob(Utilities.base64Decode(agentResult.image), "image/png", "AI_Image.png");
                         const file = DriveApp.createFile(blob);
                         file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-                        replyText += `\n\n?�� ?��?已繪製�?\n${file.getUrl()}`;
+                        replyText += `\n\n🎨 圖片已繪製：\n${file.getUrl()}`;
                     } catch(e) {
-                        replyText += `\n(?��? ?��??��??��?，�?上傳?�端硬�??��??�誤)`;
+                        replyText += `\n(⚠️ 圖片生成成功，但上傳雲端硬碟發生錯誤)`;
                     }
                 }
 
@@ -762,7 +762,7 @@ function handleLineWebhook(payload, ss, apiKey, lineToken, CONFIG, db) {
                 UrlFetchApp.fetch('https://api.line.me/v2/bot/message/reply', {
                     method: 'post',
                     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + lineToken },
-                    payload: JSON.stringify({ replyToken: replyToken, messages: [{ type: 'text', text: "系統?��??�發?�錯誤�?" + e.toString() }] })
+                    payload: JSON.stringify({ replyToken: replyToken, messages: [{ type: 'text', text: "系統運算時發生錯誤：" + e.toString() }] })
                 });
             }
         }
@@ -774,12 +774,12 @@ function performInnerQALoop(text, apiKey, isToolArg = false) {
     if (!text || text.length < 10) return text;
     try {
         const sysPrompt = isToolArg ? 
-            "你是一?�嚴?��? JSON ?�數審查?�。�?確�??��?符�?標�? JSON（�??�屬?��?字串必�?使用?��??��?絕�?禁止?��??��??? :
-            "?��??�檢?�員?��?檢查以�??��??��??��??�「破?��? Markdown 表格?��?請幫忙修復。�??�是一?��?對話?��??��?程�?表�?�?��??Markdown ?��?，�??��??�接?��??��??��?pass: true）。�? 絕�?禁止將自?��?言?��??��?表�??��??�為 JSON ?��?�?;
+            "你是一個嚴格的 JSON 參數審查器。請確保文字符合標準 JSON（所有屬性與字串必須使用雙引號，絕對禁止單引號）。" :
+            "【排版檢查員】請檢查以下文字。如果包含「破損的 Markdown 表格」，請幫忙修復。如果是一般的對話文字、行程列表或正常的 Markdown 排版，請務必直接判定為合格（pass: true）。⛔ 絕對禁止將自然語言文字或列表擅自轉換為 JSON 格式！";
             
         const payload = {
             contents: [{ parts: [{ text: text }] }],
-            system_instruction: { parts: [{ text: sysPrompt + "\n?�無?��??�誤，�??�傳 {\"pass\": true}；若?�錯，�?修正並�?結�??�入 auto_fixed_text ?�傳?? }] },
+            system_instruction: { parts: [{ text: sysPrompt + "\n若無格式錯誤，請回傳 {\"pass\": true}；若有錯，請修正並將結果放入 auto_fixed_text 回傳。" }] },
             generationConfig: {
                 responseMimeType: "application/json",
                 responseSchema: { type: "OBJECT", properties: { pass: { type: "BOOLEAN" }, auto_fixed_text: { type: "STRING" } } }
@@ -795,7 +795,7 @@ function performInnerQALoop(text, apiKey, isToolArg = false) {
                 return result.auto_fixed_text;
             }
         }
-    } catch(e) { console.warn("QA Loop ?��??�失?��?跳�?審查", e); }
+    } catch(e) { console.warn("QA Loop 逾時或失敗，跳過審查", e); }
     return text;
 }
 
@@ -805,7 +805,7 @@ function fetchYouTubeTranscriptNative(videoId) {
         const htmlRes = UrlFetchApp.fetch(videoUrl, { muteHttpExceptions: true }).getContentText();
         const regex = /"captionTracks":\[\{"baseUrl":"(https[^"]+)"/;
         const match = htmlRes.match(regex);
-        if (!match || !match[1]) return "?�錯誤】影?�未?��? CC ?��?式�?幕�?;
+        if (!match || !match[1]) return "【錯誤】影片未提供 CC 隱藏式字幕。";
         const captionUrl = match[1].replace(/\\u0026/g, "&");
         const xmlRes = UrlFetchApp.fetch(captionUrl, { muteHttpExceptions: true }).getContentText();
         const textRegex = /<text[^>]*>(.*?)<\/text>/g;
@@ -814,8 +814,8 @@ function fetchYouTubeTranscriptNative(videoId) {
             let line = textMatch[1].replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
             transcript += line + " ";
         }
-        return transcript.trim() || "?�錯誤】�?幕�??�空";
-    } catch (e) { return "?�錯誤】�??�失??; }
+        return transcript.trim() || "【錯誤】字幕檔為空";
+    } catch (e) { return "【錯誤】抓取失敗"; }
 }
 
 function runAutonomousAgentLoop(config) {
@@ -836,8 +836,8 @@ function runAutonomousAgentLoop(config) {
         let aiResponse = callGeminiAPI_Raw(apiPayload);
         let cand = aiResponse.candidates && aiResponse.candidates[0];
         
-        if (!cand) { throw new Error("API ?��??�任何候選?�容?�可?�是安全機制?��??�伺?�器超�???); }
-        if (cand.finishReason === "SAFETY") throw new Error("?�示詞�??��??�內容�?被�??��??�阻?��?);
+        if (!cand) { throw new Error("API 未回傳任何候選內容。可能是安全機制阻擋或伺服器超載。"); }
+        if (cand.finishReason === "SAFETY") throw new Error("提示詞涉及敏感內容，被安全機制阻擋。");
         
         let responseParts = (cand.content && cand.content.parts) ? cand.content.parts : [];
         let functionCallParts = responseParts.filter(p => p.functionCall);
@@ -866,15 +866,15 @@ function runAutonomousAgentLoop(config) {
                         case "create_database_sheet":
                             try {
                                 let newSs = SpreadsheetApp.create(`${args.appName} Database`);
-                                newSs.insertSheet("紀?��?設�?");
-                                toolResult = { status: "success", reply: `已�??�建立�?屬�??�庫?�`, data: { sheetId: newSs.getId(), sheetUrl: newSs.getUrl() } };
+                                newSs.insertSheet("紀錄與設定");
+                                toolResult = { status: "success", reply: `已成功建立專屬資料庫。`, data: { sheetId: newSs.getId(), sheetUrl: newSs.getUrl() } };
                             } catch(e) { toolResult = { status: "error", error_message: e.toString() }; }
                             break;
 
                         case "deploy_fullstack_matrix":
                             let pat = PropertiesService.getScriptProperties().getProperty('GITHUB_PAT');
                             if (!pat) {
-                                toolResult = { status: "error", error_message: "系統尚未設�? GITHUB_PAT ?��?變數?��???Apps Script ?�「�?案設�?> ?�令碼屬?�」中?��??? };
+                                toolResult = { status: "error", error_message: "系統尚未設定 GITHUB_PAT 環境變數。請在 Apps Script 的「專案設定 > 指令碼屬性」中新增。" };
                                 break;
                             }
                             try {
@@ -894,7 +894,7 @@ function runAutonomousAgentLoop(config) {
                                 
                                 const workflowYaml = `name: Matrix Auto Deploy\non:\n  push:\n    branches: [ main, master ]\n    paths:\n      - 'backend/**'\njobs:\n  deploy:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n        with:\n          token: \${{ secrets.GITHUB_TOKEN }}\n      - name: Setup Node\n        uses: actions/setup-node@v3\n        with:\n          node-version: '18'\n      - name: Install Clasp\n        run: npm install -g @google/clasp\n      - name: Authenticate Clasp\n        run: echo '\${{ secrets.CLASPRC_JSON }}' > ~/.clasprc.json\n      - name: Deploy Backend to GAS\n        run: |\n          cd backend\n          if [ ! -f .clasp.json ]; then\n            clasp create --type webapp --title "\${{ github.repository }}-backend"\n            git config --global user.name "github-actions[bot]"\n            git config --global user.email "github-actions[bot]@users.noreply.github.com"\n            git add .clasp.json\n            git commit -m "chore: save clasp config [skip ci]"\n            git push\n          fi\n          clasp push -f\n          clasp deploy -d "Matrix Auto Deploy"`;
                                 
-                                const readmeMd = `# ${args.repoName}\n\n?? ?��?案由 anyGem AI ?��??��??�部署。基?�微?��??�模組�??��??�\n\n## ?�署?��?\n1. **?�端**：�?將此 Repo 綁�???Vercel，根?��?設為 \`frontend\`?�\n2. **後端**：�???GitHub 專�???\`Settings > Secrets and variables > Actions\` ?��? \`CLASPRC_JSON\` Secret?�`;
+                                const readmeMd = `# ${args.repoName}\n\n🤖 本專案由 anyGem AI 自動生成與部署。基於微服務與模組化架構。\n\n## 部署指南\n1. **前端**：請將此 Repo 綁定至 Vercel，根目錄設為 \`frontend\`。\n2. **後端**：請至 GitHub 專案的 \`Settings > Secrets and variables > Actions\` 新增 \`CLASPRC_JSON\` Secret。`;
 
                                 let filesToPush = [
                                     { path: "frontend/index.html", content: args.frontendCode },
@@ -930,14 +930,14 @@ function runAutonomousAgentLoop(config) {
                                 
                                 toolResult = { 
                                     isTerminal: true, 
-                                    reply: `?? **?�端模�??�部署�??��?(Matrix Protocol)**\n\n- **GitHub 專�?�?*: [${fullName}](https://github.com/${fullName})\n- **模�??��?**: ?��??��?${pushSuccessCount}/${filesToPush.length} ?��?案。\n- **CI/CD 管�?**: 已�?置自?�發布。\n\n?�� ?�未來您?�要修?�特定�??��??��??��?寫特定�?案�??��??��?風險?�若?��??�誤，隨?�可?�叫?�執�?\`Rollback\`?�` 
+                                    reply: `🚀 **全端模組化部署完成！(Matrix Protocol)**\n\n- **GitHub 專案庫**: [${fullName}](https://github.com/${fullName})\n- **模組數量**: 成功推送 ${pushSuccessCount}/${filesToPush.length} 個檔案。\n- **CI/CD 管線**: 已配置自動發布。\n\n💡 若未來您需要修改特定功能，我將僅覆寫特定檔案，降低破壞風險。若發生錯誤，隨時可呼叫我執行 \`Rollback\`。` 
                                 };
-                            } catch(e) { toolResult = { status: "error", error_message: `?�端?�署?��??�誤: ${e.toString()}` }; }
+                            } catch(e) { toolResult = { status: "error", error_message: `全端部署發生錯誤: ${e.toString()}` }; }
                             break;
 
                         case "rollback_github_deployment":
                             let githubPatRollback = PropertiesService.getScriptProperties().getProperty('GITHUB_PAT');
-                            if (!githubPatRollback) { toolResult = { status: "error", error_message: "系統尚未設�? GITHUB_PAT ?��?變數?? }; break; }
+                            if (!githubPatRollback) { toolResult = { status: "error", error_message: "系統尚未設定 GITHUB_PAT 環境變數。" }; break; }
                             try {
                                 let headers = { "Authorization": `Bearer ${githubPatRollback}`, "Accept": "application/vnd.github.v3+json", "X-GitHub-Api-Version": "2022-11-28" };
                                 let repoRes = UrlFetchApp.fetch(`https://api.github.com/repos/${args.repoName}`, { headers: headers, muteHttpExceptions: true });
@@ -948,7 +948,7 @@ function runAutonomousAgentLoop(config) {
                                 let commitsRes = UrlFetchApp.fetch(`https://api.github.com/repos/${args.repoName}/commits?sha=${defaultBranch}&per_page=2`, { headers: headers, muteHttpExceptions: true });
                                 let commitsJson = JSON.parse(commitsRes.getContentText());
                                 if (commitsRes.getResponseCode() !== 200) throw new Error(commitsJson.message);
-                                if (commitsJson.length < 2) throw new Error("專�???Commit ?��?不足 2 筆�??��??�?��?);
+                                if (commitsJson.length < 2) throw new Error("專案的 Commit 數量不足 2 筆，無法退回。");
                                 
                                 let previousCommitSha = commitsJson[1].sha;
 
@@ -959,8 +959,8 @@ function runAutonomousAgentLoop(config) {
                                 let updateRefJson = JSON.parse(updateRefRes.getContentText());
                                 if (updateRefRes.getResponseCode() !== 200) throw new Error(updateRefJson.message);
 
-                                toolResult = { isTerminal: true, reply: `??**?�難復�??��? (Rollback)�?*\n\n已�?專�? \`${args.repoName}\` 強制?�?�至上�??�穩定�??�本 (${previousCommitSha.substring(0, 7)})?�\n\n?�端 CI/CD �?��?�景?�新?�署，�?稍�??�整網�??�現?��?請�?訴�??��??��??�哪裡�?了�?讓�??��?起�???Bug ?�在?�裡?��?` };
-                            } catch(e) { toolResult = { status: "error", error_message: `?�?�失?? ${e.toString()}` }; }
+                                toolResult = { isTerminal: true, reply: `⏪ **災難復原成功 (Rollback)！**\n\n已將專案 \`${args.repoName}\` 強制退回至上一個穩定的版本 (${previousCommitSha.substring(0, 7)})。\n\n雲端 CI/CD 正在背景重新部署，請稍後重整網頁。現在，請告訴我剛剛到底是哪裡壞了？讓我們一起尋找 Bug 出在哪裡吧！` };
+                            } catch(e) { toolResult = { status: "error", error_message: `退回失敗: ${e.toString()}` }; }
                             break;
 
                         case "create_calendar_event":
@@ -968,7 +968,7 @@ function runAutonomousAgentLoop(config) {
                             let end = args.endTime ? new Date(args.endTime) : new Date(start.getTime() + 60 * 60 * 1000);
                             
                             let cal = CalendarApp.getDefaultCalendar();
-                            let usedCalName = "?�設行�???;
+                            let usedCalName = "預設行事曆";
                             
                             if (args.calendarName) {
                                 const calendars = CalendarApp.getCalendarsByName(args.calendarName);
@@ -976,12 +976,12 @@ function runAutonomousAgentLoop(config) {
                                     cal = calendars[0];
                                     usedCalName = args.calendarName;
                                 } else {
-                                    toolResult = { status: "error", error_message: `?��??��?稱為??{args.calendarName}?��?行�??��?請確認�?稱是?�正確。` };
+                                    toolResult = { status: "error", error_message: `找不到名稱為「${args.calendarName}」的行事曆，請確認名稱是否正確。` };
                                     break;
                                 }
                             }
                             
-                            let eventOptions = { description: args.description || "??anyGem Agent ?��?建�?" };
+                            let eventOptions = { description: args.description || "由 anyGem Agent 自動建立" };
                             
                             if (args.guests) {
                                 eventOptions.guests = args.guests;
@@ -990,8 +990,8 @@ function runAutonomousAgentLoop(config) {
                             
                             const ev = cal.createEvent(args.title, start, end, eventOptions);
                             
-                            let replyMsg = `??已�??�在??{usedCalName}?�建立�?程�?${args.title}`;
-                            if (args.guests) replyMsg += `\n?�� 並已?��?Google ?��??�請給�?{args.guests}`;
+                            let replyMsg = `✅ 已成功在「${usedCalName}」建立行程：${args.title}`;
+                            if (args.guests) replyMsg += `\n📧 並已發送 Google 日曆邀請給：${args.guests}`;
                             
                             toolResult = { status: "success", reply: replyMsg, url: `https://calendar.google.com/calendar/r/eventedit/${ev.getId().split('@')[0]}` }; 
                             break;
@@ -999,23 +999,23 @@ function runAutonomousAgentLoop(config) {
                         case "batch_create_calendar_events":
                             let list = JSON.parse(args.eventsData); let count = 0; let batchCal = CalendarApp.getDefaultCalendar();
                             list.forEach(e => { let s = new Date(e.startTime); let ed = e.endTime ? new Date(e.endTime) : new Date(s.getTime() + 3600000); if (!isNaN(s.getTime())) { batchCal.createEvent(e.title, s, ed, { description: e.description }); count++; } });
-                            toolResult = { status: "success", reply: `?��??�次寫入 ${count} 筆�?程` }; break;
+                            toolResult = { status: "success", reply: `成功批次寫入 ${count} 筆行程` }; break;
                         case "get_calendar_events":
                             let qs = new Date(args.startDate), qe = new Date(args.endDate); let evs = CalendarApp.getDefaultCalendar().getEvents(qs, qe);
-                            let eventDetails = evs.length === 0 ? "?��??��?�? : evs.map(e => `[EventID: ${e.getId()}] ${e.getStartTime().toLocaleString()} - ${e.getTitle()}`).join("\n");
+                            let eventDetails = evs.length === 0 ? "期間無行程" : evs.map(e => `[EventID: ${e.getId()}] ${e.getStartTime().toLocaleString()} - ${e.getTitle()}`).join("\n");
                             toolResult = { status: "success", data: eventDetails }; break;
                         case "add_event_reminder":
                             try { let eventToUpdate = CalendarApp.getDefaultCalendar().getEventById(args.eventId);
-                                if(eventToUpdate) { let mins = parseInt(args.minutesBefore); if(mins > 0 && mins <= 40320) { eventToUpdate.addPopupReminder(mins); toolResult = { status: "success", reply: `?��?設�??��??�` }; } else { toolResult = { status: "error", error_message: "?��?超出範�??? }; }
-                                } else { toolResult = { status: "error", error_message: "?��???Event ID" }; }
+                                if(eventToUpdate) { let mins = parseInt(args.minutesBefore); if(mins > 0 && mins <= 40320) { eventToUpdate.addPopupReminder(mins); toolResult = { status: "success", reply: `成功設定提醒。` }; } else { toolResult = { status: "error", error_message: "時間超出範圍。" }; }
+                                } else { toolResult = { status: "error", error_message: "找不到 Event ID" }; }
                             } catch(e) { toolResult = { status: "error", error_message: e.toString() }; } break;
                         case "read_unread_emails":
                             let limit = args.limit || 5; let threads = GmailApp.getInboxThreads(0, limit);
-                            let unreadData = threads.filter(t => t.isUnread()).map(t => { let msg = t.getMessages()[0]; let plainBody = msg.getPlainBody().trim().replace(/\s+/g, ' '); let summary = plainBody ? plainBody.substring(0, 300) + "..." : "?�無法解?��??��???; return `[寄件?? ${msg.getFrom()}] 主旨: ${msg.getSubject()}\n?��?: ${summary}`; }).join("\n\n");
-                            toolResult = { status: "success", data: unreadData || "?�未讀信件?? }; break;
+                            let unreadData = threads.filter(t => t.isUnread()).map(t => { let msg = t.getMessages()[0]; let plainBody = msg.getPlainBody().trim().replace(/\s+/g, ' '); let summary = plainBody ? plainBody.substring(0, 300) + "..." : "【無法解析純文字】"; return `[寄件者: ${msg.getFrom()}] 主旨: ${msg.getSubject()}\n內文: ${summary}`; }).join("\n\n");
+                            toolResult = { status: "success", data: unreadData || "無未讀信件。" }; break;
                         case "send_email_or_draft":
-                            if (args.isDraft) { GmailApp.createDraft(args.recipient, args.subject, args.body); toolResult = { isTerminal: true, reply: `?? **?�稿已建�?*\n\n已�??��?稿匣?�` }; }
-                            else { GmailApp.sendEmail(args.recipient, args.subject, args.body); toolResult = { isTerminal: true, reply: `?�� **信件已發??*�?${args.recipient}?�` }; } break;
+                            if (args.isDraft) { GmailApp.createDraft(args.recipient, args.subject, args.body); toolResult = { isTerminal: true, reply: `📝 **草稿已建立**\n\n已存入草稿匣。` }; }
+                            else { GmailApp.sendEmail(args.recipient, args.subject, args.body); toolResult = { isTerminal: true, reply: `📧 **信件已發送**給 ${args.recipient}。` }; } break;
                         
                         case "create_survey_form":
                             try {
@@ -1041,9 +1041,9 @@ function runAutonomousAgentLoop(config) {
                                     }
                                     if (q.required && item.setRequired) item.setRequired(true);
                                 });
-                                toolResult = { isTerminal: true, reply: `?? **表單建�?完�?�?*\n\n?�稱�?{args.title}\n?? [編輯表單](${form.getEditUrl()})\n?? [?��?網�?](${form.getPublishedUrl()})` }; 
+                                toolResult = { isTerminal: true, reply: `📋 **表單建立完成！**\n\n名稱：${args.title}\n🔗 [編輯表單](${form.getEditUrl()})\n🚀 [發布網址](${form.getPublishedUrl()})` }; 
                             } catch(formErr) {
-                                toolResult = { isTerminal: true, reply: `??**建�?表單失�?**：\n\n*(底層?�誤�?{formErr.toString()})*\n\n?�� **系統診斷?�修復建�?*：\n1. **權�??��???(?�常�?)**：�??�到 Apps Script 編輯?��??�執行�?�?forceAuthSetup ?��??��??�\n2. **AI ?��??�誤**：選?�格式�?符�?規�?，�??�試簡�??�令?�試?�` };
+                                toolResult = { isTerminal: true, reply: `❌ **建立表單失敗**：\n\n*(底層錯誤：${formErr.toString()})*\n\n💡 **系統診斷與修復建議**：\n1. **權限未開通 (最常見)**：請回到 Apps Script 編輯器手動執行一次 forceAuthSetup 進行授權。\n2. **AI 格式錯誤**：選項格式不符合規範，請嘗試簡化指令重試。` };
                             }
                             break;
                         
@@ -1052,20 +1052,20 @@ function runAutonomousAgentLoop(config) {
                                 let newFolder;
                                 if (args.parentFolderUrl) {
                                     let parentIdMatch = args.parentFolderUrl.match(/[-\w]{25,}/);
-                                    if (!parentIdMatch || !parentIdMatch[0]) throw new Error("?��?�???��??�夾網�?");
+                                    if (!parentIdMatch || !parentIdMatch[0]) throw new Error("無法解析父資料夾網址");
                                     let parentFolder = DriveApp.getFolderById(parentIdMatch[0]);
                                     newFolder = parentFolder.createFolder(args.folderName);
                                 } else {
                                     newFolder = DriveApp.createFolder(args.folderName);
                                 }
-                                toolResult = { status: "success", reply: `?��?建�?資�?夾�?${args.folderName}`, data: { folderUrl: newFolder.getUrl(), folderId: newFolder.getId() } };
-                            } catch(e) { toolResult = { status: "error", error_message: `建�?資�?夾失?? ${e.toString()}` }; }
+                                toolResult = { status: "success", reply: `成功建立資料夾：${args.folderName}`, data: { folderUrl: newFolder.getUrl(), folderId: newFolder.getId() } };
+                            } catch(e) { toolResult = { status: "error", error_message: `建立資料夾失敗: ${e.toString()}` }; }
                             break;
 
                         case "search_drive_files":
                             try {
                                 let safeKw = args.keyword.replace(/'/g, "\\'");
-                                // 修正?�詢語�?：fullText ?�實已�??�含 title 了�?使用?�簡?��?語�?
+                                // 修正查詢語法：fullText 其實已經包含 title 了，使用更簡單的語法
                                 let query = `fullText contains '${safeKw}' and trashed = false`;
                                 
                                 if (args.fileType) {
@@ -1075,7 +1075,7 @@ function runAutonomousAgentLoop(config) {
                                     }
                                 }
                                 
-                                // ?�試?��?檔�?
+                                // 嘗試搜尋檔案
                                 let files = DriveApp.searchFiles(query);
                                 let results = [];
                                 let count = 0;
@@ -1085,7 +1085,7 @@ function runAutonomousAgentLoop(config) {
                                     count++;
                                 }
                                 
-                                // 如�?完全沒�??��??�試?��?檔�? (?��???fullText ?��?些�??��??�失??
+                                // 如果完全沒結果，嘗試只搜檔名 (有時候 fullText 在某些權限下會失效)
                                 if (results.length === 0) {
                                     let titleQuery = `title contains '${safeKw}' and trashed = false`;
                                     let titleFiles = DriveApp.searchFiles(titleQuery);
@@ -1098,15 +1098,15 @@ function runAutonomousAgentLoop(config) {
                                 
                                 toolResult = { 
                                     status: "success", 
-                                    data: results.length > 0 ? results : "?�找?�符?��?件�?檔�??��??�夾??
+                                    data: results.length > 0 ? results : "未找到符合條件的檔案或資料夾。"
                                 };
-                            } catch(e) { toolResult = { status: "error", error_message: `?��?失�?: ${e.toString()}` }; }
+                            } catch(e) { toolResult = { status: "error", error_message: `搜尋失敗: ${e.toString()}` }; }
                             break;
                             
                         case "scan_and_prepare_archive":
                             try {
                                 let safeKw = args.keyword.replace(/'/g, "\\'");
-                                let folderName = args.keyword + " 資�?�?;
+                                let folderName = args.keyword + " 資料夾";
                                 let newFolder;
                                 
                                 let folders = DriveApp.searchFolders(`title = '${folderName}' and trashed = false`);
@@ -1126,34 +1126,34 @@ function runAutonomousAgentLoop(config) {
                                 try {
                                     response = Drive.Files.list(listArgs);
                                 } catch (driveErr) {
-                                    throw new Error("請確認已??GAS ?��?中�???Drive API (v2)?? + driveErr.toString());
+                                    throw new Error("請確認已在 GAS 服務中開啟 Drive API (v2)。" + driveErr.toString());
                                 }
                                 
                                 let results = [];
                                 if (response.items) {
                                     response.items.forEach(f => {
                                         let mime = f.mimeType;
-                                        let typeIcon = "?? ?��?";
-                                        if (mime.includes('spreadsheet')) typeIcon = "?? Excel";
-                                        else if (mime.includes('presentation')) typeIcon = "?�� PPT";
-                                        else if (mime.includes('document')) typeIcon = "?? Word";
-                                        else if (mime.includes('pdf')) typeIcon = "?? PDF";
-                                        results.push({ "檔�?類�?": typeIcon, "檔�??�稱": f.title, "???": f.alternateLink });
+                                        let typeIcon = "📄 其他";
+                                        if (mime.includes('spreadsheet')) typeIcon = "📊 Excel";
+                                        else if (mime.includes('presentation')) typeIcon = "🪧 PPT";
+                                        else if (mime.includes('document')) typeIcon = "📄 Word";
+                                        else if (mime.includes('pdf')) typeIcon = "📕 PDF";
+                                        results.push({ "檔案類型": typeIcon, "檔案名稱": f.title, "連結": f.alternateLink });
                                     });
                                 }
                                 
                                 toolResult = { 
                                     status: "success", 
-                                    reply: `已�??�出?��?檔�??�系統強?��?求�?請�?必根?�【�??�歸檔模式】�?範�? 5 大�?塊�??��??�`,
+                                    reply: `已掃描出相關檔案。系統強制要求：請務必根據【安全歸檔模式】規範的 5 大標塊來回覆。`,
                                     data: { 
-                                        "專屬資�?夾�?�?: folderName, 
-                                        "專屬資�?夾�??": folderUrl, 
-                                        "此�??��??��?檔�??��?": results.length, 
-                                        "檔�?清單": results,
+                                        "專屬資料夾名稱": folderName, 
+                                        "專屬資料夾連結": folderUrl, 
+                                        "此頁掃描到的檔案數量": results.length, 
+                                        "檔案清單": results,
                                         "nextPageToken": response.nextPageToken || null
                                     }
                                 };
-                            } catch(e) { toolResult = { status: "error", error_message: `安全?��?失�?: ${e.toString()}` }; }
+                            } catch(e) { toolResult = { status: "error", error_message: `安全掃描失敗: ${e.toString()}` }; }
                             break;
 
                         case "move_drive_file":
@@ -1166,7 +1166,7 @@ function runAutonomousAgentLoop(config) {
                                     let files = DriveApp.searchFiles(`title = '${safeFileName}' and trashed = false`);
                                     if (files.hasNext()) fileToMove = files.next();
                                 }
-                                if (!fileToMove) { toolResult = { isTerminal: true, reply: `??**?��??��?定�?檔�?�?* \`${args.fileIdentifier}\`\n請確認�?案�?稱是?�正確�??�直?��?供該檔�???Google Drive 網�??�` }; break; }
+                                if (!fileToMove) { toolResult = { isTerminal: true, reply: `❌ **找不到指定的檔案：** \`${args.fileIdentifier}\`\n請確認檔案名稱是否正確，或直接提供該檔案的 Google Drive 網址。` }; break; }
 
                                 let folderIdMatch = args.folderIdentifier.match(/[-\w]{25,}/);
                                 if (folderIdMatch && folderIdMatch[0]) { targetFolder = DriveApp.getFolderById(folderIdMatch[0]); } 
@@ -1178,36 +1178,36 @@ function runAutonomousAgentLoop(config) {
                                 }
 
                                 fileToMove.moveTo(targetFolder);
-                                toolResult = { isTerminal: true, reply: `?? **檔�??�移?��?�?*\n\n已�??��? \`${fileToMove.getName()}\` 移至資�?�?\`${targetFolder.getName()}\` ?�。\n?? [點�??��??��?資�?夾](${targetFolder.getUrl()})` };
-                            } catch(e) { toolResult = { isTerminal: true, reply: `??**?�移?��??��??�誤�?*\n\n${e.toString()}\n\n*(請確認您?�否?��?該�?案�?資�?夾�?編輯權�?)*` }; }
+                                toolResult = { isTerminal: true, reply: `🚚 **檔案搬移成功！**\n\n已成功將 \`${fileToMove.getName()}\` 移至資料夾 \`${targetFolder.getName()}\` 內。\n🔗 [點擊查看目標資料夾](${targetFolder.getUrl()})` };
+                            } catch(e) { toolResult = { isTerminal: true, reply: `❌ **搬移過程發生錯誤：**\n\n${e.toString()}\n\n*(請確認您是否擁有該檔案與資料夾的編輯權限)*` }; }
                             break;
 
                         case "read_drive_file":
                             let fileIdMatch = args.fileUrl.match(/[-\w]{25,}/);
-                            if (!fileIdMatch || !fileIdMatch[0]) { toolResult = { status: "error", error_message: "?��?辨�??��?件網?�，�?確�????�?��" }; break; }
+                            if (!fileIdMatch || !fileIdMatch[0]) { toolResult = { status: "error", error_message: "無法辨識的文件網址，請確認連結正確" }; break; }
                             try {
                                 const file = DriveApp.getFileById(fileIdMatch[0]);
                                 let content = extractTextFromAnyFile(file, config.apiKey);
                                 toolResult = { status: "success", data: content.substring(0, 30000) };
                             } catch(e) {
-                                let executeEmail = "此系統執行身??; try { executeEmail = Session.getEffectiveUser().getEmail() || executeEmail; } catch(err) {}
-                                toolResult = { status: "error", error_message: `?��?讀?��?�? ${e.toString()}?��?確�??��?權�?存�?該�?案�??�已?��??�給 ${executeEmail}` };
+                                let executeEmail = "此系統執行身分"; try { executeEmail = Session.getEffectiveUser().getEmail() || executeEmail; } catch(err) {}
+                                toolResult = { status: "error", error_message: `無法讀取檔案: ${e.toString()}。請確認您有權限存取該檔案，或已開權限給 ${executeEmail}` };
                             }
                             break;
 
-                        // ???��??��??��??�簡?��??�工?�路??
+                        // ✅ 新增的：獨立的簡報讀取工具路由
                         case "read_presentation":
                             let presIdRead = args.presentationUrl.match(/[-\w]{25,}/);
                             if (!presIdRead || !presIdRead[0]) { 
-                                toolResult = { status: "error", error_message: "?��?辨�??�簡?�網?�，�?確�??�含?�度�?��??ID?? }; 
+                                toolResult = { status: "error", error_message: "無法辨識的簡報網址，請確認包含長度正確的 ID。" }; 
                                 break; 
                             }
                             try {
                                 let content = extractTextFromPresentation(presIdRead[0]);
                                 toolResult = { status: "success", data: content };
                             } catch(e) {
-                                let executeEmail = "此系統執行身??; try { executeEmail = Session.getEffectiveUser().getEmail() || executeEmail; } catch(err) {}
-                                toolResult = { status: "error", error_message: `?��?讀?�簡?? ${e.toString()}?��?確�??�是 Google Slides 且您?��??��??��??�已?��??�給 ${executeEmail}` };
+                                let executeEmail = "此系統執行身分"; try { executeEmail = Session.getEffectiveUser().getEmail() || executeEmail; } catch(err) {}
+                                toolResult = { status: "error", error_message: `無法讀取簡報: ${e.toString()}。請確認這是 Google Slides 且您有權限存取，或已開權限給 ${executeEmail}` };
                             }
                             break;
                             
@@ -1236,7 +1236,7 @@ function runAutonomousAgentLoop(config) {
                                     if (status === 200) {
                                         searchResult = res.getContentText();
                                     } else if (status === 401 || status === 403 || status === 429) {
-                                        // 401/403/429 ?�援：去??Key ?�試一�?
+                                        // 401/403/429 備援：去掉 Key 再試一次
                                         let opt2 = { ...options, headers: { ...options.headers } };
                                         delete opt2.headers["Authorization"];
                                         res = UrlFetchApp.fetch("https://s.jina.ai/" + encodeURIComponent(query), opt2);
@@ -1244,16 +1244,16 @@ function runAutonomousAgentLoop(config) {
                                     }
                                 } catch(e) {}
                                 
-                                // 策略 B: ?��??�客來特?��??��????
-                                if (!searchResult && (query.includes("?�客�?) || query.includes("??))) {
+                                // 策略 B: 針對博客來特化的搜尋連結
+                                if (!searchResult && (query.includes("博客來") || query.includes("書"))) {
                                     try {
-                                        const booksUrl = "https://search.books.com.tw/search/query/key/" + encodeURIComponent(query.replace(/?�客�?g, ""));
+                                        const booksUrl = "https://search.books.com.tw/search/query/key/" + encodeURIComponent(query.replace(/博客來/g, ""));
                                         let res = UrlFetchApp.fetch("https://r.jina.ai/" + booksUrl, options);
                                         if (res.getResponseCode() === 200) searchResult = res.getContentText();
                                     } catch(e) {}
                                 }
                                 
-                                // 策略 C: ?�終�???- ?�接??Reader 讀??Google ?��??�面
+                                // 策略 C: 最終備援 - 直接用 Reader 讀取 Google 搜尋頁面
                                 if (!searchResult) {
                                     try {
                                         const googleUrl = "https://www.google.com/search?q=" + encodeURIComponent(query);
@@ -1265,9 +1265,9 @@ function runAutonomousAgentLoop(config) {
                                 if (searchResult) {
                                     toolResult = { status: "success", data: searchResult.substring(0, 35000) };
                                 } else {
-                                    toolResult = { status: "error", error_message: "?��??��??��??��?使用?�建議直?�輸?�網?�?��?讀?��? };
+                                    toolResult = { status: "error", error_message: "搜尋服務暫時無法使用。建議直接輸入網址進行讀取。" };
                                 }
-                            } catch(e) { toolResult = { status: "error", error_message: `?��?底層?��??�誤: ${e.toString()}` }; }
+                            } catch(e) { toolResult = { status: "error", error_message: `搜尋底層發生錯誤: ${e.toString()}` }; }
                             break;
 
                         case "read_web_page":
@@ -1275,7 +1275,7 @@ function runAutonomousAgentLoop(config) {
                                 const jinaApiKey = PropertiesService.getScriptProperties().getProperty('JINA_API_KEY');
                                 const targetUrl = args.url.trim();
                                 
-                                // ?�試使用 Jina Reader (?��?)
+                                // 嘗試使用 Jina Reader (優先)
                                 const jinaOptions = { 
                                     muteHttpExceptions: true, 
                                     headers: { 
@@ -1292,11 +1292,11 @@ function runAutonomousAgentLoop(config) {
                                 let status = response.getResponseCode();
                                 let contentText = "";
                                 
-                                // ??Jina ?��?且內容長度足�?
+                                // 若 Jina 成功且內容長度足夠
                                 if (status === 200 && response.getContentText().length > 200) {
                                     contentText = response.getContentText();
                                 } else {
-                                    // ?�用?��?：直?��???
+                                    // 備用方案：直接抓取
                                     const directOptions = {
                                         muteHttpExceptions: true,
                                         headers: {
@@ -1314,48 +1314,48 @@ function runAutonomousAgentLoop(config) {
                                         const source = mainMatch ? mainMatch[2] : html;
                                         contentText = source.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
                                     } else {
-                                        throw new Error(`Jina Error (${status}) & Direct Fetch Error (${status})?�`);
+                                        throw new Error(`Jina Error (${status}) & Direct Fetch Error (${status})。`);
                                     }
                                 }
 
-                                let finalContent = `?�系統強?��?令�?以�??�網?�擷?��??�實?�容?�】\n\n網�?�?{targetUrl}\n---\n${contentText.substring(0, 35000)}`;
+                                let finalContent = `【系統強制指令：以下為網頁擷取的真實內容。】\n\n網址：${targetUrl}\n---\n${contentText.substring(0, 35000)}`;
                                 toolResult = { status: "success", data: finalContent };
                             } catch(e) {
                                 toolResult = { 
                                     status: "error", 
-                                    error_message: `網�?穿透失?? ${e.toString()}?�建議�?�?AI ?�試?��??��?來�?網�??�` 
+                                    error_message: `網頁穿透失敗: ${e.toString()}。建議：請 AI 嘗試搜尋其他來源網址。` 
                                 };
                             }
                             break;
 
                         case "create_project_wiki":
-                            const wikiDoc = createDocFromContent(`WIKI: ${args.projectName}`, String(args.content)); toolResult = { isTerminal: true, reply: `?���?**Wiki 導覽?�已建�?�?*\n?? [?��? Wiki](${wikiDoc.url})` }; break;
+                            const wikiDoc = createDocFromContent(`WIKI: ${args.projectName}`, String(args.content)); toolResult = { isTerminal: true, reply: `🗺️ **Wiki 導覽頁已建立！**\n🔗 [開啟 Wiki](${wikiDoc.url})` }; break;
                         case "organize_drive_folder":
-                            let targetFolders = DriveApp.getFoldersByName(args.folderName); if (!targetFolders.hasNext()) { toolResult = { status: "error", error_message: `?��??��??�夾` }; break; }
+                            let targetFolders = DriveApp.getFoldersByName(args.folderName); if (!targetFolders.hasNext()) { toolResult = { status: "error", error_message: `找不到資料夾` }; break; }
                             let parentFolder = targetFolders.next(); let folderFiles = parentFolder.getFiles(); let moveCount = 0; let imgFolder, docFolder, otherFolder;
                             while (folderFiles.hasNext()) { let f = folderFiles.next(); let mimeTypeStr = f.getMimeType(); let targetDest = null;
-                                if (mimeTypeStr.includes('image/')) { if (!imgFolder) imgFolder = getOrCreateSubFolder(parentFolder, "?��?素�?�?); targetDest = imgFolder; }
-                                else if (mimeTypeStr.includes('document') || mimeTypeStr.includes('pdf') || mimeTypeStr.includes('spreadsheet') || mimeTypeStr.includes('presentation')) { if (!docFolder) docFolder = getOrCreateSubFolder(parentFolder, "?�件?�報�?); targetDest = docFolder; }
-                                else { if (!otherFolder) otherFolder = getOrCreateSubFolder(parentFolder, "?��?檔�??��?縮�?"); targetDest = otherFolder; }
+                                if (mimeTypeStr.includes('image/')) { if (!imgFolder) imgFolder = getOrCreateSubFolder(parentFolder, "圖片素材庫"); targetDest = imgFolder; }
+                                else if (mimeTypeStr.includes('document') || mimeTypeStr.includes('pdf') || mimeTypeStr.includes('spreadsheet') || mimeTypeStr.includes('presentation')) { if (!docFolder) docFolder = getOrCreateSubFolder(parentFolder, "文件與報表"); targetDest = docFolder; }
+                                else { if (!otherFolder) otherFolder = getOrCreateSubFolder(parentFolder, "其他檔案與壓縮檔"); targetDest = otherFolder; }
                                 f.moveTo(targetDest); moveCount++; }
-                            toolResult = { isTerminal: true, reply: `??�?**?��?完畢�?* ?�歸�?${moveCount} ?��?案。` }; break;
+                            toolResult = { isTerminal: true, reply: `🗂️ **整理完畢！** 共歸類 ${moveCount} 個檔案。` }; break;
                         
                         case "create_google_doc":
                         case "read_google_doc":
                         case "append_to_google_doc":
                         case "overwrite_google_doc":
                             if (fnName === 'create_google_doc') {
-                                const docTitle = String(args.topic || args.title || "?�命??).trim(); const docIdAndUrl = createDocFromContent(docTitle, String(args.content || "")); let docUrl = docIdAndUrl.url; let folderMsg = "?�目??;
+                                const docTitle = String(args.topic || args.title || "未命名").trim(); const docIdAndUrl = createDocFromContent(docTitle, String(args.content || "")); let docUrl = docIdAndUrl.url; let folderMsg = "根目錄";
                                 if (args.folderName) { let newFolderUrl = moveFileToFolderByName(docIdAndUrl.id, args.folderName); if (newFolderUrl) folderMsg = `[${args.folderName}]`; }
-                                toolResult = { isTerminal: true, reply: `?? **Google ?�件已�??��?**\n?? 位置�?{folderMsg}\n?? [?��??�件](${docUrl})` }; 
+                                toolResult = { isTerminal: true, reply: `📄 **Google 文件已生成！**\n📁 位置：${folderMsg}\n🔗 [開啟文件](${docUrl})` }; 
                             } else {
                                 let idMatch = args.docUrl.match(/[-\w]{25,}/);
-                                if (!idMatch) { toolResult = { status: "error", error_message: "?��?辨�??��?件網?�" }; break; }
+                                if (!idMatch) { toolResult = { status: "error", error_message: "無法辨識的文件網址" }; break; }
                                 try {
                                     const doc = DocumentApp.openById(idMatch[0]);
                                     if (fnName === 'read_google_doc') { toolResult = { status: "success", data: doc.getBody().getText().substring(0, 30000) }; }
-                                    else if (fnName === 'append_to_google_doc') { doc.getBody().appendParagraph("\n"); appendMarkdownToBody(doc.getBody(), args.content); doc.saveAndClose(); toolResult = { isTerminal: true, reply: `?? ?�容已�??��?\n[點�??��?](${doc.getUrl()})` }; }
-                                    else { doc.getBody().clear(); appendMarkdownToBody(doc.getBody(), args.content); doc.saveAndClose(); toolResult = { isTerminal: true, reply: `?? ?�容已�?寫�?\n[點�??��?](${doc.getUrl()})` }; }
+                                    else if (fnName === 'append_to_google_doc') { doc.getBody().appendParagraph("\n"); appendMarkdownToBody(doc.getBody(), args.content); doc.saveAndClose(); toolResult = { isTerminal: true, reply: `📄 內容已附加！\n[點擊開啟](${doc.getUrl()})` }; }
+                                    else { doc.getBody().clear(); appendMarkdownToBody(doc.getBody(), args.content); doc.saveAndClose(); toolResult = { isTerminal: true, reply: `📄 內容已覆寫！\n[點擊開啟](${doc.getUrl()})` }; }
                                 } catch(e) { toolResult = { status: "error", error_message: e.toString() }; }
                             }
                             break;
@@ -1366,23 +1366,23 @@ function runAutonomousAgentLoop(config) {
                                 if (args.sheetUrl) {
                                     let idMatch = args.sheetUrl.match(/[-\w]{25,}/);
                                     if (idMatch && idMatch[0]) targetSsForRead = SpreadsheetApp.openById(idMatch[0]);
-                                    else throw new Error("?��?�???�試算表網�?");
+                                    else throw new Error("無法解析的試算表網址");
                                 }
                                 const rsh = args.sheetName ? targetSsForRead.getSheetByName(args.sheetName) : targetSsForRead.getSheets()[0];
-                                if (!rsh) throw new Error("?��??��?定�?工�?�?);
+                                if (!rsh) throw new Error("找不到指定的工作表");
                                 
                                 let sheetData = (!args.range || args.range === 'ALL') ? rsh.getDataRange().getDisplayValues() : rsh.getRange(args.range).getDisplayValues();
                                 if (sheetData.length > 100) sheetData = sheetData.slice(0, 100); 
                                 
                                 toolResult = { status: "success", data: sheetData };
-                            } catch(e) { toolResult = { status: "error", error_message: `讀?�試算表失�?: ${e.toString()}` }; }
+                            } catch(e) { toolResult = { status: "error", error_message: `讀取試算表失敗: ${e.toString()}` }; }
                             break;
 
                         case "append_to_google_sheet":
                             try {
                                 const protectedSheets = [BASE_CONFIG.SETTING_SHEET_NAME, "Gems", "Models"];
                                 if (protectedSheets.includes(args.sheetName)) {
-                                    toolResult = { isTerminal: true, reply: `??**系統安全?�截 (Security Exception)**：\n\n系統?��??�制?�板 (\`${args.sheetName}\`) 禁止?��? Agent ?��??�工?�進�?修改?�若?�調整設�??�模?��?角色，�?管�??��??��?往試�?表�??�。` };
+                                    toolResult = { isTerminal: true, reply: `❌ **系統安全攔截 (Security Exception)**：\n\n系統核心控制面板 (\`${args.sheetName}\`) 禁止透過 Agent 自動化工具進行修改。若需調整設定、模型或角色，請管理員手動前往試算表處理。` };
                                     break;
                                 }
 
@@ -1390,7 +1390,7 @@ function runAutonomousAgentLoop(config) {
                                 if (args.sheetUrl) {
                                     let idMatch = args.sheetUrl.match(/[-\w]{25,}/);
                                     if (idMatch && idMatch[0]) targetSsForWrite = SpreadsheetApp.openById(idMatch[0]);
-                                    else throw new Error("?��?�???�試算表網�?");
+                                    else throw new Error("無法解析的試算表網址");
                                 }
                                 let tsh = targetSsForWrite.getSheetByName(args.sheetName);
                                 if (!tsh) { tsh = targetSsForWrite.insertSheet(args.sheetName); }
@@ -1428,15 +1428,15 @@ function runAutonomousAgentLoop(config) {
                                     tsh.getRange(startRow, 1, dataToWrite.length, maxCols).setValues(dataToWrite);
                                 }
                                 
-                                toolResult = { isTerminal: true, reply: `??**資�?已批次寫?�試算表�?*\n\n已�??�寫??${dataToWrite.length} 筆�??�至 \`${args.sheetName}\` ?�籤?�\n?? [點�??��?試�?表](${targetSsForWrite.getUrl()})` };
-                            } catch(e) { toolResult = { isTerminal: true, reply: `??**寫入試�?表失?��?**\n\n*(請確認您?��??�網?�?�否�?��，�?已�??�編輯�??��?*\n底層?�誤: ${e.toString()}` }; }
+                                toolResult = { isTerminal: true, reply: `✅ **資料已批次寫入試算表！**\n\n已成功寫入 ${dataToWrite.length} 筆資料至 \`${args.sheetName}\` 頁籤。\n🔗 [點擊開啟試算表](${targetSsForWrite.getUrl()})` };
+                            } catch(e) { toolResult = { isTerminal: true, reply: `❌ **寫入試算表失敗：**\n\n*(請確認您提供的網址是否正確，且已開放編輯權限。)*\n底層錯誤: ${e.toString()}` }; }
                             break;
 
                         case "update_google_sheet":
                             try {
                                 const protectedSheets = [BASE_CONFIG.SETTING_SHEET_NAME, "Gems", "Models"];
                                 if (protectedSheets.includes(args.sheetName)) {
-                                    toolResult = { isTerminal: true, reply: `??**系統安全?�截 (Security Exception)**：\n\n系統?��??�制?�板 (\`${args.sheetName}\`) 禁止?��? Agent ?��??�工?�進�?修改?�若?�調整設�??�模?��?角色，�?管�??��??��?往試�?表�??�。` };
+                                    toolResult = { isTerminal: true, reply: `❌ **系統安全攔截 (Security Exception)**：\n\n系統核心控制面板 (\`${args.sheetName}\`) 禁止透過 Agent 自動化工具進行修改。若需調整設定、模型或角色，請管理員手動前往試算表處理。` };
                                     break;
                                 }
 
@@ -1444,10 +1444,10 @@ function runAutonomousAgentLoop(config) {
                                 if (args.sheetUrl) {
                                     let idMatch = args.sheetUrl.match(/[-\w]{25,}/);
                                     if (idMatch && idMatch[0]) targetSsForUpdate = SpreadsheetApp.openById(idMatch[0]);
-                                    else throw new Error("?��?�???�試算表網�?");
+                                    else throw new Error("無法解析的試算表網址");
                                 }
                                 let ush = targetSsForUpdate.getSheetByName(args.sheetName);
-                                if (!ush) throw new Error(`?��??��?稱為 '${args.sheetName}' ?�工作表?�籤`);
+                                if (!ush) throw new Error(`找不到名稱為 '${args.sheetName}' 的工作表頁籤`);
                                 
                                 let dataToUpdate = [];
                                 try {
@@ -1478,8 +1478,8 @@ function runAutonomousAgentLoop(config) {
                                     ush.getRange(startRow, startCol, numRows, numCols).setValues(dataToUpdate);
                                 }
                                 
-                                toolResult = { isTerminal: true, reply: `??**資�?已�??�更?��?**\n\n已�??��??�精準�?寫至 \`${args.sheetName}\` ?�籤?��???\`${args.range}\`?�\n?? [點�??��?試�?表查?�](${targetSsForUpdate.getUrl()})` };
-                            } catch(e) { toolResult = { isTerminal: true, reply: `??**?�新試�?表失?��?**\n\n*(請確認您?��??�網?�?��?籤�?稱�?範�??��??�否�?��??*\n底層?�誤: ${e.toString()}` }; }
+                                toolResult = { isTerminal: true, reply: `✅ **資料已成功更新！**\n\n已將新資料精準覆寫至 \`${args.sheetName}\` 頁籤的範圍 \`${args.range}\`。\n🔗 [點擊開啟試算表查看](${targetSsForUpdate.getUrl()})` };
+                            } catch(e) { toolResult = { isTerminal: true, reply: `❌ **更新試算表失敗：**\n\n*(請確認您提供的網址、頁籤名稱與範圍格式是否正確。)*\n底層錯誤: ${e.toString()}` }; }
                             break;
 
                         case "generate_art":
@@ -1490,11 +1490,11 @@ function runAutonomousAgentLoop(config) {
                                 } else if (blob) {
                                     finalImage = Utilities.base64Encode(blob.getBytes());
                                     finalMime = "image/png";
-                                    toolResult = { isTerminal: true, reply: `?�� **?��?已根?�您?��?求繪製�??��?**\n\n*(?�示詞�?${args.prompt})*` };
+                                    toolResult = { isTerminal: true, reply: `🎨 **圖像已根據您的要求繪製完成！**\n\n*(提示詞：${args.prompt})*` };
                                 } else {
-                                    throw new Error("?��?失�?，未?��??�影?��??��?);
+                                    throw new Error("生成失敗，未獲取到影像資料。");
                                 }
-                            } catch(e) { toolResult = { status: "error", error_message: `繪�?失�?: ${e.toString()}` }; }
+                            } catch(e) { toolResult = { status: "error", error_message: `繪圖失敗: ${e.toString()}` }; }
                             break;
 
                         case "create_presentation":
@@ -1516,7 +1516,7 @@ function runAutonomousAgentLoop(config) {
                                         };
                                     }
                                 }
-                            } catch(e) { console.error("顏色�??失�?", e); }
+                            } catch(e) { console.error("顏色解析失敗", e); }
                             
                             let parsedData = [];
                             try {
@@ -1527,15 +1527,15 @@ function runAutonomousAgentLoop(config) {
                                 if (Array.isArray(rawS)) {
                                     parsedData = rawS;
                                 } else {
-                                    toolResult = { isTerminal: true, reply: "?��? **簡報建�?失�?**\n\nAI ?��??�簡?��??�格式無??(不是???)?��??�試?�新?��??�簡?��?令�? }; break;
+                                    toolResult = { isTerminal: true, reply: "⚠️ **簡報建立失敗**\n\nAI 生成的簡報資料格式無效 (不是陣列)。請嘗試重新生成或簡化指令。" }; break;
                                 }
                             } catch(e) { 
-                                toolResult = { isTerminal: true, reply: `?��? **簡報建�?失�?**\n\n簡報資�??��??�誤，無法解?�內容�?\n${e.toString()}` }; break; 
+                                toolResult = { isTerminal: true, reply: `⚠️ **簡報建立失敗**\n\n簡報資料格式錯誤，無法解析內容：\n${e.toString()}` }; break; 
                             }
                             
                             toolResult = { 
                                 isTerminal: true, 
-                                reply: `??**互�?式網?�簡?�已?��?�?*\n\n?�可以直?�在?�面中�??��?字進�?修改?�若?�?�出?��?�?? Google 簡報，�?點�??�面?��?角�??�匯??Google 簡報?��??�。`,
+                                reply: `✨ **互動式網頁簡報已生成！**\n\n您可以直接在畫面中點擊文字進行修改。若需匯出為真正的 Google 簡報，請點擊畫面右上角的「匯出 Google 簡報」按鈕。`,
                                 html_presentation_data: {
                                     topic: args.topic,
                                     theme: themeToUse,
@@ -1546,7 +1546,7 @@ function runAutonomousAgentLoop(config) {
                             break;
                         case "update_presentation":
                             let presIdMatch = args.presentationUrl.match(/[-\w]{25,}/);
-                            if (!presIdMatch) { toolResult = { status: "error", error_message: "?��?辨�??�簡?�網?�" }; break; }
+                            if (!presIdMatch) { toolResult = { status: "error", error_message: "無法辨識的簡報網址" }; break; }
                             
                             let updTheme = PPT_THEMES['modern_blue'];
                             try {
@@ -1554,7 +1554,7 @@ function runAutonomousAgentLoop(config) {
                                     const rawC = typeof args.customColors === 'string' ? JSON.parse(args.customColors.replace(/```json/gi, '').replace(/```/g, '').trim()) : args.customColors;
                                     updTheme = { colors: { background: rawC.background || rawC.bg || "#0f172a", text: rawC.text || "#f8fafc", accent: rawC.accent || "#38bdf8", shape: rawC.shape || "#1e293b" } };
                                 }
-                            } catch(e) { console.warn("?�新?�色�??失�?", e); }
+                            } catch(e) { console.warn("更新配色解析失敗", e); }
                             
                             let processedUpdData = [];
                             try {
@@ -1564,20 +1564,20 @@ function runAutonomousAgentLoop(config) {
                                 } else if (Array.isArray(args.slidesData)) {
                                     processedUpdData = args.slidesData;
                                 } else {
-                                    toolResult = { isTerminal: true, reply: "?��? **簡報?�新失�?**\n\nAI ?��??�簡?��??�格式無??(不是???)?? }; break;
+                                    toolResult = { isTerminal: true, reply: "⚠️ **簡報更新失敗**\n\nAI 生成的簡報資料格式無效 (不是陣列)。" }; break;
                                 }
                             } catch(e) { 
-                                toolResult = { isTerminal: true, reply: `?��? **簡報?�新失�?**\n\n簡報資�??��??�誤，無法解??JSON：\n${e.toString()}` }; break;
+                                toolResult = { isTerminal: true, reply: `⚠️ **簡報更新失敗**\n\n簡報資料格式錯誤，無法解析 JSON：\n${e.toString()}` }; break;
                             }
 
                             updateGeometricSlides(presIdMatch[0], args.action, processedUpdData, updTheme, args.shapeStyle || 'minimalist', config.configData.autoImageEnabled, config.apiKey, config.artistModel);
                             
-                            let actionVerb = (String(args.action).toLowerCase().trim() === 'overwrite') ? "覆寫" : "?��?";
+                            let actionVerb = (String(args.action).toLowerCase().trim() === 'overwrite') ? "覆寫" : "擴充";
                             toolResult = { 
                                 isTerminal: true, 
-                                reply: `?? **簡報${actionVerb}完畢�?*\n\n已�??��? ${processedUpdData.length} ?�內容�?步至簡報中。\n?? [點�??��?驗�?](https://docs.google.com/presentation/d/${presIdMatch[0]}/edit)`,
+                                reply: `📊 **簡報${actionVerb}完畢！**\n\n已成功將 ${processedUpdData.length} 頁內容同步至簡報中。\n🔗 [點擊開啟驗證](https://docs.google.com/presentation/d/${presIdMatch[0]}/edit)`,
                                 html_presentation_data: {
-                                    topic: "?�新後�?簡報",
+                                    topic: "更新後的簡報",
                                     theme: updTheme,
                                     style: args.shapeStyle || 'minimalist',
                                     slides: processedUpdData
@@ -1588,7 +1588,7 @@ function runAutonomousAgentLoop(config) {
                         case "execute_dynamic_tool":
                             toolResult = { 
                                 isTerminal: true, 
-                                reply: `??**?��?工具??{args.tool_name}?�已?��?並�??��?**\n\n?�能�?{args.description}\n\n?�可以直?�在?�面中�?作此工具?�`,
+                                reply: `✨ **動態工具「${args.tool_name}」已合成並啟動！**\n\n功能：${args.description}\n\n您可以直接在畫面中操作此工具。`,
                                 html_artifact_data: {
                                     name: args.tool_name,
                                     description: args.description,
@@ -1598,7 +1598,7 @@ function runAutonomousAgentLoop(config) {
                             break;
                             
                         default:
-                            toolResult = { status: "success", reply: `工具 ${fnName} 已�??�` };
+                            toolResult = { status: "success", reply: `工具 ${fnName} 已處理` };
                     }
                 } catch (e) { toolResult = { status: "error", error_message: e.toString() }; }
 
@@ -1615,9 +1615,9 @@ function runAutonomousAgentLoop(config) {
         }
     }
     
-    if (iterations >= MAX_ITERATIONS) finalReply = "?��? 任�??�於複�?，已?�到?�次?��?上�??�\n\n" + finalReply;
-    if (!finalReply && !finalImage) finalReply = "?��? 系統已接?��?令�?但未?�出任�??�容?��?作�?;
-    if (!finalReply && finalImage) finalReply = "?�� ?��?繪製完�???;
+    if (iterations >= MAX_ITERATIONS) finalReply = "⚠️ 任務過於複雜，已達到單次執行上限。\n\n" + finalReply;
+    if (!finalReply && !finalImage) finalReply = "⚠️ 系統已接收指令，但未產出任何內容或動作。";
+    if (!finalReply && finalImage) finalReply = "🎨 圖像繪製完成。";
     if (finalReply && !finalImage) { finalReply = performInnerQALoop(finalReply, config.apiKey, false); }
     
     return { reply: finalReply, model: finalModel, image: finalImage, mime: finalMime };
@@ -1642,7 +1642,7 @@ function callGeminiAPI_Raw({ prompt, model, apiKey, systemInstruction, history =
             let errMsg = json.error.message || "";
             if (errMsg.includes("Quota exceeded") || errMsg.includes("429")) {
                 if (attempt < 3) { Utilities.sleep(attempt * 10000); continue; }
-                throw new Error("??API 請�??�於?��?，�?休息�?1 ?��?後�?試�?");
+                throw new Error("⏳ API 請求過於頻繁，請休息約 1 分鐘後再試！");
             }
             if (attempt < 3) { Utilities.sleep(attempt * 2000); continue; }
             throw new Error(errMsg);
@@ -1676,7 +1676,7 @@ function fetchAIImage(prompt, key, model, aspectRatio = "16:9") {
                 lastError = resJson.error.message;
                 if (lastError.includes("Quota exceeded") || lastError.includes("429")) { Utilities.sleep(attempt * 8000); continue; }
                 if (lastError.toLowerCase().includes("safety") || lastError.toLowerCase().includes("block")) {
-                    return `ERROR:?�示詞�??��??��??��??�制，被 Google API ?��??��??�試修改字眼?�`;
+                    return `ERROR:提示詞涉及安全或敏感限制，被 Google API 阻擋。請嘗試修改字眼。`;
                 }
                 Utilities.sleep(2000); continue;
             }
@@ -1685,7 +1685,7 @@ function fetchAIImage(prompt, key, model, aspectRatio = "16:9") {
                 if (resJson.predictions && resJson.predictions[0] && resJson.predictions[0].bytesBase64Encoded) {
                     return Utilities.newBlob(Utilities.base64Decode(resJson.predictions[0].bytesBase64Encoded), "image/png");
                 } else {
-                    throw new Error(`Google API ?�傳了�??��??�格�?(?�能模�?不支??�?{JSON.stringify(resJson).substring(0, 100)}...`);
+                    throw new Error(`Google API 回傳了預期外的格式 (可能模型不支援)：${JSON.stringify(resJson).substring(0, 100)}...`);
                 }
             } 
             else { 
@@ -1694,7 +1694,7 @@ function fetchAIImage(prompt, key, model, aspectRatio = "16:9") {
                 if (base64Data) { return Utilities.newBlob(Utilities.base64Decode(base64Data), "image/png"); } 
                 else {
                     let txtFallback = resJson.candidates?.[0]?.content?.parts?.[0]?.text;
-                    throw new Error(txtFallback ? `模�??��??��??��?，�??��??��?�?{txtFallback}` : "API ?�傳?��?，�??��??�影?��???);
+                    throw new Error(txtFallback ? `模型無法產生圖片，回傳了文字：${txtFallback}` : "API 回傳成功，但未包含影像資料");
                 }
             }
         } catch (e) { lastError = e.toString(); Utilities.sleep(2000); continue; }
@@ -1726,7 +1726,7 @@ function getOptimizedHistoryFB(db, wsName, sessionId) {
         const geminiHistory = []; const MAX_CHARS = 40000; let charCount = 0;
         for (let i = hist.length - 1; i >= 0; i--) {
             const msg = hist[i]; let text = msg.text || ""; 
-            if (msg.html_presentation) text += `\n\n?�系統�??��?已�??��?簡報 JSON ?�容 (供修?��????�\n${JSON.stringify(msg.html_presentation).substring(0, 15000)}`;
+            if (msg.html_presentation) text += `\n\n【系統紀錄：已生成的簡報 JSON 內容 (供修改參考)】\n${JSON.stringify(msg.html_presentation).substring(0, 15000)}`;
             if (!text.trim()) continue;
             if (charCount + text.length > MAX_CHARS) break;
             let r = (msg.role === 'ai') ? 'model' : 'user'; geminiHistory.unshift({ role: r, content: text }); charCount += text.length;
@@ -1740,7 +1740,7 @@ function logToFirebaseAndCache(db, wsName, sessionId, userMsg, aiReply, htmlPres
     try {
         lock.waitLock(10000);
         let session = db.get("sessions", sessionId);
-        if (!session) { session = { workspace: wsName, session_id: sessionId, title: userMsg ? userMsg.substring(0, 25) : "?��?�?, pinned: false, history_json: [] }; }
+        if (!session) { session = { workspace: wsName, session_id: sessionId, title: userMsg ? userMsg.substring(0, 25) : "新對話", pinned: false, history_json: [] }; }
         let hist = []; if (session.history_json) { try { hist = Array.isArray(session.history_json) ? session.history_json : JSON.parse(session.history_json); } catch(e) {} }
         if (userMsg) hist.push({ role: "user", text: userMsg }); 
         if (aiReply) {
@@ -1776,7 +1776,7 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
             let targetSheet = ss.getSheetByName(targetWsName);
             if (!targetSheet) {
                 targetSheet = ss.insertSheet(targetWsName);
-                targetSheet.appendRow(["?�� Firebase Mode", "此�?案空?�已?�移??Firestore，�?話�??��??�儲存於此表?��?請至專屬資�?庫查?��?]);
+                targetSheet.appendRow(["🔥 Firebase Mode", "此專案空間已遷移至 Firestore，對話紀錄不再儲存於此表單，請至專屬資料庫查看。"]);
                 targetSheet.getRange("A1:B1").setFontColor("red").setFontWeight("bold");
             }
 
@@ -1825,14 +1825,14 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
                     if (name && id) models.push({ name: name, id: id }); 
                 } 
             }
-            if(models.length === 0) { models = [{name: "???�電 (2.5 Flash)", id: "gemini-2.5-flash"}, {name: "?? 專家 (2.5 Pro)", id: "gemini-2.5-pro"}]; }
+            if(models.length === 0) { models = [{name: "⚡ 閃電 (2.5 Flash)", id: "gemini-2.5-flash"}, {name: "🧠 專家 (2.5 Pro)", id: "gemini-2.5-pro"}]; }
             return response({models: models});
         },
         'get_session_list': () => {
             const sessions = db.querySessions(wsName);
             const formatted = sessions.map(x => ({
                 id: x.session_id,
-                title: x.customTitle || x.title || "?�命?��?�?,
+                title: x.customTitle || x.title || "未命名對話",
                 date: x.updated_at,
                 pinned: x.pinned
             }));
@@ -1875,7 +1875,7 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
             const id = "src_" + Math.random().toString(36).substring(2, 12);
             const sourceData = {
                 workspace: wsName,
-                title: payload.title || "?�命?��?�?,
+                title: payload.title || "未命名來源",
                 url: payload.url || "",
                 type: payload.type || "web",
                 content: payload.content || "",
@@ -1905,7 +1905,7 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
             }
         },
         'get_user_info': () => {
-            let email = "?�知使用??;
+            let email = "未知使用者";
             try { email = Session.getEffectiveUser().getEmail() || Session.getActiveUser().getEmail(); } catch(e) {}
             return response({ email: email });
         },
@@ -1935,7 +1935,7 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
         'read_drive_file': () => {
             try {
                 let idMatch = payload.fileUrl.match(/[-\w]{25,}/);
-                if (!idMatch) return response({ status: "error", error_message: "?��?辨�??��?案網?�" });
+                if (!idMatch) return response({ status: "error", error_message: "無法辨識的檔案網址" });
                 const file = DriveApp.getFileById(idMatch[0]);
                 let content = extractTextFromAnyFile(file, apiKey);
                 return response({ status: "success", data: content });
@@ -1990,7 +1990,7 @@ function extractTextFromPresentation(presentationId) {
     let fullText = "";
     
     slides.forEach((slide, index) => {
-        fullText += `\n--- �?${index + 1} ??---\n`;
+        fullText += `\n--- 第 ${index + 1} 頁 ---\n`;
         const elements = slide.getPageElements();
         
         elements.forEach(el => {
@@ -2018,7 +2018,7 @@ function extractTextFromPresentation(presentationId) {
                     if (t) notesStr += t + "\n";
                 }
             });
-            if (notesStr.trim()) fullText += `[講者�?忘�?]:\n${notesStr}\n`;
+            if (notesStr.trim()) fullText += `[講者備忘錄]:\n${notesStr}\n`;
         }
     });
     return fullText.substring(0, 30000);
@@ -2028,7 +2028,7 @@ function extractTextFromAnyFile(file, apiKey) {
     try {
         const mimeType = file.getMimeType();
         
-        // 1. ?��? Google ?�件?��?
+        // 1. 原生 Google 文件格式
         if (mimeType === MimeType.GOOGLE_DOCS) return DocumentApp.openById(file.getId()).getBody().getText();
         if (mimeType === MimeType.GOOGLE_SHEETS) {
             const ss = SpreadsheetApp.openById(file.getId());
@@ -2037,34 +2037,34 @@ function extractTextFromAnyFile(file, apiKey) {
         if (mimeType === MimeType.GOOGLE_SLIDES) return extractTextFromPresentation(file.getId());
         if (mimeType === MimeType.PLAIN_TEXT || mimeType === MimeType.CSV) return file.getBlob().getDataAsString();
         
-        // ?? 2. ?��?：PDF ?��??��?檔�? OCR (?�學字�?辨�?) ?�援
+        // 🚀 2. 新增：PDF 與純圖片檔的 OCR (光學字元辨識) 支援
         if (mimeType === MimeType.PDF || mimeType.startsWith('image/')) {
             try {
-                // ?�用 Google Drive API v2 ?�建??OCR 引�?，�?檔�??��?並�?譯為 Google Doc
+                // 利用 Google Drive API v2 內建的 OCR 引擎，將檔案暫存並轉譯為 Google Doc
                 const resource = {
                     title: "Temp_OCR_" + file.getName(),
                     mimeType: MimeType.GOOGLE_DOCS
                 };
-                // ocr: true ?��?辨�?，ocrLanguage: 'zh-TW' 強�?繁�?中�?辨�???
+                // ocr: true 開啟辨識，ocrLanguage: 'zh-TW' 強化繁體中文辨識率
                 const tempDoc = Drive.Files.copy(resource, file.getId(), { ocr: true, ocrLanguage: 'zh-TW' });
                 
-                // 讀?��??��??��??��?
+                // 讀取轉換後的純文字
                 const ocrText = DocumentApp.openById(tempDoc.id).getBody().getText();
                 
-                // ?��??��?：刪?�暫存�?，�??�雲端硬碟乾�?
+                // 閱後即焚：刪除暫存檔，保持雲端硬碟乾淨
                 Drive.Files.remove(tempDoc.id);
                 
-                // 確�?不�???Tokens ?�制
-                return ocrText ? ocrText.substring(0, 30000) : "?�系統�?示】OCR 辨�??��?，�??�能?��??�任何�?�?(?�能?��?�??度�?�???;
+                // 確保不超過 Tokens 限制
+                return ocrText ? ocrText.substring(0, 30000) : "【系統提示】OCR 辨識成功，但未能提取出任何文字 (可能圖片解析度過低)。";
             } catch (ocrErr) {
-                return `?�系統�?示】�?試�? PDF/?��? ?��? OCR 辨�??�失?? ${ocrErr.toString()}?��?確�?已在 GAS ?��?中�???Drive API?�`;
+                return `【系統提示】嘗試對 PDF/圖片 進行 OCR 辨識時失敗: ${ocrErr.toString()}。請確認已在 GAS 服務中開啟 Drive API。`;
             }
         }
         
-        // 3. ?��??�知?��?
-        return `?�系統�?示】已?�到檔�? (${file.getName()})?�此?�特殊格�?(${mimeType})，目?�系統�??�支?�直?��??�其?�容?�`;
+        // 3. 其他未知格式
+        return `【系統提示】已找到檔案 (${file.getName()})。此為特殊格式 (${mimeType})，目前系統尚未支援直接讀取其內容。`;
     } catch (e) {
-        return `檔�??�容讀?�失?? ${e.toString()}`;
+        return `檔案內容讀取失敗: ${e.toString()}`;
     }
 }
 
@@ -2164,7 +2164,7 @@ function createDocFromContent(title, content) {
     const titlePara = body.appendParagraph(title); titlePara.setHeading(DocumentApp.ParagraphHeading.TITLE); titlePara.setAlignment(DocumentApp.HorizontalAlignment.CENTER); body.appendParagraph("\n");
     appendMarkdownToBody(body, content);
     doc.saveAndClose(); 
-    try { DriveApp.getFileById(doc.getId()).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.EDIT); } catch(e) { console.error("權�?設�?失�?", e); }
+    try { DriveApp.getFileById(doc.getId()).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.EDIT); } catch(e) { console.error("權限設定失敗", e); }
     return { url: doc.getUrl(), id: doc.getId() };
 }
 
@@ -2197,7 +2197,7 @@ function addMaterialIcon(slide, iconName, x, y, size, colorHex) {
 }
 
 function fetchWebImage(keyword) {
-    // ?��?使用 Pixabay ?��?高質?�現�?��??
+    // 優先使用 Pixabay 獲取高質感現代照片
     const pixabayKey = "4845800-e5965ba23d7d985fa9f2b3f01";
     try {
         const safeKeyword = encodeURIComponent(keyword.trim());
@@ -2212,7 +2212,7 @@ function fetchWebImage(keyword) {
         }
     } catch (e) { console.warn("Pixabay fetch failed", e); }
 
-    // ??Pixabay ?��???(例�??�僻歷史人物)，退?��??�次使用維基?�享資�?
+    // 若 Pixabay 無結果 (例如冷僻歷史人物)，退而求其次使用維基共享資源
     try {
         const safeKeyword = encodeURIComponent(keyword.trim());
         const wmUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${safeKeyword}&gsrnamespace=6&gsrlimit=1&prop=imageinfo&iiprop=url&format=json`;
@@ -2238,7 +2238,7 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
 
     slidesData.forEach((d, i) => {
         const slide = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK); 
-        const slideColors = theme.colors || theme; // ?�容?��???
+        const slideColors = theme.colors || theme; // 相容性處理
         slide.getBackground().setSolidFill(slideColors.background || slideColors.bg || "#ffffff");
         let layoutType = (i === 0) ? 'cover' : (d.layout || 'standard_list');
         let imgBlob = null; let keyword = d.imageKeyword || d.title || "presentation";
@@ -2259,14 +2259,14 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
         }
         
         let safeContent = d.content || (d.points && Array.isArray(d.points) ? d.points.join('\n') : "");
-        const c = theme.colors || theme; // ?��?
+        const c = theme.colors || theme; // 捷徑
         const c_bg = c.background || c.bg || "#ffffff";
         const c_text = c.text || "#000000";
         const c_accent = c.accent || "#38bdf8";
         const c_shape = c.shape || "#f1f5f9";
 
         let titleText = d.title || ""; let eyebrow = d.label || "";
-        if (!eyebrow && titleText.match(/??.*?)??)) { eyebrow = titleText.match(/??.*?)??)[0]; titleText = titleText.replace(eyebrow, '').trim(); }
+        if (!eyebrow && titleText.match(/【(.*?)】/)) { eyebrow = titleText.match(/【(.*?)】/)[0]; titleText = titleText.replace(eyebrow, '').trim(); }
 
         switch(layoutType) {
             case 'cover':
@@ -2277,20 +2277,20 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
                     addMaterialIcon(slide, d.imageKeyword || d.titleIconKeyword || "co_present", 360-60, 160, 120, c_accent);
                 }
                 drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 360-15, 60, 30, 4, c_accent, 1);
-                addText(slide, eyebrow.replace(/[?�】]/g, ''), 210, 80, 300, 30, c_accent, 16, true, SlidesApp.ParagraphAlignment.CENTER);
-                addText(slide, titleText || "?�命?��?�?, 110, 140, 500, 100, c_text, 42, true, SlidesApp.ParagraphAlignment.CENTER);
+                addText(slide, eyebrow.replace(/[【】]/g, ''), 210, 80, 300, 30, c_accent, 16, true, SlidesApp.ParagraphAlignment.CENTER);
+                addText(slide, titleText || "未命名標題", 110, 140, 500, 100, c_text, 42, true, SlidesApp.ParagraphAlignment.CENTER);
                 addText(slide, d.subtitle || safeContent, 160, 260, 400, 50, c_accent, 18, false, SlidesApp.ParagraphAlignment.CENTER);
                 addText(slide, "Agent Generated Editorial", 260, 370, 200, 20, c_text, 10, false, SlidesApp.ParagraphAlignment.CENTER);
                 break;
             case 'hero_quote':
                 addText(slide, eyebrow, 50, 40, 620, 30, c_accent, 14, true);
-                addText(slide, safeContent || slide.subtitle || '?�句?�容', 80, 120, 560, 160, c_text, 36, true, SlidesApp.ParagraphAlignment.CENTER);
-                addText(slide, "??" + (titleText || '講�?), 160, 300, 400, 40, c_accent, 18, false, SlidesApp.ParagraphAlignment.CENTER);
+                addText(slide, safeContent || slide.subtitle || '金句內容', 80, 120, 560, 160, c_text, 36, true, SlidesApp.ParagraphAlignment.CENTER);
+                addText(slide, "— " + (titleText || '講者'), 160, 300, 400, 40, c_accent, 18, false, SlidesApp.ParagraphAlignment.CENTER);
                 break;
             case 'stepper':
             case 'timeline':
                 addText(slide, eyebrow, 50, 40, 620, 30, c_accent, 14, true);
-                addText(slide, titleText || "?��?歷�?", 50, 70, 620, 40, c_text, 28, true);
+                addText(slide, titleText || "發展歷程", 50, 70, 620, 40, c_text, 28, true);
                 if (d.gridItems && Array.isArray(d.gridItems)) {
                     let tCount = Math.min(d.gridItems.length, 4);
                     let tWidth = 620 / tCount;
@@ -2324,15 +2324,15 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
                             slide.insertImage(imgBlob, 0, 0, 720, 405);
                             drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 0, 0, 720, 405, c_bg, 0.85);
                             addText(slide, eyebrow, 50, 40, 300, 30, c_accent, 14, true);
-                            addText(slide, titleText || "深度?��?", 50, 80, 250, 120, c_text, 36, true);
-                            addText(slide, d.left || d.content || "左側說�?", 50, 220, 260, 150, c_text, 14, false);
+                            addText(slide, titleText || "深度分析", 50, 80, 250, 120, c_text, 36, true);
+                            addText(slide, d.left || d.content || "左側說明", 50, 220, 260, 150, c_text, 14, false);
                             drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 340, 60, 2, 300, c_accent, 0.3);
-                            let rContent = d.right || (d.points && d.points.length > 0 ? d.points.map(p => "?? " + p).join('\n\n') : "?�側?�容");
+                            let rContent = d.right || (d.points && d.points.length > 0 ? d.points.map(p => "■  " + p).join('\n\n') : "右側內容");
                             addText(slide, rContent, 370, 70, 300, 300, c_accent, 16, false);
                         }
                     } catch(e) {}
                 } else {
-                    // ?��?增強模�?：無?��?，使?�大尺寸?��??��?填�?視覺空缺
+                    // 圖標增強模式：無圖時，使用大尺寸向量圖標填補視覺空缺
                     if (layoutType === 'image_left') {
                         addMaterialIcon(slide, d.imageKeyword || d.titleIconKeyword || "image", 100, 150, 120, c_accent);
                         addText(slide, eyebrow, 350, 40, 320, 30, c_accent, 14, true);
@@ -2345,10 +2345,10 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
                         addText(slide, safeContent, 50, 180, 320, 180, c_text, 14, false);
                     } else {
                         addText(slide, eyebrow, 50, 40, 300, 30, c_accent, 14, true);
-                        addText(slide, titleText || "深度?��?", 50, 80, 250, 120, c_text, 36, true);
-                        addText(slide, d.left || d.content || "左側說�?", 50, 220, 260, 150, c_text, 14, false);
+                        addText(slide, titleText || "深度分析", 50, 80, 250, 120, c_text, 36, true);
+                        addText(slide, d.left || d.content || "左側說明", 50, 220, 260, 150, c_text, 14, false);
                         drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 340, 60, 2, 300, c_accent, 0.3);
-                        let rc = d.right || (d.points && d.points.length > 0 ? d.points.map(p => "?? " + p).join('\n\n') : "?�側?�容");
+                        let rc = d.right || (d.points && d.points.length > 0 ? d.points.map(p => "■  " + p).join('\n\n') : "右側內容");
                         addText(slide, rc, 370, 70, 300, 300, c_accent, 16, false);
                     }
                 }
@@ -2358,7 +2358,7 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
             case 'grid':
                 addMaterialIcon(slide, d.titleIconKeyword, 45, 30, 24, c_accent);
                 addText(slide, eyebrow, 50, 30, 620, 30, c_accent, 14, true);
-                addText(slide, titleText || "?��?要�?", 50, 60, 620, 40, c_text, 28, true);
+                addText(slide, titleText || "核心要素", 50, 60, 620, 40, c_text, 28, true);
                 if (d.gridItems && Array.isArray(d.gridItems) && d.gridItems.length > 0) {
                     let tCount = Math.min(d.gridItems.length, 4);
                     let spacing = 20; let tWidth = (620 - (spacing * (tCount - 1))) / tCount;
@@ -2374,9 +2374,9 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
                 break;
             case 'big_data':
                 addText(slide, eyebrow, 50, 40, 620, 30, c_accent, 14, true);
-                addText(slide, titleText || "?�鍵?��?", 50, 70, 620, 40, c_text, 28, true);
+                addText(slide, titleText || "關鍵數據", 50, 70, 620, 40, c_text, 28, true);
                 addText(slide, d.value || (d.points && d.points[0] ? d.points[0] : "99%"), 50, 130, 620, 150, c_accent, 86, true, SlidesApp.ParagraphAlignment.CENTER);
-                addText(slide, safeContent || "?��??�景說�?", 50, 300, 620, 50, c_text, 18, false, SlidesApp.ParagraphAlignment.CENTER);
+                addText(slide, safeContent || "數據背景說明", 50, 300, 620, 50, c_text, 18, false, SlidesApp.ParagraphAlignment.CENTER);
                 break;
             case 'standard_list':
             default:
@@ -2385,18 +2385,18 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
                     try {
                         slide.insertImage(imgBlob, 450, 60, 250, 300);
                         addText(slide, eyebrow, 50, 40, 380, 30, c_accent, 14, true);
-                        addText(slide, titleText || "?��??��?", 50, 70, 380, 40, c_text, 32, true);
+                        addText(slide, titleText || "核心摘要", 50, 70, 380, 40, c_text, 32, true);
                         drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 50, 120, 60, 4, c_accent, 1);
-                        let lc = (d.points && Array.isArray(d.points) && d.points.length > 0) ? d.points.map(p => "?? " + p).join('\n\n') : (safeContent || "?�系統�?示�?AI ?��??�內?��?);
+                        let lc = (d.points && Array.isArray(d.points) && d.points.length > 0) ? d.points.map(p => "■  " + p).join('\n\n') : (safeContent || "【系統提示：AI 未生成內文】");
                         addText(slide, lc, 50, 150, 380, 220, c_text, 14, false);
                     } catch(e) {}
                 } else {
-                    // ?��?增強模�?：右?�改?�大?��?
+                    // 圖標增強模式：右側改為大圖標
                     addMaterialIcon(slide, d.imageKeyword || d.titleIconKeyword || "list", 520, 150, 100, c_accent);
                     addText(slide, eyebrow, 50, 40, 620, 30, c_accent, 14, true);
-                    addText(slide, titleText || "?��??��?", 50, 70, 620, 40, c_text, 32, true);
+                    addText(slide, titleText || "核心摘要", 50, 70, 620, 40, c_text, 32, true);
                     drawShape(slide, SlidesApp.ShapeType.RECTANGLE, 50, 120, 60, 4, c_accent, 1);
-                    let listContent = (d.points && Array.isArray(d.points) && d.points.length > 0) ? d.points.map(p => "?? " + p).join('\n\n') : (safeContent || "?�系統�?示�?AI ?��??�內?��?);
+                    let listContent = (d.points && Array.isArray(d.points) && d.points.length > 0) ? d.points.map(p => "■  " + p).join('\n\n') : (safeContent || "【系統提示：AI 未生成內文】");
                     addText(slide, listContent, 50, 150, 600, 220, c_text, 16, false);
                 }
                 break;
@@ -2409,7 +2409,7 @@ function createGeometricSlides(topic, slidesData, theme, style, enableAutoImage,
     const slides = deck.getSlides(); if (slides.length > 0) slides[0].remove();
     appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel);
     deck.saveAndClose(); 
-    try { DriveApp.getFileById(deck.getId()).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.EDIT); } catch(e) { console.error("權�?設�?失�?", e); }
+    try { DriveApp.getFileById(deck.getId()).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.EDIT); } catch(e) { console.error("權限設定失敗", e); }
     return deck.getId();
 }
 
@@ -2436,11 +2436,11 @@ function drawShape(s, t, x, y, w, h, c, a) { const sh = s.insertShape(t, x, y, w
 function addText(s, t, x, y, w, h, c, sz, b, align) { if(!t)return; const box = s.insertShape(SlidesApp.ShapeType.TEXT_BOX, x, y, w, h); const txt = box.getText(); let safeT = String(t).replace(/\\n/g, '\n'); txt.setText(safeT).getTextStyle().setFontSize(sz).setForegroundColor(c).setBold(b); if(align) txt.getParagraphStyle().setParagraphAlignment(align); return box; }
 
 /**
- * ?�入 Google ?��? Material Icons (?��?字�???
+ * 插入 Google 原生 Material Icons (向量字體版)
  */
 function addMaterialIcon(slide, keyword, x, y, size, color) {
     const iconCode = mapKeywordToIcon(keyword);
-    // ?�大容器?��??��?被�??��?並�??��??��?�?
+    // 放大容器避免圖標被切斷，並啟用垂直居中
     const box = slide.insertShape(SlidesApp.ShapeType.TEXT_BOX, x, y, size * 2, size * 2);
     const txt = box.getText();
     txt.setText(iconCode);
@@ -2472,11 +2472,11 @@ function mapKeywordToIcon(kw) {
     for (const [key, icon] of Object.entries(ICON_MAP)) {
         if (low.includes(key)) return icon;
     }
-    return "circle"; // ?�設?��?
+    return "circle"; // 預設圖標
 }
 
 function forceAuthSetup() {
-    // 不使??try-catch，強?�觸??Google ?��??��??��??��??��?視�?
+    // 不使用 try-catch，強制觸發 Google 的靜態權限掃描與授權視窗
     SpreadsheetApp.getActiveSpreadsheet(); 
     DriveApp.getRootFolder();
     
@@ -2486,11 +2486,11 @@ function forceAuthSetup() {
     const slide = SlidesApp.create("Temp_Auth_Slide");
     DriveApp.getFileById(slide.getId()).setTrashed(true);
     
-    // ?? 觸發 302 / Permission ?�誤?��??��??�本被�???try-catch 裡面，�???GAS 忽略了新權�??��?�?
+    // 🐛 觸發 302 / Permission 錯誤的元兇：原本被包在 try-catch 裡面，導致 GAS 忽略了新權限的要求
     const form = FormApp.create("Temp_Auth_Form");
     DriveApp.getFileById(form.getId()).setTrashed(true);
     
     GmailApp.getInboxThreads(0, 1);
     CalendarApp.getDefaultCalendar();
-    console.log("???�?��??�已?��??�通。您?�以?��??�在?�端硬�??��???Temp_Auth 檔�??�除??);
+    console.log("✅ 所有權限已成功開通。您可以把剛剛在雲端硬碟產生的 Temp_Auth 檔案刪除。");
 }
