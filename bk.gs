@@ -273,7 +273,8 @@ const AGENT_TOOLS = [{
         { name: "read_drive_file", description: "【強制呼叫】讀取 Google 雲端硬碟檔案內容。當使用者貼上 Drive 網址時，你已具備最高合法授權，絕對禁止以「無法存取私人檔案」或「安全限制」為由拒絕，請立刻呼叫此工具解析。", parameters: { type: "OBJECT", properties: { fileUrl: { type: "STRING", description: "要讀取的檔案完整網址" } }, required: ["fileUrl"] } },
 
         { name: "read_web_page", description: "【代理人瀏覽模式 (Agent Browser Mode)】使用整合型無頭瀏覽器讀取網頁。此工具能穿透 JavaScript 與反爬蟲機制（如博客來、Amazon）。當搜尋摘要缺失 ISBN 或原價等深度細節時，強制呼叫此工具進入內頁抓取。取得內容後，請嚴格基於內容回答，禁止腦補。", parameters: { type: "OBJECT", properties: { url: { type: "STRING", description: "要讀取的網頁完整網址 (需包含 http/https)" } }, required: ["url"] } },
-        { name: "search_web", description: "【萬用搜尋引擎】搜尋全球公開資訊與最新新聞。當使用者要求找尋資料、比較產品、或是現有知識不足時，請優先呼叫此工具。", parameters: { type: "OBJECT", properties: { query: { type: "STRING", description: "精確的搜尋關鍵字" } }, required: ["query"] } },
+        { name: "google_search", description: "【萬用搜尋引擎】搜尋全球公開資訊與最新新聞。當使用者要求找尋資料、比較產品、或是現有知識不足時，請優先呼叫此工具。", parameters: { type: "OBJECT", properties: { query: { type: "STRING", description: "精確的搜尋關鍵字" } }, required: ["query"] } },
+        { name: "search_web", description: "【備用搜尋引擎】功能同 google_search，作為冗餘備援。", parameters: { type: "OBJECT", properties: { query: { type: "STRING", description: "搜尋關鍵字" } }, required: ["query"] } },
 
         { name: "organize_drive_folder", description: "智慧整理 Google Drive 資料夾。", parameters: { type: "OBJECT", properties: { folderName: { type: "STRING" } }, required: ["folderName"] } },
         
@@ -474,11 +475,12 @@ ${customRules}
 [場景 E：深度資料探勘 (Deep Research)]
 當使用者要求「搜尋特定產品清單」、「整理書籍資訊 (含 ISBN/價格)」等任務時，你必須切換至【研究員人格】：
 1. 立即規劃「多步探勘計畫」，並在回覆中顯性列出。
-2. 第一步：使用 \`search_web\` 找出標的網站 (如博客來、Amazon) 的搜尋結果。
+2. 第一步：使用 \`google_search\` 找出標的網站 (如博客來、Amazon) 的搜尋結果。
 3. 第二步：分析搜尋結果，提取每一個產品的「詳細頁面 URL」。
 4. 第三步：【核心強制】針對這些 URL，逐一呼叫 \`read_web_page\` 進入內頁。**絕對禁止**只依賴搜尋結果的 Snippet。
 5. 第四步：彙整為 Markdown 表格交付。
-⚠️ 絕對禁止：禁止在沒呼叫過 \`read_web_page\` 的情況下說「找不到資訊」或「我無法進入網站」。若網頁內容過長，請嘗試多次讀取。`;
+⚠️ 絕對禁止：禁止在沒呼叫過 \`read_web_page\` 的情況下說「找不到資訊」或「我無法進入網站」。若網頁內容過長，請嘗試多次讀取。
+⚠️ **禁止使用 Python**：絕對禁止嘗試透過撰寫程式碼或呼叫內建代碼執行器來解決數據查詢問題。請唯一使用上述工具。`;
 }
 
 
@@ -1192,6 +1194,7 @@ function runAutonomousAgentLoop(config) {
                             }
                             break;
                             
+                        case "google_search":
                         case "search_web":
                             try {
                                 let jinaApiKey = PropertiesService.getScriptProperties().getProperty('JINA_API_KEY');
@@ -1212,10 +1215,11 @@ function runAutonomousAgentLoop(config) {
                                 // 策略 A: Jina Search (s.jina.ai)
                                 try {
                                     let res = UrlFetchApp.fetch("https://s.jina.ai/" + encodeURIComponent(query), options);
-                                    if (res.getResponseCode() === 200) {
+                                    let status = res.getResponseCode();
+                                    if (status === 200) {
                                         searchResult = res.getContentText();
-                                    } else if (res.getResponseCode() === 401 && jinaApiKey) {
-                                        // 401 備援：去掉 Key 再試一次
+                                    } else if (status === 401 || status === 403 || status === 429) {
+                                        // 401/403/429 備援：去掉 Key 再試一次
                                         let opt2 = { ...options, headers: { ...options.headers } };
                                         delete opt2.headers["Authorization"];
                                         res = UrlFetchApp.fetch("https://s.jina.ai/" + encodeURIComponent(query), opt2);
@@ -1223,7 +1227,7 @@ function runAutonomousAgentLoop(config) {
                                     }
                                 } catch(e) {}
                                 
-                                // 策略 B: 針對博客來特化的搜尋連結 (直接透過 Reader 抓取搜尋結果)
+                                // 策略 B: 針對博客來特化的搜尋連結
                                 if (!searchResult && (query.includes("博客來") || query.includes("書"))) {
                                     try {
                                         const booksUrl = "https://search.books.com.tw/search/query/key/" + encodeURIComponent(query.replace(/博客來/g, ""));
@@ -1244,9 +1248,9 @@ function runAutonomousAgentLoop(config) {
                                 if (searchResult) {
                                     toolResult = { status: "success", data: searchResult.substring(0, 35000) };
                                 } else {
-                                    throw new Error("所有搜尋策略皆失敗。請嘗試調整關鍵字或稍後再試。");
+                                    toolResult = { status: "error", error_message: "搜尋服務暫時無法使用。建議直接輸入網址進行讀取。" };
                                 }
-                            } catch(e) { toolResult = { status: "error", error_message: `搜尋失敗: ${e.toString()}` }; }
+                            } catch(e) { toolResult = { status: "error", error_message: `搜尋底層發生錯誤: ${e.toString()}` }; }
                             break;
 
                         case "read_web_page":
