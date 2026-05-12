@@ -613,10 +613,10 @@ function doPost(e) {
             finalTools = [{ functionDeclarations: AGENT_TOOLS[0].functionDeclarations.filter(t => t.name === "generate_art") }];
             finalSystemInstruction += `\n\n【🎨 強制繪圖模式 (Draw Mode)】\n使用者已開啟「純繪圖模式」。請將使用者的文字轉換為精確的英文生圖 Prompt，並『強制且唯一』呼叫 \`generate_art\` 工具。不要講多餘的廢話，直接畫圖！`;
         } else if (web_search) {
-            // 原則上使用自定義 search_web 工具以利與 read_web_page 並存
+            // 原則上使用自定義 google_search 工具以利與 read_web_page 並存
             // 只有當使用者明確開啟「強制聯網」且不考慮其他工具時才使用內建工具
             finalTools = JSON.parse(JSON.stringify(AGENT_TOOLS));
-            finalSystemInstruction += `\n\n【🌍 強制聯網模式】請優先使用 search_web 與 read_web_page 工具來完成深度探勘，提供最新資訊。`;
+            finalSystemInstruction += `\n\n【🌍 強制聯網模式】請優先使用 google_search 與 read_web_page 工具來完成深度探勘，提供最新資訊。`;
         } else {
             finalTools = JSON.parse(JSON.stringify(AGENT_TOOLS));
         }
@@ -722,7 +722,7 @@ function handleLineWebhook(payload, ss, apiKey, lineToken, CONFIG, db) {
                 finalSystemInstruction += `\n\n【🎨 強制繪圖模式】使用者要求畫圖，請將使用者的文字轉換為詳細的英文畫面描述，並強制呼叫 generate_art 工具。不要講廢話。`;
             } else if (web_search) {
                 finalTools = JSON.parse(JSON.stringify(AGENT_TOOLS));
-                finalSystemInstruction += `\n\n【🌍 聯網搜尋模式】使用者正在詢問外部資訊，請優先使用 search_web 與 read_web_page 工具提供最新答案。`;
+                finalSystemInstruction += `\n\n【🌍 聯網搜尋模式】使用者正在詢問外部資訊，請優先使用 google_search 與 read_web_page 工具提供最新答案。`;
             } else {
                 finalTools = JSON.parse(JSON.stringify(AGENT_TOOLS));
             }
