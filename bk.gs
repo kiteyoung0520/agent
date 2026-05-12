@@ -1244,7 +1244,7 @@ function runAutonomousAgentLoop(config) {
                                     }
                                 } catch(e) {}
                                 
-                                // 策略 B: 針對博客來特化的搜尋連結
+                                // 策略 B: 針對博客來特化的搜尋連結 (僅在相關關鍵字時觸發)
                                 if (!searchResult && (query.includes("博客來") || query.includes("書"))) {
                                     try {
                                         const booksUrl = "https://search.books.com.tw/search/query/key/" + encodeURIComponent(query.replace(/博客來/g, ""));
@@ -1252,8 +1252,17 @@ function runAutonomousAgentLoop(config) {
                                         if (res.getResponseCode() === 200) searchResult = res.getContentText();
                                     } catch(e) {}
                                 }
+
+                                // 策略 C: 備援 - DuckDuckGo (通常比 Google 更少擋 Bot)
+                                if (!searchResult) {
+                                    try {
+                                        const ddgUrl = "https://duckduckgo.com/html/?q=" + encodeURIComponent(query);
+                                        let res = UrlFetchApp.fetch("https://r.jina.ai/" + ddgUrl, options);
+                                        if (res.getResponseCode() === 200 && !res.getContentText().includes("unusual traffic")) searchResult = res.getContentText();
+                                    } catch(e) {}
+                                }
                                 
-                                // 策略 C: 最終備援 - 直接用 Reader 讀取 Google 搜尋頁面
+                                // 策略 D: 最終備援 - 直接用 Reader 讀取 Google 搜尋頁面
                                 if (!searchResult) {
                                     try {
                                         const googleUrl = "https://www.google.com/search?q=" + encodeURIComponent(query);
