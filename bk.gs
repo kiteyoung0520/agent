@@ -821,7 +821,7 @@ function fetchYouTubeTranscriptNative(videoId) {
 function runAutonomousAgentLoop(config) {
     let currentHistory = [...config.history];
     let isFirstTurn = true; let finalReply = ""; let finalImage = null; let finalMime = null; let finalModel = config.model;
-    const MAX_ITERATIONS = 5; let iterations = 0;
+    const MAX_ITERATIONS = 12; let iterations = 0;
 
     while (iterations < MAX_ITERATIONS) {
         iterations++;
