@@ -1668,7 +1668,7 @@ function callGeminiAPI_Raw({ prompt, model, apiKey, systemInstruction, history =
         else { contents.push({ role: 'user', parts: userPart }); }
     }
     const payload = { contents: contents };
-    if (tools.length > 0 && !imageData) payload.tools = tools;
+    if (tools.length > 0) payload.tools = tools;
     if (systemInstruction) payload.system_instruction = { parts: [{ text: systemInstruction }] };
 
     for (let attempt = 1; attempt <= 3; attempt++) {
