@@ -1145,6 +1145,10 @@
 
                 const finalOutput = (stdout + "\n" + stderr).trim();
                 
+                // 強制重置狀態以利自動發送
+                isWaiting = false;
+                toggleSendButton(false);
+
                 // 將結果回傳給後端繼續任務
                 userInput.value = `【瀏覽器 Python 執行結果】：\n\`\`\`\n${finalOutput || "(執行成功，無輸出)"}\n\`\`\``;
                 sendMessage();
