@@ -12,6 +12,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
     
     <style>
         body { 
@@ -253,13 +254,17 @@
                 <span class="font-semibold text-sm truncate md:text-base text-gray-200" id="mobile-title">新對話</span>
             </div>
             <div class="flex items-center gap-2">
-                <button onclick="switchRightPanel('settings')" class="flex items-center gap-2 px-3 py-1.5 bg-[#2a2b2f] hover:bg-[#333] text-purple-400 rounded-lg border border-[#444] transition-all group">
-                    <span class="material-symbols-rounded text-[20px]">tune</span>
-                    <span class="text-xs font-bold hidden sm:inline">功能設定</span>
+                <button id="canvas-tab-btn" onclick="switchRightPanel('canvas')" class="flex items-center gap-2 px-3 py-1.5 bg-[#2a2b2f] hover:bg-[#333] text-emerald-400 rounded-lg border border-[#444] transition-all group">
+                    <span class="material-symbols-rounded text-[20px]">deployed_code</span>
+                    <span class="text-xs font-bold hidden sm:inline">動態畫布</span>
                 </button>
-                <button onclick="switchRightPanel('library')" class="flex items-center gap-2 px-3 py-1.5 bg-[#2a2b2f] hover:bg-[#333] text-blue-400 rounded-lg border border-[#444] transition-all group">
+                <button id="library-tab-btn" onclick="switchRightPanel('library')" class="flex items-center gap-2 px-3 py-1.5 bg-[#2a2b2f] hover:bg-[#333] text-blue-400 rounded-lg border border-[#444] transition-all group">
                     <span class="material-symbols-rounded text-[20px]">library_books</span>
                     <span class="text-xs font-bold hidden sm:inline">專案圖書館</span>
+                </button>
+                <button id="settings-tab-btn" onclick="switchRightPanel('settings')" class="flex items-center gap-2 px-3 py-1.5 bg-[#2a2b2f] hover:bg-[#333] text-purple-400 rounded-lg border border-[#444] transition-all group">
+                    <span class="material-symbols-rounded text-[20px]">tune</span>
+                    <span class="text-xs font-bold hidden sm:inline">功能設定</span>
                 </button>
             </div>
         </header>
@@ -412,6 +417,16 @@
         let currentImageData = null, currentMimeType = null, currentDocumentText = null, currentDocumentName = null, currentYouTubeId = null;
         let isWaiting = false, currentRenderCode = "", abortController = null, silenceTimer = null, currentGemsList = []; 
         window.sharedKnowledgeSet = new Set();
+        let isCanvasReady = false;
+        let pyodideInstance = null;
+
+        async function getPyodide() {
+            if (pyodideInstance) return pyodideInstance;
+            pyodideInstance = await loadPyodide();
+            return pyodideInstance;
+        }
+
+        const CANVAS_HOST_PAGE = `<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><script src="https://unpkg.com/react@18/umd/react.production.min.js">\x3C/script><script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js">\x3C/script><script src="https://unpkg.com/@babel/standalone/babel.min.js">\x3C/script><script src="https://cdn.tailwindcss.com">\x3C/script><script src="https://unpkg.com/lucide@latest">\x3C/script><style>body { margin: 0; background: #f9fafb; font-family: sans-serif; } #root { min-height: 100vh; }</style></head><body><div id="root"></div><script>window.addEventListener('message', (e) => { if (e.data.type === 'render_artifact') { try { const { code } = e.data; let cleanCode = code.replace(/import\\s+.*?from\\s+['"].*?['"];?/g, '').replace(/export\\s+default\\s+function/g, 'function'); let m = code.match(/export\\s+default\\s+function\\s+([A-Za-z0-9_]+)/); const compName = m ? m[1] : 'App'; const transformed = Babel.transform(cleanCode, { presets: ['react'] }).code; const run = new Function('React', 'ReactDOM', 'lucide', transformed + \`\\n const rootEl = document.getElementById('root'); if (window.lastRoot) window.lastRoot.unmount(); window.lastRoot = ReactDOM.createRoot(rootEl); window.lastRoot.render(React.createElement(\${compName})); setTimeout(() => lucide.createIcons(), 100); \`); run(React, ReactDOM, lucide); } catch (err) { document.getElementById('root').innerHTML = '<div class="p-4 text-red-700 font-mono text-xs">Render Error: ' + err.message + '</div>'; } } }); window.parent.postMessage({ type: 'canvas_ready' }, '*'); \x3C/script></body></html>`;
 
         // ⚙️ 全域設定狀態 (Persistent Settings)
         const settings = {
@@ -593,7 +608,16 @@
                 const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload), signal: abortController.signal });
                 const data = await res.json(); removeLoading(lid);
                 if (data.status === "error") throw new Error(data.error || "伺服器錯誤");
-                if (data.reply) { appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model, data.html_presentation || null, data.html_artifact || null); if (!speakText(data.reply, true) && settings.continuousMode) setTimeout(startRecording, 500); }
+                
+                if (data.python_browser_request) {
+                    await handleBrowserPythonRequest(data.python_browser_request);
+                    return;
+                }
+
+                if (data.reply) { 
+                    appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model, data.html_presentation || null, data.html_artifact || null, data.needs_confirmation || false, data.pending_tool_call || null); 
+                    if (!speakText(data.reply, true) && settings.continuousMode) setTimeout(startRecording, 500); 
+                }
                 loadSessions(); 
             } catch (err) { removeLoading(lid); appendMessage('ai', err.name === 'AbortError' ? `🛑 **生成已中止。**` : `❌ 執行失敗：\n\`\`\`text\n${err.message}\n\`\`\``); } 
             finally { toggleSendButton(false); abortController = null; }
@@ -643,12 +667,75 @@
                 const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload), signal: abortController.signal });
                 const data = await res.json(); removeLoading(lid);
                 if (data.status === "error") throw new Error(data.error || "伺服器錯誤");
-                if (data.reply) { appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model, data.html_presentation || null, data.html_artifact || null); if (!speakText(data.reply, true) && settings.continuousMode) setTimeout(startRecording, 500); }
+                
+                if (data.python_browser_request) {
+                    await handleBrowserPythonRequest(data.python_browser_request);
+                    return;
+                }
+
+                if (data.reply) { 
+                    appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model, data.html_presentation || null, data.html_artifact || null, data.needs_confirmation || false, data.pending_tool_call || null); 
+                    if (!speakText(data.reply, true) && settings.continuousMode) setTimeout(startRecording, 500); 
+                }
                 loadSessions(); 
             } catch (err) { removeLoading(lid); appendMessage('ai', err.name === 'AbortError' ? `🛑 **生成已中止。**` : `❌ 執行失敗：\n\`\`\`text\n${err.message}\n\`\`\``); } 
             finally { toggleSendButton(false); abortController = null; }
         }
 
+        async function confirmAction(btn, isConfirmed) {
+            const messageWrapper = btn.closest('.message-bubble');
+            const pendingToolCall = JSON.parse(messageWrapper.dataset.pendingToolCall || "null");
+            const originalPrompt = messageWrapper.dataset.originalMessage || "";
+            const confirmationDiv = btn.closest('.animate-pulse');
+            
+            if (!isConfirmed) {
+                confirmationDiv.innerHTML = '<div class="text-gray-500 italic text-sm py-2">🚫 已拒絕執行此動作。</div>';
+                confirmationDiv.classList.remove('animate-pulse', 'bg-amber-500/10', 'border-amber-500/30');
+                return;
+            }
+
+            confirmationDiv.innerHTML = '<div class="flex items-center gap-2 text-emerald-400 font-bold py-2 text-sm"><span class="material-symbols-rounded animate-spin">sync</span> 正在授權執行中...</div>';
+            
+            // 重新發送請求，帶上 confirmed: true
+            const ms = document.getElementById('model-selector');
+            const gs = document.getElementById('gem-selector');
+            let agp = null, agm = null;
+            if (gs.value !== "") { agp = currentGemsList[parseInt(gs.value)].prompt; agm = currentGemsList[parseInt(gs.value)].model; }
+
+            const payload = { 
+                message: originalPrompt,
+                session_id: currentSessionId, 
+                workspace: currentWorkspace,
+                web_search: settings.webSearch, 
+                auto_image: settings.autoImage, 
+                draw_mode: settings.drawMode, 
+                gem_prompt: agp, gem_model: agm, selected_model: ms.value,
+                confirmed: true // 🛡️ 關鍵授權標記
+            };
+
+            toggleSendButton(true); const lid = appendLoading("授權執行中..."); abortController = new AbortController(); 
+
+            try {
+                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload), signal: abortController.signal });
+                const data = await res.json(); 
+                removeLoading(lid);
+                
+                if (data.status === "error") throw new Error(data.error || "伺服器錯誤");
+                
+                // 成功後移除確認框，並顯示結果
+                confirmationDiv.remove();
+                if (data.reply) { 
+                    appendMessage('ai', data.reply, data.image ? `data:${data.mime};base64,${data.image}` : null, data.model, data.html_presentation || null, data.html_artifact || null, data.needs_confirmation || false, data.pending_tool_call || null); 
+                }
+            } catch (err) { 
+                removeLoading(lid); 
+                confirmationDiv.innerHTML = `<div class="text-red-400 text-xs py-2">❌ 授權執行失敗：${err.message}</div>`;
+            } finally { 
+                toggleSendButton(false); 
+                abortController = null; 
+            }
+        }
+        
         async function handleFileUpload(e) {
             const f = e.target.files[0]; if (!f) return; const r = new FileReader(), ext = f.name.split('.').pop().toLowerCase();
             
@@ -756,7 +843,7 @@
             }
         }
 
-        function appendMessage(role, text, imageSrc = null, model = null, htmlPresentation = null, htmlArtifact = null) {
+        function appendMessage(role, text, imageSrc = null, model = null, htmlPresentation = null, htmlArtifact = null, needsConfirmation = false, pendingToolCall = null) {
             const isAI = role === 'ai', w = document.createElement('div'); w.className = `flex gap-3 sm:gap-4 max-w-4xl mx-auto w-full group ${!isAI ? 'flex-row-reverse' : ''}`;
             let b = `<div class="flex-1 ${!isAI ? 'text-right' : ''} space-y-2 max-w-[90%] sm:max-w-[85%] relative min-w-0">`;
             
@@ -777,6 +864,29 @@
                     parsedText = parsedText.replace(/\[來源\s*(\d+)\]/g, '<span class="citation" onclick="highlightSource($1)">[來源 $1]</span>');
                 }
                 b += `<div class="prose prose-invert text-gray-200 bg-[#1e1f22] p-4 sm:p-5 rounded-2xl rounded-tl-none shadow-sm text-base sm:text-lg leading-relaxed text-left ${isShared ? 'shared-message' : ''}">${parsedText}${isShared ? '<span class="shared-badge">專案共用</span>' : ''}</div>`;
+                
+                if (needsConfirmation && isAI) {
+                    b += `
+                        <div class="mt-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl animate-pulse">
+                            <div class="flex items-center gap-2 text-amber-400 font-bold mb-3 text-sm">
+                                <span class="material-symbols-rounded">security</span>
+                                敏感操作授權請求
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="confirmAction(this, true)" class="confirm-yes-btn flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-sm font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center gap-1">
+                                    <span class="material-symbols-rounded text-[18px]">check_circle</span> 授權執行
+                                </button>
+                                <button onclick="confirmAction(this, false)" class="confirm-no-btn flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-1">
+                                    <span class="material-symbols-rounded text-[18px]">cancel</span> 取消
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    // 儲存待處理的 Tool Call 資訊以便確認後使用
+                    w.dataset.pendingToolCall = JSON.stringify(pendingToolCall);
+                    w.dataset.originalMessage = userInput.value || ""; // 記錄當前訊息
+                }
+
                 if (htmlPresentation && isAI) {
                     b += `<div class="mt-3"><button class="open-ppt-btn flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-3 rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 font-bold text-sm sm:text-base"><span class="material-symbols-rounded">presentation_play</span> 🎨 開啟互動簡報</button></div>`;
                 }
@@ -814,7 +924,7 @@
                 const artifactBtn = w.querySelector('.open-artifact-btn');
                 if (artifactBtn && htmlArtifact) {
                     artifactBtn.onclick = () => openHtmlArtifact(htmlArtifact);
-                    openHtmlArtifact(htmlArtifact); // 自動開啟 Manus 級別工具
+                    openHtmlArtifact(htmlArtifact); 
                 }
             }
             
@@ -969,14 +1079,120 @@
             currentRenderCode = rc; document.getElementById('preview-modal').classList.remove('hidden'); document.getElementById('preview-modal').classList.add('flex'); document.getElementById('preview-iframe').srcdoc = rc;
         }
 
+        let artifactHistory = [];
         function openHtmlArtifact(data) {
             if (!data || !data.code) return;
-            const modal = document.getElementById('preview-modal');
-            const iframe = document.getElementById('preview-iframe');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            iframe.srcdoc = data.code;
-            currentRenderCode = data.code;
+            const code = data.code;
+            currentRenderCode = code;
+            
+            // 加入歷史紀錄
+            if (!artifactHistory.some(a => a.name === data.name && a.code === data.code)) {
+                artifactHistory.unshift({ name: data.name, description: data.description, code: data.code, time: new Date() });
+            }
+
+            // 切換面板
+            if (currentRightTab !== 'canvas') switchRightPanel('canvas');
+
+            const iframe = document.getElementById('canvas-iframe');
+            if (!iframe) return;
+
+            // 判斷是否為 JSX/React 還是 完整 HTML
+            const isFullHtml = code.trim().toLowerCase().startsWith('<!doctype html') || code.trim().toLowerCase().startsWith('<html');
+            
+            if (isFullHtml) {
+                iframe.srcdoc = code;
+                isCanvasReady = false; // 破壞了基座
+            } else {
+                // 如果基座沒了，先重建基座
+                if (!isCanvasReady || !iframe.contentWindow) {
+                    iframe.srcdoc = CANVAS_HOST_PAGE;
+                    // 等待基座就緒後發送
+                    const checker = setInterval(() => {
+                        if (isCanvasReady) {
+                            iframe.contentWindow.postMessage({ type: 'render_artifact', code: code }, '*');
+                            clearInterval(checker);
+                        }
+                    }, 50);
+                } else {
+                    iframe.contentWindow.postMessage({ type: 'render_artifact', code: code }, '*');
+                }
+            }
+            renderArtifactHistory();
+            const p = document.getElementById('right-panel');
+            if (p.classList.contains('right-panel-closed')) toggleRightPanel();
+        }
+
+        async function handleBrowserPythonRequest(req) {
+            const lid = appendLoading("🐍 正在載入瀏覽器 Python 引擎 (第一次約需 10 秒)...");
+            try {
+                const py = await getPyodide();
+                updateLoading(lid, "⚙️ 正在初始化 Python 環境...");
+                
+                // 準備捕捉 stdout
+                await py.runPythonAsync(`
+                    import sys
+                    import io
+                    sys.stdout = io.StringIO()
+                    sys.stderr = io.StringIO()
+                `);
+                
+                updateLoading(lid, "📊 正在進行本地運算...");
+                await py.runPythonAsync(req.code);
+                
+                const stdout = py.runPython("sys.stdout.getvalue()");
+                const stderr = py.runPython("sys.stderr.getvalue()");
+                removeLoading(lid);
+
+                const finalOutput = (stdout + "\n" + stderr).trim();
+                
+                // 將結果回傳給後端繼續任務
+                userInput.value = `【瀏覽器 Python 執行結果】：\n\`\`\`\n${finalOutput || "(執行成功，無輸出)"}\n\`\`\``;
+                sendMessage();
+            } catch (err) {
+                removeLoading(lid);
+                appendMessage('ai', `❌ 瀏覽器 Python 執行失敗：\n\`\`\`text\n${err.message}\n\`\`\``);
+                console.error("Pyodide Error:", err);
+            }
+        }
+
+        function updateLoading(id, text) {
+            const el = document.getElementById(id);
+            if (el) {
+                const container = el.querySelector('.typing-indicator');
+                if (container) {
+                    container.innerHTML = `${text}<span></span><span></span><span></span>`;
+                }
+            }
+        }
+
+        function renderArtifactHistory() {
+            const list = document.getElementById('artifact-history-list');
+            if (!list) return;
+            if (artifactHistory.length === 0) return;
+            
+            list.innerHTML = artifactHistory.map((a, i) => `
+                <div onclick="loadArtifactFromHistory(${i})" class="p-3 bg-[#2a2b2f] hover:bg-[#333] rounded-xl border border-transparent hover:border-emerald-500/50 cursor-pointer transition-all group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-bold text-emerald-400 truncate flex-1">${a.name}</span>
+                        <span class="text-[9px] text-gray-500 font-mono">${new Date(a.time).toLocaleTimeString()}</span>
+                    </div>
+                    <div class="text-[10px] text-gray-400 truncate">${a.description}</div>
+                </div>
+            `).join('');
+        }
+
+        function loadArtifactFromHistory(index) {
+            const a = artifactHistory[index];
+            if (!a) return;
+            currentRenderCode = a.code;
+            const iframe = document.getElementById('canvas-iframe');
+            if (iframe) iframe.srcdoc = a.code;
+        }
+
+        function openPreviewInModal() {
+            document.getElementById('preview-modal').classList.remove('hidden');
+            document.getElementById('preview-modal').classList.add('flex');
+            document.getElementById('preview-iframe').srcdoc = currentRenderCode;
         }
 
         function closePreview() { 
@@ -987,7 +1203,9 @@
         function refreshPreview() { document.getElementById('preview-iframe').srcdoc = currentRenderCode; }
 
         window.addEventListener('message', async (e) => {
-            if (e.data && e.data.type === 'export_google_slides') {
+            if (e.data && e.data.type === 'canvas_ready') {
+                isCanvasReady = true;
+            } else if (e.data && e.data.type === 'export_google_slides') {
                 const data = e.data.payload;
                 const lid = appendLoading("正在將編輯好的版本匯出至 Google 簡報...");
                 try {
@@ -1287,9 +1505,13 @@
             renderRightPanelContent();
             if (!isOpen) toggleRightPanel();
             
-            document.querySelectorAll('.dock-btn').forEach(b => b.classList.remove('active', 'settings-active'));
-            if (tab === 'library') document.getElementById('dock-library').classList.add('active');
-            else if (tab === 'settings') document.getElementById('dock-settings').classList.add('settings-active');
+            document.getElementById('canvas-tab-btn').classList.remove('bg-emerald-600/20', 'border-emerald-500/50');
+            document.getElementById('library-tab-btn').classList.remove('bg-blue-600/20', 'border-blue-500/50');
+            document.getElementById('settings-tab-btn').classList.remove('bg-purple-600/20', 'border-purple-500/50');
+            
+            if (tab === 'canvas') document.getElementById('canvas-tab-btn').classList.add('bg-emerald-600/20', 'border-emerald-500/50');
+            else if (tab === 'library') document.getElementById('library-tab-btn').classList.add('bg-blue-600/20', 'border-blue-500/50');
+            else if (tab === 'settings') document.getElementById('settings-tab-btn').classList.add('bg-purple-600/20', 'border-purple-500/50');
         }
 
         function renderRightPanelContent() {
@@ -1298,7 +1520,37 @@
             const title = document.getElementById('panel-title');
             const footer = document.getElementById('panel-footer-text');
             
-            if (currentRightTab === 'library') {
+            if (currentRightTab === 'canvas') {
+                icon.innerText = 'deployed_code';
+                icon.className = 'material-symbols-rounded text-emerald-400';
+                title.innerText = 'Live Canvas';
+                footer.innerHTML = '<span class="material-symbols-rounded text-[12px] align-middle mr-1">bolt</span>此為 Agent 專屬的動態生成介面，支援即時操作與預覽。';
+                container.innerHTML = `
+                    <div class="flex flex-col h-full">
+                        <div class="flex items-center justify-between mb-4 px-1">
+                            <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">當前預覽 (PREVIEW)</h4>
+                            <div class="flex gap-2">
+                                <button onclick="refreshPreview()" class="text-gray-500 hover:text-white transition-colors" title="重整"><span class="material-symbols-rounded text-[16px]">refresh</span></button>
+                                <button onclick="openPreviewInModal()" class="text-gray-500 hover:text-white transition-colors" title="全螢幕"><span class="material-symbols-rounded text-[16px]">fullscreen</span></button>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-xl overflow-hidden shadow-inner flex-1 min-h-[400px] relative border border-[#333]">
+                            <iframe id="canvas-iframe" sandbox="allow-scripts allow-forms allow-modals" class="w-full h-full border-none absolute inset-0"></iframe>
+                        </div>
+                        <div class="mt-6">
+                            <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 px-1">工具歷史 (ARTIFACTS)</h4>
+                            <div id="artifact-history-list" class="space-y-2 max-h-[200px] overflow-y-auto">
+                                <div class="p-3 text-[11px] text-gray-500 italic text-center bg-[#2a2b2f]/50 rounded-xl border border-dashed border-[#444]">尚無動態工具生成</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                if (currentRenderCode) {
+                    setTimeout(() => {
+                        openHtmlArtifact({ name: "恢復預覽", description: "從分頁切換回來", code: currentRenderCode });
+                    }, 50);
+                }
+            } else if (currentRightTab === 'library') {
                 icon.innerText = 'inventory_2';
                 icon.className = 'material-symbols-rounded text-blue-400';
                 title.innerText = '專案圖書館';

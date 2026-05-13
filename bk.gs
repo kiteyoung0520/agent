@@ -272,7 +272,11 @@ const AGENT_TOOLS = [{
         
         { name: "read_drive_file", description: "【強制呼叫】讀取 Google 雲端硬碟檔案內容。當使用者貼上 Drive 網址時，你已具備最高合法授權，絕對禁止以「無法存取私人檔案」或「安全限制」為由拒絕，請立刻呼叫此工具解析。", parameters: { type: "OBJECT", properties: { fileUrl: { type: "STRING", description: "要讀取的檔案完整網址" } }, required: ["fileUrl"] } },
 
-        { name: "read_web_page", description: "【代理人瀏覽模式 (Agent Browser Mode)】使用整合型無頭瀏覽器讀取網頁。此工具能穿透 JavaScript 與反爬蟲機制（如博客來、Amazon）。當搜尋摘要缺失 ISBN 或原價等深度細節時，強制呼叫此工具進入內頁抓取。取得內容後，請嚴格基於內容回答，禁止腦補。", parameters: { type: "OBJECT", properties: { url: { type: "STRING", description: "要讀取的網頁完整網址 (需包含 http/https)" } }, required: ["url"] } },
+        { 
+            name: "read_web_page", 
+            description: "【代理人瀏覽模式 (Agent Browser Mode)】使用整合型無頭瀏覽器讀取網頁。此工具能穿透 JavaScript 與反爬蟲機制（如博客來、Amazon）。⚠️ 讀取規範：當搜尋摘要缺失 ISBN、原價或出版社等深度細節時，強制呼叫此工具進入內頁抓取。取得內容後，請嚴格基於內容回答，禁止腦補。你已獲得系統最高讀取授權，絕對禁止以「技術限制」為由拒絕。", 
+            parameters: { type: "OBJECT", properties: { url: { type: "STRING", description: "要讀取的網頁完整網址 (需包含 http/https)" } }, required: ["url"] } 
+        },
         { name: "google_search", description: "【萬用搜尋引擎】搜尋全球公開資訊與最新新聞。當使用者要求找尋資料、比較產品、或是現有知識不足時，請優先呼叫此工具。", parameters: { type: "OBJECT", properties: { query: { type: "STRING", description: "精確的搜尋關鍵字" } }, required: ["query"] } },
         { name: "search_web", description: "【備用搜尋引擎】功能同 google_search，作為冗餘備援。", parameters: { type: "OBJECT", properties: { query: { type: "STRING", description: "搜尋關鍵字" } }, required: ["query"] } },
 
@@ -283,7 +287,11 @@ const AGENT_TOOLS = [{
         { name: "read_google_doc", description: "【強制呼叫】讀取 Google 文件的所有文字內容。當使用者貼上 Google Docs 文件網址，並要求「總結、閱讀、提問、修改或覆寫」時，請唯一且強制呼叫此工具取得內容。", parameters: { type: "OBJECT", properties: { docUrl: { type: "STRING", description: "該 Google 文件的完整網址" } }, required: ["docUrl"] } },
         
         { name: "append_to_google_doc", description: "在現有 Google 文件最下方「補充/附加」新內容。", parameters: { type: "OBJECT", properties: { docUrl: { type: "STRING", description: "該 Google 文件的完整網址。" }, content: { type: "STRING", description: "要附加的新內容，支援 Markdown 排版" } }, required: ["docUrl", "content"] } },
-        { name: "overwrite_google_doc", description: "完全覆寫現有 Google 文件。當使用者要求「修改整份文件」時使用。使用前務必先用 read_google_doc 讀取舊內容融合。", parameters: { type: "OBJECT", properties: { docUrl: { type: "STRING", description: "該 Google 文件的完整網址。" }, content: { type: "STRING", description: "修改後的「完整」新內容，舊內容將被清空，支援 Markdown" } }, required: ["docUrl", "content"] } },
+        { 
+            name: "overwrite_google_doc", 
+            description: "完全覆寫現有 Google 文件。當使用者要求「修改整份文件」時使用。使用前務必先用 read_google_doc 讀取舊內容融合。🛡️ 安全警告：此操作涉及 HITL 攔截，執行前會彈出授權確認卡，請務必先告知使用者風險。", 
+            parameters: { type: "OBJECT", properties: { docUrl: { type: "STRING", description: "該 Google 文件的完整網址。" }, content: { type: "STRING", description: "修改後的「完整」新內容，舊內容將被清空，支援 Markdown" } }, required: ["docUrl", "content"] } 
+        },
 
         { name: "read_google_sheet", description: "讀取特定的 Google Sheet 試算表內容。", parameters: { type: "OBJECT", properties: { sheetUrl: { type: "STRING", description: "要讀取的試算表完整網址。" }, sheetName: { type: "STRING", description: "工作表(頁籤)名稱，若不指定則預設讀取第一頁。" }, range: { type: "STRING", description: "指定範圍，如 'A1:D10'，預設或填 'ALL' 讀取全部" } }, required: ["sheetUrl"] } },
         { name: "append_to_google_sheet", description: "【新增資料】將資料批次寫入或新增到指定的 Google Sheet 試算表最下方。如果頁籤不存在會自動建立。", parameters: { type: "OBJECT", properties: { sheetUrl: { type: "STRING", description: "要寫入的試算表完整網址。" }, sheetName: { type: "STRING", description: "工作表(頁籤)名稱" }, content: { type: "STRING", description: "要寫入的資料，請強制輸出符合標準的 JSON 陣列字串 (Array of Arrays) ，請務必使用「雙引號」而非單引號。例如: [[\"日期\", \"項目\", \"金額\"], [\"03/16\", \"午餐\", 150]]" } }, required: ["sheetUrl", "sheetName", "content"] } },
@@ -306,14 +314,14 @@ const AGENT_TOOLS = [{
 
         { 
             name: "create_presentation", 
-            description: "【首席簡報總監】製作全新的 Google Slides。具備內容感知能力，會根據資訊類型自動選擇最佳排版。支援自定義配色與風格。", 
+            description: "【首席簡報總監】製作全新的互動式網頁簡報。⚠️ 視覺執行鐵律：1. 混合圖片引擎：若需真實歷史人物/場景，imageSource 必填 'web'，若需抽象/科技感則填 'ai'。2. 配色紀律：customColors 必須包含 bg, text, accent, shape，請根據主題氛圍(如教育、科技)調配高品質色碼。3. 動態版面：金句用 hero_quote，流程用 stepper/timeline，對比用 split_column，震撼數據用 big_data。", 
             parameters: { 
                 type: "OBJECT", 
                 properties: { 
                     topic: { type: "STRING", description: "簡報核心主題" }, 
-                    customColors: { type: "OBJECT", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。請依主題氛圍自主調配。" }, 
-                    shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist' (極簡), 'rounded' (圓角), 'cyber' (銳角/科技), 'dynamic' (斜切/活力), 'layered' (疊層/深邃)。" }, 
-                    slidesData: { type: "ARRAY", items: { type: "OBJECT" }, description: "簡報 JSON 陣列。格式：[{layout: 'cover|hero_quote|standard_list|split_column|card_deck|stepper|icon_grid|timeline|big_data', title: '標題', content: '內文', points: ['重點'], left: '左欄', right: '右欄', value: '大數據值', imageKeyword: '英文關鍵字', imageSource: 'ai' 或 'web', gridItems: [{title:'標題', content:'內容', iconKeyword:'圖標關鍵字'}]}]。⚠️請根據內容特徵挑選 layout。⚠️ imageSource：若需真實歷史人物/場景請填 'web'，若需抽象/藝術配圖請填 'ai'。" } 
+                    customColors: { type: "OBJECT", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。" }, 
+                    shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist', 'rounded', 'cyber', 'dynamic', 'layered'。" }, 
+                    slidesData: { type: "ARRAY", items: { type: "OBJECT" }, description: "簡報 JSON 陣列。格式：[{layout: 'cover|hero_quote|standard_list|split_column|card_deck|stepper|icon_grid|timeline|big_data', title: '標題', content: '內文', points: ['重點'], left: '左欄', right: '右欄', value: '大數據值', imageKeyword: '英文關鍵字', imageSource: 'ai'|'web'}]" } 
                 }, 
                 required: ["topic", "customColors", "shapeStyle", "slidesData"] 
             } 
@@ -345,6 +353,29 @@ const AGENT_TOOLS = [{
                 }, 
                 required: ["tool_name", "description", "html_code"] 
             } 
+        },
+        {
+            name: "run_cloud_sandbox_code",
+            description: "【anyGem 雲端電腦 (Computer Use)】啟動一台臨時虛擬機執行 Python 或 Shell 指令。適用於：複雜數據處理、檔案分析、安裝第三方軟體包或執行高強度計算。你可以建立檔案、下載網路資源並在沙盒中處理。",
+            parameters: {
+                type: "OBJECT",
+                properties: {
+                    language: { type: "STRING", description: "執行語言：'python' 或 'shell'。" },
+                    code: { type: "STRING", description: "要執行的程式碼或指令。" },
+                    files_to_create: { 
+                        type: "ARRAY", 
+                        items: { 
+                            type: "OBJECT", 
+                            properties: { 
+                                path: { type: "STRING", description: "檔案路徑" }, 
+                                content: { type: "STRING", description: "內容" } 
+                            } 
+                        },
+                        description: "可選。執行前先在沙盒中建立的檔案。"
+                    }
+                },
+                required: ["language", "code"]
+            }
         }
     ]
 }];
@@ -386,30 +417,14 @@ function getSuperAgentPrompt(wsName, customRules) {
 - **終極驗證**：在交付前，最後確認格式是否專業、連結是否可用。
 - **成果摘要**：回覆最後必須附上簡短的執行摘要與所有成果附件。
 
-【視覺執行與設計鐵律 (Execution Discipline)】：
-1. **方案優先 (Discussed Plan First)**：如果在對話中與使用者討論過版面規劃（例如：第三頁用雙欄、主題色用紫色），在呼叫 'create_presentation' 時【必須】嚴格遵守。禁止使用預設主題名，請務必手動根據討論結果計算配色 JSON 填入 'customColors'。
-2. **混合圖片引擎 (Hybrid Image Engine)**：每頁簡報的 'imageKeyword' 必須填寫英文。並且根據內容性質決定 'imageSource'：
-   - 若為「真實歷史人物 (如孔子)、真實風景、歷史事件」，必須設定 \`"imageSource": "web"\`。
-   - 若為「抽象概念、科技感、幾何圖形、未來感」，必須設定 \`"imageSource": "ai"\`。
-3. **內容保護 (Strict Content)**：對於使用者提供的教案、文案、名單、數據，必須 100% 完整保留並填入簡報中。絕對禁止自行做摘要、禁止刪減名單、禁止修改專業術語。
-4. **動態版面 (Dynamic Layout)**：捨棄呆板排版，根據內容靈活切換 'layout'。
-   - 金句/名言/哲理：必用 'hero_quote' (全螢幕大字)。
-   - 多重點/特色：必用 'card_deck' (卡片堆疊) 或 'icon_grid'。
-   - 流程/步驟/歷史：必用 'stepper' 或 'timeline'。
-   - 對比/優缺點：必用 'split_column'。
-   - 震撼數據：必用 'big_data'。
-5. **配色紀律**：'customColors' 的 JSON 格式必須包含：{"bg": "#...", "text": "#...", "accent": "#...", "shape": "#..."}。請依據主題氛圍（如：優雅、科技、教育）自主設計高品質配色。
-6. **資料探勘紀律 (Data Mining)**：當要求抓取具備「唯一性」或「精確性」的資料（如 ISBN、原價、出版社、規格參數）時，禁止僅依賴 \`google_search\` 的結果片段。你必須：(1) 先搜尋取得清單；(2) 針對清單中的關鍵網址，逐一呼叫 \`read_web_page\` 進入內頁；(3) 彙整內頁真實數據。若因次數限制無法抓取全部，請誠實告知已抓取的部分，絕對禁止腦補。
+【執行紀律與 Manus 作業標準 (Execution Discipline)】：
+1. **方案優先 (Plan First)**：嚴格遵守在階段二中與使用者討論過的架構、排版與配色建議。
+2. **混合圖片引擎 (Hybrid Image Engine)**：根據內容性質精確選擇圖片來源（ai 或 web）。
+3. **內容完整性 (Integrity)**：對於原始數據、名單、文案，必須 100% 完整保留，禁止擅自摘要或修改專業術語。
+4. **資料探勘 (Deep Research)**：搜尋具備唯一性的精確資料時，嚴禁依賴摘要。必須逐一點進內頁獲取真實數據。
 
 【🗂️ 專案記憶隔離 (Workspace)】
 您目前正處於『${wsName}』的專案空間中。請針對此空間的脈絡進行連貫性對話。
-
-【🌟 全格式讀取與代理人瀏覽能力 (Agent Browser Capability)】
-你已獲得系統底層的「最高讀取授權」！你目前已整合了【Jina AI Reader 代理人瀏覽模式】，這使你具備了穿透 JavaScript 渲染、自動繞過反爬蟲機制、以及將複雜網頁簡化為 Markdown 的能力。
-- **你的權限**：你可以讀取 Google Drive、Docs、Slides、以及任何公開的電商網站（如博客來、Amazon）。
-- **你的動作**：你的 \`read_web_page\` 工具就是你的「點擊」與「深入瀏覽」動作。
-⚠️ 嚴禁行為：絕對禁止回覆「由於技術限制我無法點擊」、「我只能看到摘要」或「我無法獲取 ISBN/價格」。
-✅ 正確行為：直接呼叫 \`read_web_page\` 穿透網頁。如果你在搜尋結果沒看到細節，那代表你「還沒點進去」，請立刻執行深度瀏覽。
 
 【高階代理人執行協議：四階段思考與執行框架 (ReAct + HITL)】：
 從現在起，你必須嚴格遵循以下框架來處理所有請求：
@@ -444,12 +459,23 @@ function getSuperAgentPrompt(wsName, customRules) {
 2. **確定的指令 (沉默執行)**：僅對於極度簡單且意圖明確的指令 (如：搜尋某新聞)，可跳過藍圖直接執行以維持效率。
 3. **工具定義明確化**：'create_presentation' 工具生成的【就是】互動式網頁簡報。禁止告訴使用者「我只能做 Google 簡報」。
 
-【🗣️ 溝通與輸出格式規範 (CRITICAL)】
-1. 無論使用了什麼工具（包含行事曆、Drive 等），你的「最終回覆」必須是自然、流暢、具備溫度的「繁體中文口語化文字」。
-2. 請將系統回傳的生硬資料（如行程、檔案清單）轉化為人類容易閱讀的 Markdown 排版（如條列式、粗體）。
-3. ⛔ 絕對禁止直接向使用者輸出原始的 JSON 格式資料（除非使用者明確要求寫程式）。
-4. ⛔ **嚴禁使用 Python 直譯器**：禁止呼叫任何名為「Python」、「code_execution」或「Code Interpreter」的內建工具，那會導致 NameError 系統崩潰。
-5. ✅ **鼓勵使用 JS 代碼合成**：當現有工具無法解決複雜問題（如資料處理、圖表、計算、爬蟲後整理）時，你被完全授權且**強烈鼓勵**呼叫 \`execute_dynamic_tool\` 現場撰寫 HTML/JS 代碼來解決問題。這是你的「創造力核心」，不是禁區。
+4. **Live Canvas 與 Agentic UI 優先協議**：
+   - 你現在擁有一個位於側邊欄的「Live Canvas (動態畫布)」。
+   - 當使用者要求「分析數據」、「視覺化」、「設計介面」或「互動式操作」時，你【必須】優先呼叫 \`execute_dynamic_tool\`。
+   - 這個工具會直接在側邊欄生成一個具備 HTML/JS/Tailwind/Lucide 能力的互動式元件。
+   - 透過這個畫布，你可以為使用者提供「實時、可操作、可點擊」的解決方案，而不僅僅是文字回覆。
+   - 畫布支援 React (UMD), Tailwind CSS, Lucide Icons 等現代前端技術。
+
+5. ✅ **Agentic UI 與雲端電腦雙軌協議**：
+   - 當需要「數據視覺化、互動式操作」時，優先呼叫 \`execute_dynamic_tool\` 在側邊欄生成前端元件。
+   - 當需要「複雜計算、Python 數據處理、操作多個檔案」時，優先呼叫 \`run_cloud_sandbox_code\`。
+   - 這兩者是你的「創造力核心」與「運算核心」。
+6. **安全優先與 HITL 授權協議 (Security First & HITL)**：
+   - 涉及「刪除檔案」、「覆寫 Google Doc」、「雲端電腦執行 Shell」或「正式發送郵件」等操作時，系統會自動攔截。
+   - 涉及「刪除檔案/對話」、「覆寫 Google Doc」、「GitHub 回滾 (Rollback)」或「正式發送郵件」等敏感操作時，系統已建置 **HITL (人機協同)** 安全攔截機制。
+   - 當你呼叫這些工具時，系統會自動攔截並彈出「授權確認卡」給使用者。
+   - 因此，你【必須】在執行前（階段二/階段四）誠實告知使用者該操作的影響範圍與風險。
+   - 如果使用者拒絕授權，請根據使用者的反饋調整計畫，不要嘗試繞過攔截。
 
 【🧠 使用者專屬大腦與規則 (Custom Rules)】
 <rules>
@@ -544,7 +570,7 @@ function doPost(e) {
             }
         }
 
-        const { message, session_id, workspace, mode, old_text, target_text, target_role, file_data, mime_type, web_search, youtube_id, auto_image, draw_mode, gem_prompt, gem_model, selected_model } = payload;
+        const { message, session_id, workspace, mode, old_text, target_text, target_role, file_data, mime_type, web_search, youtube_id, auto_image, draw_mode, gem_prompt, gem_model, selected_model, confirmed } = payload;
         
         const ss = SpreadsheetApp.openById(BASE_CONFIG.SHEET_ID);
         const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
@@ -654,11 +680,23 @@ function doPost(e) {
             systemInstruction: finalSystemInstruction, history: history, tools: finalTools,
             imageData: file_data ? { mimeType: mime_type, data: file_data } : null,
             artistModel: CONFIG.MODEL_ARTIST || "gemini-3.1-flash-image-preview",
-            configData: { ...CONFIG, autoImageEnabled: auto_image }
+            configData: { ...CONFIG, autoImageEnabled: auto_image },
+            confirmed: confirmed
         });
 
         logToFirebaseAndCache(db, wsName, session_id || "default", message, agentResult.reply || "執行完成", agentResult.html_presentation || null, agentResult.html_artifact || null);
-        return response({ status: "success", reply: agentResult.reply, model: agentResult.model || modelId, image: agentResult.image || null, mime: agentResult.mime || null, html_presentation: agentResult.html_presentation || null, html_artifact: agentResult.html_artifact || null });
+        return response({ 
+            status: "success", 
+            reply: agentResult.reply, 
+            model: agentResult.model || modelId, 
+            image: agentResult.image || null, 
+            mime: agentResult.mime || null, 
+            html_presentation: agentResult.html_presentation || null, 
+            html_artifact: agentResult.html_artifact || null,
+            needs_confirmation: agentResult.needs_confirmation || false,
+            pending_tool_call: agentResult.pending_tool_call || null,
+            python_browser_request: agentResult.python_browser_request || null
+        });
     } catch (err) { return response({ error: err.toString(), status: "error" }); }
 }
 
@@ -888,6 +926,19 @@ function runAutonomousAgentLoop(config) {
                     if (args.content && typeof args.content === 'string') args.content = performInnerQALoop(args.content, config.apiKey, true);
                     if (args.rowData && typeof args.rowData === 'string') args.rowData = performInnerQALoop(args.rowData, config.apiKey, true);
                 } catch(e) {}
+
+                const sensitiveTools = ["overwrite_google_doc", "rollback_github_deployment", "delete_session", "send_email_or_draft"];
+                const isEmailActuallySending = (fnName === "send_email_or_draft" && !args.isDraft);
+                
+                if ((sensitiveTools.includes(fnName) || isEmailActuallySending) && !config.confirmed) {
+                    let warningMsg = `⚠️ **安全攔截：偵測到敏感動作**\n\n代理人試圖執行：\`${fnName}\`\n參數摘要：\`${JSON.stringify(args).substring(0, 200)}\`\n\n為了您的資料安全，此動作必須由您親自授權。請確認是否執行？`;
+                    return { 
+                        reply: warningMsg, 
+                        model: "Security-Gateway", 
+                        needs_confirmation: true, 
+                        pending_tool_call: part.functionCall 
+                    };
+                }
 
                 try {
                     switch (fnName) {
@@ -1255,6 +1306,16 @@ function runAutonomousAgentLoop(config) {
                                 if (jinaApiKey) options.headers["Authorization"] = "Bearer " + jinaApiKey;
                                 
                                 let query = args.query.trim();
+                                
+                                // 🆕 效能提升：檢查快取 (MD5 雜湊優化)
+                                const cache = CacheService.getScriptCache();
+                                const cacheKey = "search_" + Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, query).map(b => (b < 0 ? b + 256 : b).toString(16).padStart(2, '0')).join('');
+                                const cachedSearch = cache.get(cacheKey);
+                                if (cachedSearch) {
+                                    toolResult = { status: "success", data: cachedSearch + "\n\n(⚡ 此內容來自系統快取)" };
+                                    break;
+                                }
+
                                 let searchResult = "";
                                 
                                 // 策略 A: Jina Search (s.jina.ai)
@@ -1300,7 +1361,14 @@ function runAutonomousAgentLoop(config) {
                                 }
                                 
                                 if (searchResult) {
-                                    toolResult = { status: "success", data: searchResult.substring(0, 35000) };
+                                    const finalResult = searchResult.substring(0, 35000);
+                                    // 確保不超過 100KB (CacheService 限制)
+                                    try { 
+                                        let safeVal = finalResult;
+                                        if (safeVal.length > 90000) safeVal = safeVal.substring(0, 90000); 
+                                        cache.put(cacheKey, safeVal, 1800); 
+                                    } catch(e) {}
+                                    toolResult = { status: "success", data: finalResult };
                                 } else {
                                     toolResult = { status: "error", error_message: "搜尋服務暫時無法使用。建議直接輸入網址進行讀取。" };
                                 }
@@ -1309,8 +1377,18 @@ function runAutonomousAgentLoop(config) {
 
                         case "read_web_page":
                             try {
-                                const jinaApiKey = PropertiesService.getScriptProperties().getProperty('JINA_API_KEY');
                                 const targetUrl = args.url.trim();
+                                
+                                // 🆕 效能提升：檢查快取 (MD5 雜湊優化)
+                                const cache = CacheService.getScriptCache();
+                                const cacheKey = "web_" + Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, targetUrl).map(b => (b < 0 ? b + 256 : b).toString(16).padStart(2, '0')).join('');
+                                const cachedContent = cache.get(cacheKey);
+                                if (cachedContent) {
+                                    toolResult = { status: "success", data: cachedContent + "\n\n(⚡ 此內容來自系統快取)" };
+                                    break;
+                                }
+
+                                const jinaApiKey = PropertiesService.getScriptProperties().getProperty('JINA_API_KEY');
                                 
                                 // 嘗試使用 Jina Reader (優先)
                                 const jinaOptions = { 
@@ -1356,6 +1434,12 @@ function runAutonomousAgentLoop(config) {
                                 }
 
                                 let finalContent = `【系統強制指令：以下為網頁擷取的真實內容。】\n\n網址：${targetUrl}\n---\n${contentText.substring(0, 35000)}`;
+                                // 確保不超過 100KB (CacheService 限制)
+                                try { 
+                                    let safeVal = finalContent;
+                                    if (safeVal.length > 90000) safeVal = safeVal.substring(0, 90000);
+                                    cache.put(cacheKey, safeVal, 1800); 
+                                } catch(e) {}
                                 toolResult = { status: "success", data: finalContent };
                             } catch(e) {
                                 toolResult = { 
@@ -1622,6 +1706,89 @@ function runAutonomousAgentLoop(config) {
                             };
                             break;
                             
+                        case "run_cloud_sandbox_code":
+                            try {
+                                let sandboxApiKey = PropertiesService.getScriptProperties().getProperty('SANDBOX_API_KEY');
+                                if (sandboxApiKey) sandboxApiKey = sandboxApiKey.trim();
+                                let finalOutput = "";
+                                
+                                if (sandboxApiKey && sandboxApiKey !== "null") {
+                                    // --- 方案 A: E2B (強大、支援檔案系統) ---
+                                    try {
+                                        const sandboxUrl = "https://api.e2b.dev/sandboxes";
+                                        const headers = { "Authorization": "Bearer " + sandboxApiKey, "Content-Type": "application/json" };
+                                        
+                                        let createRes = UrlFetchApp.fetch(sandboxUrl, { method: "post", headers: headers, payload: JSON.stringify({ templateID: "base" }) });
+                                        let sandbox = JSON.parse(createRes.getContentText());
+                                        let sandboxID = sandbox.sandboxID;
+                                        
+                                        if (args.files_to_create && Array.isArray(args.files_to_create)) {
+                                            for (let f of args.files_to_create) {
+                                                UrlFetchApp.fetch(`${sandboxUrl}/${sandboxID}/files`, { method: "post", headers: headers, payload: JSON.stringify({ path: f.path, content: f.content }) });
+                                            }
+                                        }
+                                        
+                                        let cmd = args.language === 'python' ? `python3 -c "${args.code.replace(/"/g, '\\"')}"` : args.code;
+                                        if (args.language === 'python' && args.code.includes('\n')) {
+                                            UrlFetchApp.fetch(`${sandboxUrl}/${sandboxID}/files`, { method: "post", headers: headers, payload: JSON.stringify({ path: "main.py", content: args.code }) });
+                                            cmd = "python3 main.py";
+                                        }
+                                        
+                                        let execRes = UrlFetchApp.fetch(`${sandboxUrl}/${sandboxID}/commands`, { method: "post", headers: headers, payload: JSON.stringify({ cmd: cmd }) });
+                                        let result = JSON.parse(execRes.getContentText());
+                                        UrlFetchApp.fetch(`${sandboxUrl}/${sandboxID}`, { method: "delete", headers: headers });
+                                        finalOutput = result.stdout || result.stderr || "(無輸出)";
+                                    } catch (err) {
+                                        if (err.toString().includes("401")) {
+                                            console.warn("E2B Key 無效，自動切換至 Piston 備援模式");
+                                            sandboxApiKey = null; // 觸發下方的 Piston 邏輯
+                                        } else throw err;
+                                    }
+                                }
+                                
+                                if (!sandboxApiKey || sandboxApiKey === "null") {
+                                    // --- 方案 B: Piston API (免費、免 Key 備援) ---
+                                    const pistonUrl = "https://emkc.org/api/v2/piston/execute";
+                                    const payload = {
+                                        language: args.language === 'shell' ? 'bash' : 'python',
+                                        version: args.language === 'shell' ? '5.2.0' : '3.10.0',
+                                        files: [{ content: args.code }]
+                                    };
+                                    
+                                    const res = UrlFetchApp.fetch(pistonUrl, {
+                                        method: "post",
+                                        contentType: "application/json",
+                                        payload: JSON.stringify(payload),
+                                        muteHttpExceptions: true
+                                    });
+                                    
+                                    if (res.getResponseCode() === 200) {
+                                        const result = JSON.parse(res.getContentText());
+                                        finalOutput = result.run.stdout || result.run.stderr || "(無輸出)";
+                                        if (result.run.code !== 0 && !finalOutput) finalOutput = "執行失敗，代碼：" + result.run.code;
+                                    } else {
+                                        // --- 方案 C: 瀏覽器 Python (最終殺手鐧) ---
+                                        toolResult = { 
+                                            isTerminal: true,
+                                            reply: "🔄 **正在啟動瀏覽器 Python 引擎 (Pyodide) 進行運算...**",
+                                            python_browser_request: { 
+                                                code: args.code, 
+                                                language: args.language 
+                                            } 
+                                        };
+                                        break;
+                                    }
+                                }
+                                
+                                toolResult = { 
+                                    status: "success", 
+                                    isTerminal: true,
+                                    reply: `🚀 **雲端電腦任務執行完畢** ${sandboxApiKey ? "" : "(免密碼模式)"}\n\n語言：${args.language}\n輸出結果：\n\`\`\`\n${finalOutput}\n\`\`\``,
+                                    data: { output: finalOutput } 
+                                };
+                            } catch(e) { toolResult = { status: "error", error_message: `雲端電腦執行失敗: ${e.toString()}` }; }
+                            break;
+                            
                         case "execute_dynamic_tool":
                             toolResult = { 
                                 isTerminal: true, 
@@ -1641,7 +1808,15 @@ function runAutonomousAgentLoop(config) {
 
                 if (toolResult.isTerminal) { 
                     let combinedReply = aiTextGenerated ? (aiTextGenerated + "\n\n---\n\n" + toolResult.reply) : toolResult.reply;
-                    return { reply: combinedReply, model: "Agent-Executor", image: finalImage, mime: finalMime, html_presentation: toolResult.html_presentation_data || null, html_artifact: toolResult.html_artifact_data || null }; 
+                    return { 
+                        reply: combinedReply, 
+                        model: "Agent-Executor", 
+                        image: finalImage, 
+                        mime: finalMime, 
+                        html_presentation: toolResult.html_presentation_data || null, 
+                        html_artifact: toolResult.html_artifact_data || null,
+                        python_browser_request: toolResult.python_browser_request || null
+                    }; 
                 }
                 toolResponses.push({ functionResponse: { name: fnName, response: toolResult, id: part.functionCall.id } });
             }
