@@ -5,11 +5,14 @@
  * - ReAct Reasoning Loop
  */
 
-const CONFIG = {
-    FB_PROJECT_ID: PropertiesService.getScriptProperties().getProperty('FB_PROJECT_ID'),
-    FB_API_KEY: PropertiesService.getScriptProperties().getProperty('FB_API_KEY'),
-    GEMINI_API_KEY: PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY') || PropertiesService.getScriptProperties().getProperty('GEMINI_API'),
-};
+function getGlobalConfig() {
+    return {
+        FB_PROJECT_ID: PropertiesService.getScriptProperties().getProperty('FB_PROJECT_ID'),
+        FB_API_KEY: PropertiesService.getScriptProperties().getProperty('FB_API_KEY'),
+        GEMINI_API_KEY: PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY') || PropertiesService.getScriptProperties().getProperty('GEMINI_API'),
+    };
+}
+
 
 function response(obj) {
     return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
@@ -18,8 +21,9 @@ function response(obj) {
 // ====== Firebase Client ======
 class FirebaseClient {
     constructor() {
-        this.projectId = CONFIG.FB_PROJECT_ID;
-        this.apiKey = CONFIG.FB_API_KEY;
+        const config = getGlobalConfig();
+        this.projectId = config.FB_PROJECT_ID;
+        this.apiKey = config.FB_API_KEY;
         this.baseUrl = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents`;
     }
 
@@ -254,7 +258,8 @@ const AGENT_TOOLS = [{
 }];
 
 function callGemini(history) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${CONFIG.GEMINI_API_KEY}`;
+    const config = getGlobalConfig();
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${config.GEMINI_API_KEY}`;
     
     const payload = {
         system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
