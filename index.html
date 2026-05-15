@@ -157,14 +157,21 @@
             logBox.innerHTML = '<div class="text-green-600">> 建立全新任務...</div>';
             
             try {
+                logBox.innerHTML += `<div class="text-gray-500">> 正在進行基礎連線測試...</div>`;
                 const pingRes = await fetch(GAS_URL, {
                     method: 'POST',
                     body: JSON.stringify({ action: 'ping' })
                 }).then(r => r.json());
-                console.log("Ping result:", pingRes);
+                
+                if (pingRes.status === 'pong') {
+                    logBox.innerHTML += `<div class="text-green-500">> 基礎連線測試成功 (PONG)!</div>`;
+                } else {
+                    logBox.innerHTML += `<div class="text-yellow-500">> 連線回應異常: ${JSON.stringify(pingRes)}</div>`;
+                }
             } catch(e) {
-                console.error("Ping failed:", e);
-                logBox.innerHTML += `<div class="text-red-500">> 基礎連線測試失敗 (CORS/Network Error)</div>`;
+                logBox.innerHTML += `<div class="text-red-500">> 基礎連線測試失敗: ${e.message}</div>`;
+                logBox.innerHTML += `<div class="text-xs text-gray-600 pl-4">提示: 請確認是否登入多個 Google 帳號，或嘗試使用無痕模式。</div>`;
+                return; // Stop if ping fails
             }
 
             try {
