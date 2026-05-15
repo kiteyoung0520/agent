@@ -1,0 +1,9 @@
+**
+!bk.gs
+!index.html
+!appsscript.json
+.git
+node_modules
+*.bak
+bk.js
+bk.gs-response.js

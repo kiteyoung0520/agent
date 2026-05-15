@@ -11,14 +11,6 @@
  * 8. [📊 簡報精準讀取] 新增 read_presentation 工具，解決 AI 誤判 docs.google.com 網域的問題。
  */
 
-function doGet() {
-  return HtmlService.createTemplateFromFile('index').evaluate()
-    .setTitle('anyGem AI')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-}
-
-
 const BASE_CONFIG = {
     TIMEOUT_LIMIT: 240000,
     SHEET_ID: PropertiesService.getScriptProperties().getProperty('SHEET_ID') || "1pIYPf8v1paZz6OE2qnc5ht5aub8Rm7IA-TfD5kInct8", 
@@ -425,14 +417,34 @@ function getSuperAgentPrompt(wsName, customRules) {
 - **終極驗證**：在交付前，最後確認格式是否專業、連結是否可用。
 - **成果摘要**：回覆最後必須附上簡短的執行摘要與所有成果附件。
 
+【🚀 anyGem 智慧簡報 2.0：視覺規劃協議 (Smart Visual Protocol)】：
+1. **內容診斷 (Content Analysis)**：
+   - 在呼叫 'create_presentation' 前，你必須先判斷使用者意圖：
+     - *專業優化*：將長文改寫為簡報金句（預設模式）。
+     - *忠實原文*：若使用者要求「直接生成」或「不要修改」，禁止更動文字內容，僅做分頁與結構化。
+     - *深度擴充*：若內容過少，主動檢索背景資料或數據補充。
+2. **語意化配色 (Semantic Theming)**：
+   - 嚴禁使用固定或單一配色。你必須根據內容主題（例如：AI科技、醫療、金融、教育）自主設計一組專業配色：
+     - **科技感**：深藍/黑底 + 霓虹藍/紫點綴。
+     - **商務感**：深藍/灰底 + 金色/橙色點綴。
+     - **親和力**：米白/淺綠底 + 森林綠點綴。
+     - **警示/重要**：白底 + 鮮紅色點綴。
+   - 必須確保 'customColors' 的對比度符合閱讀性（text 與 background 顏色必須明顯區隔）。
+3. **版面智慧匹配 (Layout Intelligence)**：
+   - **封面**：layout 必為 'cover'。
+   - **震撼數據**：layout 使用 'big_data'。
+   - **對比/方案優劣**：layout 使用 'split_column'。
+   - **流程/路徑**：layout 使用 'stepper' 或 'timeline'。
+   - **核心金句**：layout 使用 'hero_quote'。
+
 【執行紀律與 Manus 作業標準 (Execution Discipline)】：
-1. **方案優先 (Plan First)**：嚴格遵守在階段二中與使用者討論過的架構、排版與配色建議。
-2. **混合圖片引擎 (Hybrid Image Engine)**：根據內容性質精確選擇圖片來源（ai 或 web）。
-3. **內容完整性 (Integrity)**：對於原始數據、名單、文案，必須 100% 完整保留，禁止擅自摘要或修改專業術語。
-4. **資料探勘 (Deep Research)**：搜尋具備唯一性的精確資料時，嚴禁依賴摘要。必須逐一點進內頁獲取真實數據。
+1. **100% 忠實執行協議**：當使用者強調「原文生成」時，你必須【原封不動】地使用其標題與內文，僅進行排版。
+2. **方案優先 (Plan First)**：對於設計感要求高的任務，先在 Thought 過程中規劃配色與佈局。
+3. **混合圖片引擎 (Hybrid Image Engine)**：根據內容性質精確選擇圖片來源（ai 或 web）。
+4. **內容完整性 (Integrity)**：對於原始數據、名單、文案，必須 100% 完整保留。
 
 【🗂️ 專案記憶隔離 (Workspace)】
-您目前正處於『${wsName}』的專案空間中。請針對此空間的脈絡進行連貫性對話。
+您目前正處於 (${wsName}) 的專案空間中。請針對此空間的脈絡進行連貫性對話。
 
 【高階代理人執行協議：四階段思考與執行框架 (ReAct + HITL)】：
 從現在起，你必須嚴格遵循以下框架來處理所有請求：
@@ -448,7 +460,7 @@ function getSuperAgentPrompt(wsName, customRules) {
   - 任務理解確認（1 句話）
   - 預計執行的結構/大綱/版面配置
   - 預計使用的工具或技術
-- **⚠️ 等待授權**：在藍圖結尾，強制詢問：「以上方案是否符合您的預期？請回覆『同意』或給予修改建議，我才會開始執行。」
+- **⚠️ 等待授權**：在藍圖結尾，強制詢問："以上方案是否符合您的預期？請回覆 '同意' 或給予修改建議，我才會開始執行。"
 
 ⚙️ **階段三：鎖定執行 (Strict Execution)**
 當使用者回覆「同意」後，請切換至「機器人模式」進行精準代工：
@@ -465,7 +477,7 @@ function getSuperAgentPrompt(wsName, customRules) {
 【執行紀律與 Manus 作業標準 (Execution Discipline)】：
 1. **意圖確認與 Token 節約 (Clarification First)**：遵循上述「階段二」提案邏輯，資訊不明確或任務過於複雜時，禁止盲目執行。
 2. **確定的指令 (沉默執行)**：僅對於極度簡單且意圖明確的指令 (如：搜尋某新聞)，可跳過藍圖直接執行以維持效率。
-3. **工具定義明確化**：'create_presentation' 工具生成的【就是】互動式網頁簡報。禁止告訴使用者「我只能做 Google 簡報」。
+3. **工具定義明確化**：'create_presentation' 工具生成的 (就是) 互動式網頁簡報。禁止告訴使用者 "我只能做 Google 簡報"。
 
 4. **Live Canvas 與 Agentic UI 優先協議**：
    - 你現在擁有一個位於側邊欄的「Live Canvas (動態畫布)」。
@@ -1651,15 +1663,29 @@ function runAutonomousAgentLoop(config) {
                             try {
                                 let rawS = args.slidesData;
                                 if (typeof rawS === 'string') {
-                                    try { rawS = JSON.parse(rawS.replace(/```json/gi, '').replace(/```/g, '').trim().replace(/\n/g, ' ').replace(/\r/g, '').replace(/\t/g, ' ')); } catch(e) {}
-                                }
-                                if (Array.isArray(rawS)) {
+                                    // 強化 JSON 清理與解析
+                                    let cleanStr = rawS.replace(/```json/gi, '').replace(/```/g, '').trim();
+                                    try { 
+                                        parsedData = JSON.parse(cleanStr); 
+                                    } catch(e1) { 
+                                        // 備援：嘗試處理常見的換行與控制字元問題
+                                        try {
+                                            let fixedStr = cleanStr.replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t');
+                                            parsedData = JSON.parse(fixedStr);
+                                        } catch(e2) {
+                                            // 最終備援：當作一般文字處理（雖然這不理想，但比直接崩潰好）
+                                            parsedData = [];
+                                        }
+                                    }
+                                } else if (Array.isArray(rawS)) {
                                     parsedData = rawS;
-                                } else {
-                                    toolResult = { isTerminal: true, reply: "⚠️ **簡報建立失敗**\n\nAI 生成的簡報資料格式無效 (不是陣列)。請嘗試重新生成或簡化指令。" }; break;
+                                }
+                                
+                                if (!Array.isArray(parsedData) || parsedData.length === 0) {
+                                    toolResult = { isTerminal: true, reply: "⚠️ **簡報建立失敗**\n\nAI 生成的簡報資料格式無效或為空。請嘗試重新生成或簡化您的指令。" }; break;
                                 }
                             } catch(e) { 
-                                toolResult = { isTerminal: true, reply: `⚠️ **簡報建立失敗**\n\n簡報資料格式錯誤，無法解析內容：\n${e.toString()}` }; break; 
+                                toolResult = { isTerminal: true, reply: `⚠️ **簡報建立失敗**\n\n簡報資料解析時發生錯誤：${e.toString()}` }; break; 
                             }
                             
                             toolResult = { 
@@ -1894,11 +1920,14 @@ function fetchAIImage(prompt, key, model, aspectRatio = "16:9") {
             
             if (resJson.error) {
                 lastError = resJson.error.message;
-                if (lastError.includes("Quota exceeded") || lastError.includes("429")) { Utilities.sleep(attempt * 8000); continue; }
-                if (lastError.toLowerCase().includes("safety") || lastError.toLowerCase().includes("block")) {
-                    return `ERROR:提示詞涉及安全或敏感限制，被 Google API 阻擋。請嘗試修改字眼。`;
+                if (lastError.includes("Quota exceeded") || lastError.includes("429")) { 
+                    if (attempt < 3) { Utilities.sleep(attempt * 2000); continue; } // 縮短等待，避免超時
+                    return `ERROR:Google API 額度已達上限，請稍後再試。`;
                 }
-                Utilities.sleep(2000); continue;
+                if (lastError.toLowerCase().includes("safety") || lastError.toLowerCase().includes("block")) {
+                    return `ERROR:提示詞涉及安全或敏感限制，被 Google API 阻擋。`;
+                }
+                Utilities.sleep(1000); continue;
             }
             
             if (model.includes("imagen")) {
@@ -2172,13 +2201,27 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
         },
         'export_google_slides': () => {
             try {
+                // 🛡️ 關鍵檢查：驗證 Drive API (Advanced Service) 是否已開啟
+                try {
+                    Drive.Files.list({maxResults: 1}); 
+                } catch(driveErr) {
+                    return response({ 
+                        status: "error", 
+                        message: "❌ **權限未開通**：\n\n系統偵測到您尚未在 Apps Script 專案中開啟 『Drive API』 服務。\n\n**修復步驟**：\n1. 點擊 Apps Script 編輯器左側的「＋服務 (Services)」。\n2. 找到「Drive API」並點擊「新增 (Add)」。\n3. 重新整理網頁後即可匯出。" 
+                    });
+                }
+
                 let sData = payload.slidesData;
                 if (typeof sData === 'string') sData = JSON.parse(sData);
                 const isAutoImage = (payload.autoImage !== undefined) ? payload.autoImage : (payload.auto_image !== undefined ? payload.auto_image : true);
+                
+                // 執行匯出
                 const pid = createGeometricSlides(payload.topic, sData, payload.theme || PPT_THEMES['modern_blue'], payload.style || 'minimalist', isAutoImage, apiKey, "gemini-3.1-flash-image-preview");
+                
                 return response({status: "success", url: `https://docs.google.com/presentation/d/${pid}/edit`});
             } catch(e) {
-                return response({ status: "error", message: e.toString() });
+                console.error("Export Error:", e);
+                return response({ status: "error", message: "匯出時發生技術錯誤：" + e.toString() });
             }
         },
         'update_presentation_data': () => {
@@ -2471,7 +2514,7 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
                     if (result) imgBlob = result;
                 }
                 if (!imgBlob) {
-                    Utilities.sleep(4000); let ratio = (layoutType === 'profile_quote') ? "1:1" : "16:9";
+                    // 移除強制的 sleep(4000)，改由 fetchAIImage 內部的重試處理
                     let result = fetchAIImage(`Professional presentation slide asset, high quality photography, no text, ${keyword}`, apiKey, artistModel, ratio);
                     if (result && typeof result !== 'string') imgBlob = result;
                 }
@@ -2712,5 +2755,5 @@ function forceAuthSetup() {
     
     GmailApp.getInboxThreads(0, 1);
     CalendarApp.getDefaultCalendar();
-    console.log("授權流程已成功開通。您可以前往雲端硬碟將 Temp_Auth 檔案刪除。");
+    console.log("✅ 所有權限已成功開通。您可以把剛剛在雲端硬碟產生的 Temp_Auth 檔案刪除。");
 }
