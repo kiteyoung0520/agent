@@ -100,6 +100,8 @@ function doGet() {
 function doPost(e) {
     try {
         const payload = JSON.parse(e.postData.contents);
+        if (payload.action === 'ping') return response({status: "pong"});
+        
         const db = new FirebaseClient();
         
         if (payload.action === 'start_task') {
@@ -257,9 +259,69 @@ const AGENT_TOOLS = [{
     ]
 }];
 
+/**
+ * 自動偵測 API Key 具備權限的模型列表
+ */
+function getAvailableModels() {
+    const config = getGlobalConfig();
+    const cache = CacheService.getScriptCache();
+    const cached = cache.get("available_models");
+    if (cached) return JSON.parse(cached);
+
+    try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${config.GEMINI_API_KEY}`;
+        const res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+        if (res.getResponseCode() === 200) {
+            const json = JSON.parse(res.getContentText());
+            const modelIds = json.models.map(m => m.name.split('/').pop());
+            cache.put("available_models", JSON.stringify(modelIds), 3600); // 快取 1 小時
+            return modelIds;
+        }
+    } catch(e) {
+        console.error("無法偵測模型清單: " + e.toString());
+    }
+    return ["gemini-1.5-flash", "gemini-1.5-pro"]; // 預設降級方案
+}
+
+/**
+ * 根據任務描述與權限「動態」選擇最適合的模型
+ * 不寫死版本號，自動尋找清單中版本號最高的 Pro 或 Flash 模型
+ */
+function selectBestModel(history) {
+    const models = getAvailableModels();
+    const userPrompt = history[0].parts[0].text.toLowerCase();
+    
+    // 判斷是否為複雜任務
+    const complexKeywords = ['研究', '分析', '研究員', '比較', '簡報', 'ppt', 'slides', '撰寫', '報告', 'write', 'research', 'analyze', 'presentation', '繪圖', 'image'];
+    const isComplex = complexKeywords.some(kw => userPrompt.includes(kw)) || userPrompt.length > 150;
+
+    // 定義優先權：Pro 模型優先級高於 Flash
+    // 我們將模型按名稱進行排序 (例如 gemini-2.0 > gemini-1.5)
+    const proModels = models.filter(m => m.includes("pro")).sort().reverse();
+    const flashModels = models.filter(m => m.includes("flash")).sort().reverse();
+    
+    if (isComplex && proModels.length > 0) {
+        // 排除掉實驗性但可能不穩定的模型，除非它是唯一的選擇
+        const stablePro = proModels.find(m => !m.includes("exp")) || proModels[0];
+        return stablePro;
+    }
+    
+    // 預設選用最快的 Flash 模型
+    if (flashModels.length > 0) {
+        const stableFlash = flashModels.find(m => !m.includes("exp")) || flashModels[0];
+        return stableFlash;
+    }
+    
+    return models[0] || "gemini-1.5-flash";
+}
+
+
 function callGemini(history) {
     const config = getGlobalConfig();
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${config.GEMINI_API_KEY}`;
+    const modelId = selectBestModel(history);
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${config.GEMINI_API_KEY}`;
+    
+    console.log(`[Smart Route] 選用模型: ${modelId}`);
     
     const payload = {
         system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
@@ -275,9 +337,10 @@ function callGemini(history) {
     
     const res = UrlFetchApp.fetch(url, options);
     const json = JSON.parse(res.getContentText());
-    if (!json.candidates) throw new Error("Gemini API Error: " + res.getContentText());
+    if (!json.candidates) throw new Error(`Gemini API (${modelId}) Error: ` + res.getContentText());
     return json;
 }
+
 
 function executeTool(name, args) {
     if (name === "run_gas_script") {

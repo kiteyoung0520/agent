@@ -157,6 +157,17 @@
             logBox.innerHTML = '<div class="text-green-600">> 建立全新任務...</div>';
             
             try {
+                const pingRes = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'ping' })
+                }).then(r => r.json());
+                console.log("Ping result:", pingRes);
+            } catch(e) {
+                console.error("Ping failed:", e);
+                logBox.innerHTML += `<div class="text-red-500">> 基礎連線測試失敗 (CORS/Network Error)</div>`;
+            }
+
+            try {
                 const res = await fetch(GAS_URL, {
                     method: 'POST',
                     body: JSON.stringify({ action: 'start_task', prompt: msg })
