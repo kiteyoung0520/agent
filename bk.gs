@@ -11,11 +11,19 @@
  * 8. [📊 簡報精準讀取] 新增 read_presentation 工具，解決 AI 誤判 docs.google.com 網域的問題。
  */
 
-const BASE_CONFIG = {
-    TIMEOUT_LIMIT: 240000,
-    SHEET_ID: PropertiesService.getScriptProperties().getProperty('SHEET_ID') || "1pIYPf8v1paZz6OE2qnc5ht5aub8Rm7IA-TfD5kInct8", 
-    SETTING_SHEET_NAME: "Setting"
-};
+// 延遲載入設定，避免未授權時全域初始化崩潰
+function getBaseConfig() {
+    const props = PropertiesService.getScriptProperties();
+    return {
+        TIMEOUT_LIMIT: 240000,
+        SHEET_ID: props.getProperty('SHEET_ID') || "1pIYPf8v1paZz6OE2qnc5ht5aub8Rm7IA-TfD5kInct8",
+        SETTING_SHEET_NAME: "Setting"
+    };
+}
+// 向下相容性包裝，首次實際呼叫時才讀取
+const BASE_CONFIG = new Proxy({}, {
+    get(_, key) { return getBaseConfig()[key]; }
+});
 
 const PPT_THEMES = {
     modern_blue:  { colors: { background: "#0f172a", text: "#f8fafc", accent: "#38bdf8", shape: "#1e293b" } }
@@ -314,13 +322,14 @@ const AGENT_TOOLS = [{
 
         { 
             name: "create_presentation", 
-            description: "【首席簡報總監】製作全新的互動式網頁簡報。⚠️ 視覺執行鐵律：1. 混合圖片引擎：若需真實歷史人物/場景，imageSource 必填 'web'，若需抽象/科技感則填 'ai'。2. 配色紀律：customColors 必須包含 bg, text, accent, shape，請根據主題氛圍(如教育、科技)調配高品質色碼。3. 動態版面：金句用 hero_quote，流程用 stepper/timeline，對比用 split_column，震撼數據用 big_data。", 
+            description: "【首席簡報總監】製作全新的互動式網頁簡報。\n\n🎨 核心設計哲學：版面與配色絕對不寫死！你必須先深度閱讀使用者的文字內容，從文義、情緒、產業、受眾出發，動態選擇最適合的視覺風格。\n\n設計選擇指南：\n- 科技/AI類 → cyber 風格 + 深藍/青色系\n- 商業/簡報類 → minimalist 風格 + 企業藍/灰色系\n- 教育/學術類 → rounded 風格 + 溫暖橙/棕色系\n- 創意/文化類 → layered 風格 + 高彩度撞色\n- 能源/環境類 → dynamic 風格 + 綠色/大地色系\n- 醫療/健康類 → rounded 風格 + 藍綠/白色系\n\n你可以呼叫 google_search 搜尋『[主題] 簡報設計 配色 [年份]』來獲取最新設計趨勢，再做出最佳選擇。",
             parameters: { 
                 type: "OBJECT", 
                 properties: { 
-                    topic: { type: "STRING", description: "簡報核心主題" }, 
-                    customColors: { type: "OBJECT", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。" }, 
-                    shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist', 'rounded', 'cyber', 'dynamic', 'layered'。" }, 
+                    topic: { type: "STRING", description: "簡報核心主題" },
+                    contentMood: { type: "STRING", description: "從文義分析出的情感基調，例如：'科技感/未來感', '溫暖/人文', '商務/專業', '創意/活潑', '嚴肅/學術'。這將作為配色與版面的主要依據。" },
+                    customColors: { type: "OBJECT", description: "根據文義動態決定的主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。禁止使用固定的預設色！必須根據 contentMood 精心調配。" }, 
+                    shapeStyle: { type: "STRING", description: "根據文義選擇的幾何風格: 'minimalist'(企業), 'rounded'(友善), 'cyber'(科技), 'dynamic'(活力), 'layered'(深度)。必填，不可留空。" }, 
                     slidesData: { type: "ARRAY", items: { type: "OBJECT" }, description: "簡報 JSON 陣列。格式：[{layout: 'cover|hero_quote|standard_list|split_column|card_deck|stepper|icon_grid|timeline|big_data', title: '標題', content: '內文', points: ['重點'], left: '左欄', right: '右欄', value: '大數據值', imageKeyword: '英文關鍵字', imageSource: 'ai'|'web'}]" } 
                 }, 
                 required: ["topic", "customColors", "shapeStyle", "slidesData"] 
@@ -328,18 +337,35 @@ const AGENT_TOOLS = [{
         },
         { 
             name: "update_presentation", 
-            description: "【修改/擴充簡報】修改現有的 Google Slides 簡報。支援在簡報最末端「附加(append)」新投影片，或「完全覆寫(overwrite)」整份簡報。修改前強烈建議先讀取現有內容。", 
+            description: "【修改/擴充簡報】修改現有的 Google Slides 簡報。", 
             parameters: { 
                 type: "OBJECT", 
                 properties: { 
                     presentationUrl: { type: "STRING", description: "現有簡報的完整網址" }, 
                     action: { type: "STRING", description: "'append' (附加投影片到最後) 或 'overwrite' (清空並重新繪製整份簡報)" }, 
-                    customColors: { type: "OBJECT", description: "主題配色 JSON (包含 bg, text, accent, shape 的 HEX 碼)。" }, 
-                    shapeStyle: { type: "STRING", description: "幾何風格: 'minimalist', 'rounded', 'cyber', 'dynamic', 'layered' 擇一。" }, 
-                    slidesData: { type: "ARRAY", items: { type: "OBJECT" }, description: "要新增或覆寫的簡報 JSON 陣列。格式同 create_presentation。" } 
+                    customColors: { type: "OBJECT", description: "主題配色 JSON。" }, 
+                    shapeStyle: { type: "STRING", description: "幾何風格擇一。" }, 
+                    slidesData: { type: "ARRAY", items: { type: "OBJECT" }, description: "要新增或覆寫的簡報 JSON 陣列。" } 
                 }, 
                 required: ["presentationUrl", "action", "slidesData"] 
             } 
+        },
+
+        {
+            name: "design_document",
+            description: "【自由文件排版設計師】根據文義自動設計精美的 HTML 文件/報告。與 create_presentation 不同，此工具生成的是可捲動的長文件，適合：報告、提案書、研究摘要、企劃書、新聞稿。\n\n🎨 設計哲學：絕不寫死版面！必須從文字的『情感、產業、受眾』出發，動態選擇最適合的視覺風格、字型、排版結構。\n\n你可以先搜尋『[主題] 設計風格 排版 報告』來獲取靈感，再做最佳設計決策。",
+            parameters: {
+                type: "OBJECT",
+                properties: {
+                    title: { type: "STRING", description: "文件標題" },
+                    contentMood: { type: "STRING", description: "從文義分析出的情感基調：'商務/正式', '創意/活潑', '學術/嚴肅', '溫暖/人文', '科技/簡約'" },
+                    colorPalette: { type: "OBJECT", description: "根據文義動態選擇的配色（包含 primary, secondary, accent, bg, text 的 HEX 碼）。禁止寫死，必須根據 contentMood 精心選擇。" },
+                    typography: { type: "STRING", description: "字型風格：'sans'(現代無襯線), 'serif'(正式有襯線), 'mono'(技術等寬)。根據文義選擇。" },
+                    layoutStyle: { type: "STRING", description: "版面風格：'single_column'(單欄), 'two_column'(雙欄), 'magazine'(雜誌風), 'report'(報告風)" },
+                    sections: { type: "ARRAY", items: { type: "OBJECT" }, description: "文件區塊 JSON 陣列。格式：[{type: 'hero|summary|body|quote|data_table|highlight_box|image_section', title: '區塊標題', content: '內容文字', data: [['欄1','欄2'],['值1','值2']], highlight: '重點摘要'}]" }
+                },
+                required: ["title", "colorPalette", "layoutStyle", "sections"]
+            }
         },
         { 
             name: "execute_dynamic_tool", 
@@ -1789,6 +1815,109 @@ function runAutonomousAgentLoop(config) {
                             } catch(e) { toolResult = { status: "error", error_message: `雲端電腦執行失敗: ${e.toString()}` }; }
                             break;
                             
+                        case "design_document":
+                            try {
+                                const docTitle = args.title || "文件";
+                                const mood = args.contentMood || "商務/正式";
+                                const palette = args.colorPalette || {};
+                                const primary = palette.primary || "#1a365d";
+                                const secondary = palette.secondary || "#2d6a9f";
+                                const accent = palette.accent || "#e67e22";
+                                const bgColor = palette.bg || "#ffffff";
+                                const textColor = palette.text || "#1a1a2e";
+                                const typo = args.typography || "sans";
+                                const layout = args.layoutStyle || "single_column";
+                                const sections = args.sections || [];
+
+                                const fontMap = {
+                                    sans: "'Inter', 'Noto Sans TC', sans-serif",
+                                    serif: "'Merriweather', 'Noto Serif TC', serif",
+                                    mono: "'JetBrains Mono', 'Noto Sans TC', monospace"
+                                };
+                                const fontFamily = fontMap[typo] || fontMap.sans;
+
+                                const isTwo = layout === 'two_column' || layout === 'magazine';
+
+                                let sectionsHtml = sections.map((sec, i) => {
+                                    const sType = sec.type || 'body';
+                                    let inner = '';
+                                    if (sType === 'hero') {
+                                        inner = `<div class="doc-hero" style="background:linear-gradient(135deg,${primary},${secondary});color:#fff;padding:4rem 3rem;border-radius:16px;margin-bottom:2rem;">
+                                            <h1 style="font-size:2.5rem;font-weight:800;margin-bottom:1rem;">${sec.title || docTitle}</h1>
+                                            <p style="font-size:1.2rem;opacity:0.9;line-height:1.8;">${(sec.content || '').replace(/\n/g, '<br>')}</p>
+                                        </div>`;
+                                    } else if (sType === 'quote') {
+                                        inner = `<blockquote style="border-left:5px solid ${accent};padding:1.5rem 2rem;background:${primary}15;margin:2rem 0;border-radius:0 12px 12px 0;">
+                                            <p style="font-size:1.3rem;font-style:italic;color:${primary};">${sec.content || ''}</p>
+                                            ${sec.title ? `<cite style="display:block;margin-top:0.8rem;font-size:0.9rem;color:${secondary};">— ${sec.title}</cite>` : ''}
+                                        </blockquote>`;
+                                    } else if (sType === 'highlight_box') {
+                                        inner = `<div style="background:${accent}18;border:2px solid ${accent};border-radius:12px;padding:1.5rem 2rem;margin:1.5rem 0;">
+                                            ${sec.title ? `<h4 style="color:${accent};margin-bottom:0.8rem;font-weight:700;">💡 ${sec.title}</h4>` : ''}
+                                            <p style="line-height:1.8;">${(sec.content || '').replace(/\n/g, '<br>')}</p>
+                                        </div>`;
+                                    } else if (sType === 'data_table' && sec.data) {
+                                        const rows = Array.isArray(sec.data) ? sec.data : [];
+                                        const header = rows[0] || [];
+                                        const body = rows.slice(1);
+                                        inner = `<div style="overflow-x:auto;margin:1.5rem 0;">
+                                            ${sec.title ? `<h3 style="color:${primary};margin-bottom:1rem;">${sec.title}</h3>` : ''}
+                                            <table style="width:100%;border-collapse:collapse;font-size:0.95rem;">
+                                                <thead><tr style="background:${primary};color:#fff;">${header.map(h => `<th style="padding:0.8rem 1rem;text-align:left;border:1px solid ${primary};">${h}</th>`).join('')}</tr></thead>
+                                                <tbody>${body.map((row, ri) => `<tr style="background:${ri%2===0?bgColor:primary+'10'};">${(Array.isArray(row)?row:[row]).map(cell => `<td style="padding:0.7rem 1rem;border:1px solid ${primary}30;">${cell}</td>`).join('')}</tr>`).join('')}</tbody>
+                                            </table>
+                                        </div>`;
+                                    } else if (sType === 'summary') {
+                                        inner = `<div style="background:${secondary}12;border-radius:12px;padding:1.8rem 2rem;margin:1.5rem 0;">
+                                            ${sec.title ? `<h3 style="color:${secondary};margin-bottom:1rem;border-bottom:2px solid ${accent};padding-bottom:0.5rem;">📋 ${sec.title}</h3>` : ''}
+                                            <p style="line-height:1.9;">${(sec.content || '').replace(/\n/g, '<br>')}</p>
+                                        </div>`;
+                                    } else {
+                                        inner = `<div style="margin:2rem 0;">
+                                            ${sec.title ? `<h2 style="color:${primary};font-size:1.5rem;font-weight:700;margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:3px solid ${accent};">${sec.title}</h2>` : ''}
+                                            <div style="line-height:1.9;color:${textColor};">${(sec.content || '').replace(/\n/g, '<br>')}</div>
+                                        </div>`;
+                                    }
+                                    return inner;
+                                }).join('');
+
+                                const gridStyle = isTwo ? `display:grid;grid-template-columns:1fr 1fr;gap:2rem;` : '';
+                                const docHtml = `<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${docTitle}</title>
+                                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Merriweather:wght@400;700&family=JetBrains+Mono&family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
+                                <style>
+                                    *{box-sizing:border-box;margin:0;padding:0;}
+                                    body{font-family:${fontFamily};background:${bgColor};color:${textColor};line-height:1.8;}
+                                    .doc-wrapper{max-width:900px;margin:0 auto;padding:3rem 2rem;}
+                                    .doc-header{text-align:center;padding:3rem 0 2rem;border-bottom:3px solid ${accent};}
+                                    .doc-header h1{font-size:2.2rem;color:${primary};font-weight:800;}
+                                    .doc-header .meta{color:${secondary};margin-top:0.5rem;font-size:0.95rem;}
+                                    .doc-content{${gridStyle}}
+                                    h2{color:${primary};} h3{color:${secondary};}
+                                    @media print{body{background:#fff;} .doc-wrapper{padding:1rem;}}
+                                </style></head>
+                                <body><div class="doc-wrapper">
+                                    <div class="doc-header">
+                                        <h1>${docTitle}</h1>
+                                        <p class="meta">${mood} · ${new Date().toLocaleDateString('zh-TW')}</p>
+                                    </div>
+                                    <div class="doc-content">${sectionsHtml}</div>
+                                    <footer style="text-align:center;padding:2rem 0;color:${secondary};font-size:0.85rem;border-top:1px solid ${primary}20;margin-top:3rem;">由 anyGem AI 動態設計生成</footer>
+                                </div></body></html>`;
+
+                                toolResult = {
+                                    isTerminal: true,
+                                    reply: `📄 **「${docTitle}」設計完成！**\n\n🎨 設計風格：${mood}\n🖋️ 字型：${typo} | 排版：${layout}\n\n已根據文義動態選配色彩與版面，可直接預覽或列印。`,
+                                    html_presentation_data: {
+                                        topic: docTitle,
+                                        theme: { colors: { background: bgColor, text: textColor, accent: accent, shape: secondary } },
+                                        style: 'document',
+                                        rawHtml: docHtml,
+                                        slides: []
+                                    }
+                                };
+                            } catch(e) { toolResult = { status: "error", error_message: `文件設計失敗: ${e.toString()}` }; }
+                            break;
+
                         case "execute_dynamic_tool":
                             toolResult = { 
                                 isTerminal: true, 
