@@ -90,9 +90,13 @@ class FirebaseClient {
 }
 
 // ====== Web App Entry ======
-function doGet() {
-    return ContentService.createTextOutput("Manus Agent Backend is Online (HEAD Deployment)");
+function doGet(e) {
+    if (e && e.parameter && e.parameter.action === 'ping') {
+        return response({status: "pong", mode: "GET"});
+    }
+    return ContentService.createTextOutput("Manus Agent Backend is Online (v2.1)");
 }
+
 
 
 function doPost(e) {

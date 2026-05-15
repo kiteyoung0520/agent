@@ -158,10 +158,10 @@
             logBox.innerHTML = '<div class="text-green-600">> 建立全新任務...</div>';
             
             try {
-                logBox.innerHTML += `<div class="text-gray-500">> 正在進行基礎連線測試...</div>`;
-                const pingRes = await fetch(GAS_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: 'ping' })
+                logBox.innerHTML += `<div class="text-gray-500">> 正在進行基礎連線測試 (GET)...</div>`;
+                const pingRes = await fetch(GAS_URL + "?action=ping", {
+                    method: 'GET',
+                    mode: 'cors'
                 }).then(r => r.json());
                 
                 if (pingRes.status === 'pong') {
