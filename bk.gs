@@ -91,11 +91,9 @@ class FirebaseClient {
 
 // ====== Web App Entry ======
 function doGet() {
-    return HtmlService.createTemplateFromFile('index').evaluate()
-        .setTitle('Manus Agent')
-        .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    return ContentService.createTextOutput("Manus Agent Backend is Online (HEAD Deployment)");
 }
+
 
 function doPost(e) {
     try {
