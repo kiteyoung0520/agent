@@ -1,4 +1,4 @@
-/**
+﻿/**
  * anyGem Backend v92.2 - 自然語言校準版 (Natural Language Edition) + 簡報讀取修復
  * 核心升級項目：
  * 1. [🗣️ 格式幻覺修復] 嚴格規範 AI 的輸出格式，禁止直接以 JSON 格式吐給使用者。
@@ -855,7 +855,7 @@ function handleLineWebhook(payload, ss, apiKey, lineToken, CONFIG, db) {
                 targetSheet.getRange("A1:B1").setFontColor("red").setFontWeight("bold");
             }
 
-            let fallbackModel = "gemini-2.0-flash";
+            let fallbackModel = "gemini-2.5-flash";
             try {
                 const modelSheet = ss.getSheetByName("Models");
                 if (modelSheet && modelSheet.getLastRow() > 1) {
