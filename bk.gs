@@ -25,6 +25,79 @@ const BASE_CONFIG = new Proxy({}, {
     get(_, key) { return getBaseConfig()[key]; }
 });
 
+// ==========================================
+// 🏥 系統健康檢查與 GET 進入點 (doGet)
+// ==========================================
+function doGet(e) {
+    // 💡 [診斷模式] ?action=diag - 提供完整系統診斷
+    if (e.parameter && e.parameter.action === 'diag') {
+        const diag = {
+            status: "success",
+            role: "anyGem Diagnostics System",
+            timestamp: new Date().toISOString(),
+            scriptTimeZone: Session.getScriptTimeZone(),
+            scriptProperties: {},
+            spreadsheet: {},
+            firebase: {},
+            line: {}
+        };
+        
+        // 1. 檢查指令碼屬性 (Script Properties)
+        try {
+            const props = PropertiesService.getScriptProperties().getProperties();
+            diag.scriptProperties.keys = Object.keys(props);
+            diag.scriptProperties.GEMINI_API_KEY_exists = !!props['GEMINI_API_KEY'];
+            diag.scriptProperties.LINE_CHANNEL_ACCESS_TOKEN_exists = !!props['LINE_CHANNEL_ACCESS_TOKEN'];
+            diag.scriptProperties.SHEET_ID_exists = !!props['SHEET_ID'];
+            diag.scriptProperties.FB_PROJECT_ID_exists = !!props['FB_PROJECT_ID'];
+            diag.scriptProperties.FB_API_KEY_exists = !!props['FB_API_KEY'];
+        } catch(err) { diag.scriptProperties.error = err.toString(); }
+        
+        // 2. 檢查 Google Sheet
+        try {
+            const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID') || "1pIYPf8v1paZz6OE2qnc5ht5aub8Rm7IA-TfD5kInct8";
+            diag.spreadsheet.target_id = sheetId;
+            const ss = SpreadsheetApp.openById(sheetId);
+            diag.spreadsheet.name = ss.getName();
+            diag.spreadsheet.sheets = ss.getSheets().map(s => s.getName());
+            
+            // 讀取設定頁面
+            const settings = loadSettings(ss);
+            diag.spreadsheet.settings_keys = Object.keys(settings);
+            diag.spreadsheet.GEMINI_API_KEY_in_settings_exists = !!settings['GEMINI_API_KEY'];
+            diag.spreadsheet.LINE_CHANNEL_ACCESS_TOKEN_in_settings_exists = !!settings['LINE_CHANNEL_ACCESS_TOKEN'];
+        } catch(err) { diag.spreadsheet.error = err.toString(); }
+        
+        // 3. 檢查 Firebase
+        try {
+            const db = new FirebaseClient();
+            diag.firebase.projectId = db.projectId;
+            diag.firebase.apiKey_exists = !!db.apiKey;
+            if (db.apiKey && db.projectId) {
+                const testGet = db.get("sessions", "line_verify_test");
+                diag.firebase.connection = "ok (authenticated)";
+            } else {
+                diag.firebase.connection = "failed (credentials missing)";
+            }
+        } catch(err) { diag.firebase.error = err.toString(); }
+        
+        return ContentService.createTextOutput(JSON.stringify(diag, null, 2))
+            .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // 💡 [極速 Ping 測試] ?action=ping - 提供網頁端 bypass CORS 健康檢查
+    if (e.parameter && e.parameter.action === 'ping') {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'success', message: 'pong' }))
+            .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // 💡 [預設網頁] 渲染 anyGem 主控網頁
+    return HtmlService.createHtmlOutputFromFile('index')
+        .setTitle('anyGem')
+        .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
 const PPT_THEMES = {
     modern_blue:  { colors: { background: "#0f172a", text: "#f8fafc", accent: "#38bdf8", shape: "#1e293b" } }
 };
@@ -599,9 +672,9 @@ function doPost(e) {
         const { message, session_id, workspace, mode, old_text, target_text, target_role, file_data, mime_type, web_search, youtube_id, auto_image, draw_mode, gem_prompt, gem_model, selected_model, confirmed } = payload;
         
         const ss = SpreadsheetApp.openById(BASE_CONFIG.SHEET_ID);
-        const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
-        const lineToken = PropertiesService.getScriptProperties().getProperty('LINE_CHANNEL_ACCESS_TOKEN');
         const CONFIG = { ...BASE_CONFIG, ...loadSettings(ss) };
+        const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY') || CONFIG.GEMINI_API_KEY;
+        const lineToken = PropertiesService.getScriptProperties().getProperty('LINE_CHANNEL_ACCESS_TOKEN') || CONFIG.LINE_CHANNEL_ACCESS_TOKEN;
         const db = new FirebaseClient();
 
         // 👑 處理真實的 LINE 用戶對話
@@ -662,7 +735,7 @@ function doPost(e) {
             finalSystemInstruction += `\n\n【💎 當前切換的 Gem 角色設定】\n使用者目前已切換為特定的 Gem 角色。請你完全沉浸並遵守以下角色設定與指示：\n<gem_role>\n${actualGemPrompt}\n</gem_role>`;
         }
 
-        let fallbackModel = "gemini-2.5-flash";
+        let fallbackModel = "gemini-2.0-flash";
         try {
             const modelSheet = ss.getSheetByName("Models");
             if (modelSheet && modelSheet.getLastRow() > 1) {
@@ -782,7 +855,7 @@ function handleLineWebhook(payload, ss, apiKey, lineToken, CONFIG, db) {
                 targetSheet.getRange("A1:B1").setFontColor("red").setFontWeight("bold");
             }
 
-            let fallbackModel = "gemini-2.5-flash";
+            let fallbackModel = "gemini-2.0-flash";
             try {
                 const modelSheet = ss.getSheetByName("Models");
                 if (modelSheet && modelSheet.getLastRow() > 1) {
@@ -977,7 +1050,7 @@ function runAutonomousAgentLoop(config) {
                             break;
 
                         case "deploy_fullstack_matrix":
-                            let pat = PropertiesService.getScriptProperties().getProperty('GITHUB_PAT');
+                            let pat = PropertiesService.getScriptProperties().getProperty('GITHUB_PAT') || config.GITHUB_PAT;
                             if (!pat) {
                                 toolResult = { status: "error", error_message: "系統尚未設定 GITHUB_PAT 環境變數。請在 Apps Script 的「專案設定 > 指令碼屬性」中新增。" };
                                 break;
@@ -1041,7 +1114,7 @@ function runAutonomousAgentLoop(config) {
                             break;
 
                         case "rollback_github_deployment":
-                            let githubPatRollback = PropertiesService.getScriptProperties().getProperty('GITHUB_PAT');
+                            let githubPatRollback = PropertiesService.getScriptProperties().getProperty('GITHUB_PAT') || config.GITHUB_PAT;
                             if (!githubPatRollback) { toolResult = { status: "error", error_message: "系統尚未設定 GITHUB_PAT 環境變數。" }; break; }
                             try {
                                 let headers = { "Authorization": `Bearer ${githubPatRollback}`, "Accept": "application/vnd.github.v3+json", "X-GitHub-Api-Version": "2022-11-28" };
@@ -1319,7 +1392,7 @@ function runAutonomousAgentLoop(config) {
                         case "google_search":
                         case "search_web":
                             try {
-                                let jinaApiKey = PropertiesService.getScriptProperties().getProperty('JINA_API_KEY');
+                                let jinaApiKey = PropertiesService.getScriptProperties().getProperty('JINA_API_KEY') || (config && config.JINA_API_KEY);
                                 if (jinaApiKey === "undefined" || jinaApiKey === "null" || !jinaApiKey) jinaApiKey = null;
                                 
                                 const options = { 
@@ -1414,7 +1487,7 @@ function runAutonomousAgentLoop(config) {
                                     break;
                                 }
 
-                                const jinaApiKey = PropertiesService.getScriptProperties().getProperty('JINA_API_KEY');
+                                const jinaApiKey = PropertiesService.getScriptProperties().getProperty('JINA_API_KEY') || (config && config.JINA_API_KEY);
                                 
                                 // 嘗試使用 Jina Reader (優先)
                                 const jinaOptions = { 
@@ -1734,7 +1807,7 @@ function runAutonomousAgentLoop(config) {
                             
                         case "run_cloud_sandbox_code":
                             try {
-                                let sandboxApiKey = PropertiesService.getScriptProperties().getProperty('SANDBOX_API_KEY');
+                                let sandboxApiKey = PropertiesService.getScriptProperties().getProperty('SANDBOX_API_KEY') || (config && config.SANDBOX_API_KEY);
                                 if (sandboxApiKey) sandboxApiKey = sandboxApiKey.trim();
                                 let finalOutput = "";
                                 
@@ -2166,7 +2239,7 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
                     if (name && id) models.push({ name: name, id: id }); 
                 } 
             }
-            if(models.length === 0) { models = [{name: "⚡ 閃電 (2.5 Flash)", id: "gemini-2.5-flash"}, {name: "🧠 專家 (2.5 Pro)", id: "gemini-2.5-pro"}]; }
+            if(models.length === 0) { models = [{name: "⚡ 閃電 (2.5 Flash)", id: "gemini-2.0-flash"}, {name: "🧠 專家 (2.5 Pro)", id: "gemini-2.5-pro"}]; }
             return response({models: models});
         },
         'get_session_list': () => {
