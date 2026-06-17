@@ -417,7 +417,7 @@
         let currentImageData = null, currentMimeType = null, currentDocumentText = null, currentDocumentName = null, currentYouTubeId = null;
         let isWaiting = false, currentRenderCode = "", abortController = null, silenceTimer = null, currentGemsList = []; 
         window.sharedKnowledgeSet = new Set();
-        let isCanvasReady = false;
+        let isCanvasReady = false, isModalCanvasReady = false;
         let pyodideInstance = null;
 
         async function getPyodide() {
@@ -1188,23 +1188,144 @@
         function loadArtifactFromHistory(index) {
             const a = artifactHistory[index];
             if (!a) return;
-            currentRenderCode = a.code;
-            const iframe = document.getElementById('canvas-iframe');
-            if (iframe) iframe.srcdoc = a.code;
+            openHtmlArtifact(a);
         }
 
         function openPreviewInModal() {
+            if (!currentRenderCode) return;
             document.getElementById('preview-modal').classList.remove('hidden');
             document.getElementById('preview-modal').classList.add('flex');
-            document.getElementById('preview-iframe').srcdoc = currentRenderCode;
+            
+            const iframe = document.getElementById('preview-iframe');
+            if (!iframe) return;
+            
+            const isFullHtml = currentRenderCode.trim().toLowerCase().startsWith('<!doctype html') || currentRenderCode.trim().toLowerCase().startsWith('<html');
+            if (isFullHtml) {
+                iframe.srcdoc = currentRenderCode;
+            } else {
+                isModalCanvasReady = false;
+                iframe.srcdoc = CANVAS_HOST_PAGE.replace("canvas_ready", "modal_canvas_ready");
+                const checker = setInterval(() => {
+                    if (isModalCanvasReady) {
+                        iframe.contentWindow.postMessage({ type: 'render_artifact', code: currentRenderCode }, '*');
+                        clearInterval(checker);
+                    }
+                }, 50);
+            }
         }
 
         function closePreview() { 
             document.getElementById('preview-modal').classList.add('hidden'); 
             document.getElementById('preview-modal').classList.remove('flex');
             document.getElementById('preview-iframe').srcdoc = ''; 
+            isModalCanvasReady = false;
         }
-        function refreshPreview() { document.getElementById('preview-iframe').srcdoc = currentRenderCode; }
+
+        function refreshPreview() {
+            if (!currentRenderCode) return;
+            const modal = document.getElementById('preview-modal');
+            const isModalOpen = modal && !modal.classList.contains('hidden');
+            
+            const iframeId = isModalOpen ? 'preview-iframe' : 'canvas-iframe';
+            const iframe = document.getElementById(iframeId);
+            if (!iframe) return;
+            
+            const isFullHtml = currentRenderCode.trim().toLowerCase().startsWith('<!doctype html') || currentRenderCode.trim().toLowerCase().startsWith('<html');
+            if (isFullHtml) {
+                iframe.srcdoc = currentRenderCode;
+            } else {
+                if (isModalOpen) {
+                    isModalCanvasReady = false;
+                    iframe.srcdoc = CANVAS_HOST_PAGE.replace("canvas_ready", "modal_canvas_ready");
+                    const checker = setInterval(() => {
+                        if (isModalCanvasReady) {
+                            iframe.contentWindow.postMessage({ type: 'render_artifact', code: currentRenderCode }, '*');
+                            clearInterval(checker);
+                        }
+                    }, 50);
+                } else {
+                    isCanvasReady = false;
+                    iframe.srcdoc = CANVAS_HOST_PAGE;
+                    const checker = setInterval(() => {
+                        if (isCanvasReady) {
+                            iframe.contentWindow.postMessage({ type: 'render_artifact', code: currentRenderCode }, '*');
+                            clearInterval(checker);
+                        }
+                    }, 50);
+                }
+            }
+        }
+
+        function copyCanvasCode() {
+            if (!currentRenderCode) {
+                alert("沒有可複製的程式碼！");
+                return;
+            }
+            navigator.clipboard.writeText(currentRenderCode).then(() => {
+                const btn = document.getElementById('copy-canvas-btn');
+                if (btn) {
+                    const originalHtml = btn.innerHTML;
+                    btn.innerHTML = `<span class="material-symbols-rounded text-[16px] text-green-400">check</span>`;
+                    setTimeout(() => { btn.innerHTML = originalHtml; }, 2000);
+                }
+            }).catch(err => {
+                alert("複製失敗：" + err);
+            });
+        }
+
+        function downloadCanvasHtml() {
+            if (!currentRenderCode) {
+                alert("沒有可下載的內容！");
+                return;
+            }
+            const isFullHtml = currentRenderCode.trim().toLowerCase().startsWith('<!doctype html') || currentRenderCode.trim().toLowerCase().startsWith('<html');
+            let finalHtml = currentRenderCode;
+            
+            if (!isFullHtml) {
+                let cleanCode = currentRenderCode.replace(/import\s+.*?from\s+['"].*?['"];?/g, '').replace(/export\s+default\s+function/g, 'function');
+                let m = currentRenderCode.match(/export\s+default\s+function\s+([A-Za-z0-9_]+)/);
+                const compName = m ? m[1] : 'App';
+                
+                finalHtml = `<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>anyGem Live Canvas Standalone</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { margin: 0; background: #f9fafb; font-family: sans-serif; }
+        #root { min-height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        \${cleanCode}
+        
+        const rootEl = document.getElementById('root');
+        const root = ReactDOM.createRoot(rootEl);
+        root.render(React.createElement(\${compName}));
+        setTimeout(() => lucide.createIcons(), 100);
+    </script>
+</body>
+</html>`;
+            }
+            
+            const blob = new Blob([finalHtml], { type: 'text/html;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'anygem-canvas-export.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
 
         window.addEventListener('message', async (e) => {
             if (e.data && e.data.type === 'canvas_ready') {
@@ -1489,8 +1610,7 @@
             document.getElementById('preview-modal').classList.add('flex'); 
             document.getElementById('preview-iframe').srcdoc = rc;
         }
-        function closePreview() { document.getElementById('preview-modal').classList.add('hidden'); document.getElementById('preview-modal').classList.remove('flex'); document.getElementById('preview-iframe').srcdoc = ''; }
-        function refreshPreview() { if (currentRenderCode) document.getElementById('preview-iframe').srcdoc = currentRenderCode; }
+        // closePreview and refreshPreview are defined globally above
 
         function toggleSharedData() { /* 已整合至右面板 */ }
         function toggleSources() { /* 已整合至右面板 */ }
@@ -1533,7 +1653,9 @@
                     <div class="flex flex-col h-full">
                         <div class="flex items-center justify-between mb-4 px-1">
                             <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">當前預覽 (PREVIEW)</h4>
-                            <div class="flex gap-2">
+                            <div class="flex gap-3">
+                                <button id="copy-canvas-btn" onclick="copyCanvasCode()" class="text-gray-500 hover:text-white transition-colors" title="複製原始碼"><span class="material-symbols-rounded text-[16px]">content_copy</span></button>
+                                <button id="download-canvas-btn" onclick="downloadCanvasHtml()" class="text-gray-500 hover:text-white transition-colors" title="下載為獨立 HTML 檔案"><span class="material-symbols-rounded text-[16px]">download</span></button>
                                 <button onclick="refreshPreview()" class="text-gray-500 hover:text-white transition-colors" title="重整"><span class="material-symbols-rounded text-[16px]">refresh</span></button>
                                 <button onclick="openPreviewInModal()" class="text-gray-500 hover:text-white transition-colors" title="全螢幕"><span class="material-symbols-rounded text-[16px]">fullscreen</span></button>
                             </div>
