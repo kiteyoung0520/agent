@@ -1,4 +1,4 @@
-﻿/**
+/**
  * anyGem Backend v92.2 - 自然語言校準版 (Natural Language Edition) + 簡報讀取修復
  * 核心升級項目：
  * 1. [🗣️ 格式幻覺修復] 嚴格規範 AI 的輸出格式，禁止直接以 JSON 格式吐給使用者。
@@ -51,6 +51,10 @@ function doGet(e) {
             diag.scriptProperties.SHEET_ID_exists = !!props['SHEET_ID'];
             diag.scriptProperties.FB_PROJECT_ID_exists = !!props['FB_PROJECT_ID'];
             diag.scriptProperties.FB_API_KEY_exists = !!props['FB_API_KEY'];
+            diag.scriptProperties.GITHUB_PAT_exists = !!props['GITHUB_PAT'];
+            if (props['GITHUB_PAT']) {
+                diag.scriptProperties.GITHUB_PAT_preview = props['GITHUB_PAT'].substring(0, 7) + "..." + props['GITHUB_PAT'].substring(props['GITHUB_PAT'].length - 4);
+            }
         } catch(err) { diag.scriptProperties.error = err.toString(); }
         
         // 2. 檢查 Google Sheet
