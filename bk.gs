@@ -799,7 +799,7 @@ function doPost(e) {
             confirmed: confirmed
         });
 
-        logToFirebaseAndCache(db, wsName, session_id || "default", message, agentResult.reply || "執行完成", agentResult.html_presentation || null, agentResult.html_artifact || null);
+        logToFirebaseAndCache(db, wsName, session_id || "default", message, agentResult.reply || "執行完成", agentResult.html_presentation || null, agentResult.html_artifact || null, agentResult.image || null, agentResult.mime || null, agentResult.model || null);
         return response({ 
             status: "success", 
             reply: agentResult.reply, 
@@ -2261,7 +2261,7 @@ function getOptimizedHistoryFB(db, wsName, sessionId) {
     } catch(e) { return []; }
 }
 
-function logToFirebaseAndCache(db, wsName, sessionId, userMsg, aiReply, htmlPresentation = null, htmlArtifact = null) {
+function logToFirebaseAndCache(db, wsName, sessionId, userMsg, aiReply, htmlPresentation = null, htmlArtifact = null, image = null, mime = null, model = null) {
     const lock = LockService.getScriptLock();
     try {
         lock.waitLock(10000);
@@ -2273,6 +2273,9 @@ function logToFirebaseAndCache(db, wsName, sessionId, userMsg, aiReply, htmlPres
             const aiMsg = { role: "ai", text: aiReply };
             if (htmlPresentation) aiMsg.html_presentation = htmlPresentation;
             if (htmlArtifact) aiMsg.html_artifact = htmlArtifact;
+            if (image) aiMsg.image = image;
+            if (mime) aiMsg.mime = mime;
+            if (model) aiMsg.model = model;
             hist.push(aiMsg);
         }
         session.updated_at = new Date(); session.history_json = hist; db.write("sessions", sessionId, session);
