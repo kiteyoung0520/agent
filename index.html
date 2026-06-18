@@ -1135,14 +1135,43 @@
         }
 
         let artifactHistory = [];
-        function openHtmlArtifact(data) {
-            if (!data || !data.code) return;
+        async function openHtmlArtifact(data) {
+            if (!data) return;
+            
+            // 🚀 若無程式碼但有雲端檔案 ID，則發送請求向後端加載工具代碼
+            if (!data.code && data.fileId) {
+                const lid = appendLoading("⚙️ 正在從雲端硬碟讀取工具代碼...");
+                try {
+                    const res = await fetch(GAS_URL, { 
+                        method: 'POST', 
+                        body: JSON.stringify({ 
+                            mode: 'system', 
+                            action: 'get_artifact_code', 
+                            file_id: data.fileId 
+                        }) 
+                    });
+                    const resJson = await res.json();
+                    removeLoading(lid);
+                    if (resJson.status === "success" && resJson.code) {
+                        data.code = resJson.code;
+                    } else {
+                        alert(`載入失敗: ${resJson.message || '未知錯誤'}`);
+                        return;
+                    }
+                } catch(e) {
+                    removeLoading(lid);
+                    alert(`連線失敗: ${e.toString()}`);
+                    return;
+                }
+            }
+            
+            if (!data.code) return;
             const code = data.code;
             currentRenderCode = code;
             
-            // 加入歷史紀錄
-            if (!artifactHistory.some(a => a.name === data.name && a.code === data.code)) {
-                artifactHistory.unshift({ name: data.name, description: data.description, code: data.code, time: new Date() });
+            // 加入歷史紀錄 (支援 fileId 對照)
+            if (!artifactHistory.some(a => a.name === data.name && (a.code === data.code || (a.fileId && a.fileId === data.fileId)))) {
+                artifactHistory.unshift({ name: data.name, description: data.description, code: data.code, fileId: data.fileId || null, time: new Date() });
             }
 
             // 切換面板
@@ -1729,6 +1758,10 @@
                 if (currentRenderCode) {
                     setTimeout(() => {
                         openHtmlArtifact({ name: "恢復預覽", description: "從分頁切換回來", code: currentRenderCode });
+                    }, 50);
+                } else if (artifactHistory.length > 0) {
+                    setTimeout(() => {
+                        openHtmlArtifact(artifactHistory[0]);
                     }, 50);
                 } else {
                     renderArtifactHistory();
