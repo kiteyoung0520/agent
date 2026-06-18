@@ -55,6 +55,18 @@ function doGet(e) {
             if (props['GITHUB_PAT']) {
                 diag.scriptProperties.GITHUB_PAT_preview = props['GITHUB_PAT'].substring(0, 7) + "..." + props['GITHUB_PAT'].substring(props['GITHUB_PAT'].length - 4);
             }
+            // 收集所有已配置的金鑰預覽，確保多金鑰架構正常
+            const tempConfig = { ...BASE_CONFIG };
+            try {
+                const sheetId = props['SHEET_ID'] || "1pIYPf8v1paZz6OE2qnc5ht5aub8Rm7IA-TfD5kInct8";
+                const ss = SpreadsheetApp.openById(sheetId);
+                Object.assign(tempConfig, loadSettings(ss));
+            } catch(e) {}
+            const accumulatedKeys = getAccumulatedGeminiApiKeys(tempConfig);
+            if (accumulatedKeys) {
+                diag.scriptProperties.accumulated_gemini_keys_count = accumulatedKeys.split(',').length;
+                diag.scriptProperties.accumulated_gemini_keys_previews = accumulatedKeys.split(',').map(k => k.substring(0, 7) + "..." + k.substring(k.length - 4));
+            }
         } catch(err) { diag.scriptProperties.error = err.toString(); }
         
         // 2. 檢查 Google Sheet
@@ -677,7 +689,7 @@ function doPost(e) {
         
         const ss = SpreadsheetApp.openById(BASE_CONFIG.SHEET_ID);
         const CONFIG = { ...BASE_CONFIG, ...loadSettings(ss) };
-        const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY') || CONFIG.GEMINI_API_KEY;
+        const apiKey = getAccumulatedGeminiApiKeys(CONFIG);
         const lineToken = PropertiesService.getScriptProperties().getProperty('LINE_CHANNEL_ACCESS_TOKEN') || CONFIG.LINE_CHANNEL_ACCESS_TOKEN;
         const db = new FirebaseClient();
 
@@ -954,10 +966,8 @@ function performInnerQALoop(text, apiKey, isToolArg = false) {
                 responseSchema: { type: "OBJECT", properties: { pass: { type: "BOOLEAN" }, auto_fixed_text: { type: "STRING" } } }
             }
         };
-        const res = UrlFetchApp.fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${apiKey}`, {
-            method: "post", contentType: "application/json", payload: JSON.stringify(payload), muteHttpExceptions: true
-        });
-        const json = JSON.parse(res.getContentText());
+        const urlTemplate = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key={KEY}`;
+        const json = fetchGoogleAPIWithRotation(urlTemplate, payload, apiKey, "post");
         if (json.candidates && json.candidates[0].content) {
             const result = JSON.parse(json.candidates[0].content.parts[0].text);
             if (result.pass === false && result.auto_fixed_text) {
@@ -2041,6 +2051,130 @@ function runAutonomousAgentLoop(config) {
     return { reply: finalReply, model: finalModel, image: finalImage, mime: finalMime };
 }
 
+function getAccumulatedGeminiApiKeys(CONFIG) {
+    const keys = [];
+    
+    // 1. 從 Script Properties 載入
+    try {
+        const props = PropertiesService.getScriptProperties().getProperties();
+        
+        // 支援 GEMINI_API_KEY (可以是逗號分隔的多個 Key)
+        if (props['GEMINI_API_KEY']) {
+            props['GEMINI_API_KEY'].split(',').forEach(k => keys.push(k.trim()));
+        }
+        
+        // 支援 GEMINI_API_KEY_2, GEMINI_API_KEY_3... 等編號金鑰
+        Object.keys(props)
+            .filter(k => k.startsWith('GEMINI_API_KEY_'))
+            .sort()
+            .forEach(k => keys.push(props[k].trim()));
+    } catch (e) {
+        console.error("讀取 Script Properties 金鑰失敗:", e);
+    }
+    
+    // 2. 從試算表設定載入 (作為備援或額外擴充)
+    if (CONFIG) {
+        if (CONFIG.GEMINI_API_KEY) {
+            CONFIG.GEMINI_API_KEY.split(',').forEach(k => keys.push(k.trim()));
+        }
+        // 遍歷 CONFIG 物件找出 GEMINI_API_KEY_2 等編號金鑰
+        Object.keys(CONFIG)
+            .filter(k => k.startsWith('GEMINI_API_KEY_'))
+            .sort()
+            .forEach(k => keys.push(CONFIG[k].trim()));
+    }
+    
+    // 去除重複值與空值
+    const uniqueKeys = [...new Set(keys)].filter(Boolean);
+    
+    return uniqueKeys.join(',');
+}
+
+function fetchGoogleAPIWithRotation(urlTemplate, payload, apiKey, method = "post") {
+    // 1. 解析金鑰清單
+    let keys = [];
+    if (apiKey) {
+        keys = apiKey.split(',').map(k => k.trim()).filter(Boolean);
+    }
+    if (keys.length === 0) {
+        throw new Error("找不到任何有效的 API Key！");
+    }
+
+    const cache = CacheService.getScriptCache();
+    
+    // 獲取非失效金鑰清單
+    function getActiveKeys() {
+        return keys.filter(k => !cache.get("key_blocked_" + k.substring(0, 15)));
+    }
+
+    let activeKeys = getActiveKeys();
+    if (activeKeys.length === 0) {
+        // 全失效時重置所有標記
+        keys.forEach(k => cache.remove("key_blocked_" + k.substring(0, 15)));
+        activeKeys = keys;
+    }
+
+    let lastError = "";
+    
+    for (let keyIndex = 0; keyIndex < activeKeys.length; keyIndex++) {
+        const currentKey = activeKeys[keyIndex];
+        const cacheKey = "key_blocked_" + currentKey.substring(0, 15);
+        
+        // 替換 URL 中的 {KEY} 佔位符
+        const finalUrl = urlTemplate.replace("{KEY}", currentKey);
+        
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+                const options = {
+                    method: method,
+                    contentType: "application/json",
+                    muteHttpExceptions: true
+                };
+                if (payload) {
+                    options.payload = JSON.stringify(payload);
+                }
+                
+                const res = UrlFetchApp.fetch(finalUrl, options);
+                const resText = res.getContentText();
+                let json = {};
+                try {
+                    json = JSON.parse(resText);
+                } catch (e) {
+                    throw new Error(`回傳內容非 JSON 格式: ${resText}`);
+                }
+                
+                if (json.error) {
+                    let errMsg = json.error.message || "";
+                    if (errMsg.includes("Quota exceeded") || errMsg.includes("429") || res.getResponseCode() === 429) {
+                        console.warn(`金鑰 [${currentKey.substring(0, 7)}...] 已達配額限制，標記失效 10 分鐘，嘗試切換下一組。`);
+                        cache.put(cacheKey, "true", 600);
+                        lastError = errMsg;
+                        break; // 跳出當前金鑰的 attempt，換下一個金鑰
+                    }
+                    
+                    if (attempt < 3) {
+                        Utilities.sleep(attempt * 2000);
+                        continue;
+                    }
+                    lastError = errMsg;
+                    break; // 跳出當前金鑰，換下一個金鑰
+                }
+                
+                return json; // 成功！
+            } catch (err) {
+                lastError = err.toString();
+                if (attempt < 3) {
+                    Utilities.sleep(attempt * 2000);
+                    continue;
+                }
+                break; // 換下一個金鑰
+            }
+        }
+    }
+    
+    throw new Error(`所有配給的 Google API 金鑰均不可用。最後錯誤：${lastError}`);
+}
+
 function callGeminiAPI_Raw({ prompt, model, apiKey, systemInstruction, history = [], tools = [], imageData = null, isFunctionResponse = false }) {
     const contents = history.map(x => ({ role: x.role, parts: x.parts ? [...x.parts] : [{ text: x.content || "" }] }));
     if (!isFunctionResponse && prompt) {
@@ -2052,71 +2186,45 @@ function callGeminiAPI_Raw({ prompt, model, apiKey, systemInstruction, history =
     if (tools.length > 0) payload.tools = tools;
     if (systemInstruction) payload.system_instruction = { parts: [{ text: systemInstruction }] };
 
-    for (let attempt = 1; attempt <= 3; attempt++) {
-        const res = UrlFetchApp.fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, { method: "post", contentType: "application/json", payload: JSON.stringify(payload), muteHttpExceptions: true });
-        const json = JSON.parse(res.getContentText());
-        
-        if (json.error) {
-            let errMsg = json.error.message || "";
-            if (errMsg.includes("Quota exceeded") || errMsg.includes("429")) {
-                if (attempt < 3) { Utilities.sleep(attempt * 10000); continue; }
-                throw new Error("⏳ API 請求過於頻繁，請休息約 1 分鐘後再試！");
-            }
-            if (attempt < 3) { Utilities.sleep(attempt * 2000); continue; }
-            throw new Error(errMsg);
-        }
-        return json;
-    }
+    const urlTemplate = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key={KEY}`;
+    return fetchGoogleAPIWithRotation(urlTemplate, payload, apiKey, "post");
 }
 
 function fetchAIImage(prompt, key, model, aspectRatio = "16:9") {
     let lastError = null;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-        try {
-            let url, payload;
-            if (model.includes("imagen")) {
-                url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${key}`;
-                const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
-                let safeRatio = validRatios.includes(aspectRatio) ? aspectRatio : "1:1";
-                payload = { instances: [{ prompt: prompt }], parameters: { sampleCount: 1, aspectRatio: safeRatio } };
-            }
-            else {
-                url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
-                let finalPrompt = prompt;
-                if (aspectRatio && aspectRatio !== "1:1") finalPrompt += ` (Aspect Ratio: ${aspectRatio})`;
-                payload = { contents: [{ parts: [{ text: finalPrompt }] }], generationConfig: { responseModalities: ["IMAGE"] } };
-            }
-            
-            const res = UrlFetchApp.fetch(url, { method: "post", contentType: "application/json", payload: JSON.stringify(payload), muteHttpExceptions: true });
-            const resJson = JSON.parse(res.getContentText());
-            
-            if (resJson.error) {
-                lastError = resJson.error.message;
-                if (lastError.includes("Quota exceeded") || lastError.includes("429")) { Utilities.sleep(attempt * 8000); continue; }
-                if (lastError.toLowerCase().includes("safety") || lastError.toLowerCase().includes("block")) {
-                    return `ERROR:提示詞涉及安全或敏感限制，被 Google API 阻擋。請嘗試修改字眼。`;
-                }
-                Utilities.sleep(2000); continue;
-            }
-            
-            if (model.includes("imagen")) {
-                if (resJson.predictions && resJson.predictions[0] && resJson.predictions[0].bytesBase64Encoded) {
-                    return Utilities.newBlob(Utilities.base64Decode(resJson.predictions[0].bytesBase64Encoded), "image/png");
-                } else {
-                    throw new Error(`Google API 回傳了預期外的格式 (可能模型不支援)：${JSON.stringify(resJson).substring(0, 100)}...`);
-                }
-            } 
-            else { 
-                let base64Data = resJson.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data; 
-                if (!base64Data) base64Data = resJson.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data; 
-                if (base64Data) { return Utilities.newBlob(Utilities.base64Decode(base64Data), "image/png"); } 
-                else {
-                    let txtFallback = resJson.candidates?.[0]?.content?.parts?.[0]?.text;
-                    throw new Error(txtFallback ? `模型無法產生圖片，回傳了文字：${txtFallback}` : "API 回傳成功，但未包含影像資料");
-                }
-            }
-        } catch (e) { lastError = e.toString(); Utilities.sleep(2000); continue; }
+    let urlTemplate, payload;
+    
+    if (model.includes("imagen")) {
+        urlTemplate = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key={KEY}`;
+        const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
+        let safeRatio = validRatios.includes(aspectRatio) ? aspectRatio : "1:1";
+        payload = { instances: [{ prompt: prompt }], parameters: { sampleCount: 1, aspectRatio: safeRatio } };
+    } else {
+        urlTemplate = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key={KEY}`;
+        let finalPrompt = prompt;
+        if (aspectRatio && aspectRatio !== "1:1") finalPrompt += ` (Aspect Ratio: ${aspectRatio})`;
+        payload = { contents: [{ parts: [{ text: finalPrompt }] }], generationConfig: { responseModalities: ["IMAGE"] } };
     }
+    
+    try {
+        const resJson = fetchGoogleAPIWithRotation(urlTemplate, payload, key, "post");
+        
+        if (model.includes("imagen")) {
+            if (resJson.predictions && resJson.predictions[0] && resJson.predictions[0].bytesBase64Encoded) {
+                return Utilities.newBlob(Utilities.base64Decode(resJson.predictions[0].bytesBase64Encoded), "image/png");
+            } else {
+                throw new Error(`Google API 回傳了預期外的格式 (可能模型不支援)：${JSON.stringify(resJson).substring(0, 100)}...`);
+            }
+        } else { 
+            let base64Data = resJson.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data; 
+            if (!base64Data) base64Data = resJson.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data; 
+            if (base64Data) { return Utilities.newBlob(Utilities.base64Decode(base64Data), "image/png"); } 
+            else {
+                let txtFallback = resJson.candidates?.[0]?.content?.parts?.[0]?.text;
+                throw new Error(txtFallback ? `模型無法產生圖片，回傳了文字：${txtFallback}` : "API 回傳成功，但未包含影像資料");
+            }
+        }
+    } catch (e) { lastError = e.toString(); }
     return lastError ? `ERROR:${lastError}` : null;
 }
 
