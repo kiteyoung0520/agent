@@ -1016,7 +1016,62 @@
             if (name && name.trim()) { currentWorkspace = name.trim(); const sel = document.getElementById('workspace-selector'); sel.innerHTML += `<option value="${currentWorkspace}">${currentWorkspace}</option>`; sel.value = currentWorkspace; startNewSession(); }
         }
 
-        async function switchSession(id, title) { if (id === currentSessionId && chatContainer.children.length > 1) return; currentSessionId = id; document.getElementById('mobile-title').innerText = title; chatContainer.innerHTML = ''; const lid = appendLoading("正在載入歷史對話..."); if (window.innerWidth < 768) toggleSidebar(); try { const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'load_session', session_id: id, workspace: currentWorkspace }) })).json(); removeLoading(lid); if (Array.isArray(d.logs)) d.logs.forEach(l => appendMessage(l.role === 'ai' ? 'ai' : 'user', l.text)); loadSessions(); loadWorkspaceContext(); loadSources(); } catch (e) {} }
+        async function switchSession(id, title) { 
+            if (id === currentSessionId && chatContainer.children.length > 1) return; 
+            currentSessionId = id; 
+            document.getElementById('mobile-title').innerText = title; 
+            chatContainer.innerHTML = ''; 
+            const lid = appendLoading("正在載入歷史對話..."); 
+            if (window.innerWidth < 768) toggleSidebar(); 
+            try { 
+                const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'load_session', session_id: id, workspace: currentWorkspace }) })).json(); 
+                removeLoading(lid); 
+                
+                // 重設並重新載入該對話的動態工具歷史
+                artifactHistory = [];
+                if (Array.isArray(d.logs)) {
+                    d.logs.forEach(l => {
+                        if (l.html_artifact && l.html_artifact.code) {
+                            if (!artifactHistory.some(a => a.name === l.html_artifact.name && a.code === l.html_artifact.code)) {
+                                artifactHistory.unshift({
+                                    name: l.html_artifact.name,
+                                    description: l.html_artifact.description,
+                                    code: l.html_artifact.code,
+                                    time: l.time || new Date()
+                                });
+                            }
+                        }
+                        appendMessage(
+                            l.role === 'ai' ? 'ai' : 'user', 
+                            l.text, 
+                            l.image ? `data:${l.mime || 'image/png'};base64,${l.image}` : null, 
+                            l.model || null, 
+                            l.html_presentation || null, 
+                            l.html_artifact || null
+                        );
+                    });
+                    
+                    // 設定當前預覽程式碼為該對話最新的動態工具
+                    if (artifactHistory.length > 0) {
+                        currentRenderCode = artifactHistory[0].code;
+                    } else {
+                        currentRenderCode = '';
+                    }
+                    
+                    // 若右側面板為開啟狀態，重新渲染右側面板內容 (包含工具歷史列表)
+                    const rightPanel = document.getElementById('right-panel');
+                    if (rightPanel && rightPanel.classList.contains('right-panel-open')) {
+                        renderRightPanelContent();
+                    }
+                }
+                
+                loadSessions(); 
+                loadWorkspaceContext(); 
+                loadSources(); 
+            } catch (e) {
+                console.error("載入對話紀錄失敗", e);
+            } 
+        }
         
         async function loadGems() { try { const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_gems', workspace: currentWorkspace }) })).json(); if (d && d.gems) { currentGemsList = d.gems; const s = document.getElementById('gem-selector'); s.innerHTML = '<option value="">🤖 全能助理</option>'; currentGemsList.forEach((g, i) => s.innerHTML += `<option value="${i}">💎 ${g.name}</option>`); } } catch (e) {} }
         
@@ -1675,6 +1730,8 @@
                     setTimeout(() => {
                         openHtmlArtifact({ name: "恢復預覽", description: "從分頁切換回來", code: currentRenderCode });
                     }, 50);
+                } else {
+                    renderArtifactHistory();
                 }
             } else if (currentRightTab === 'library') {
                 icon.innerText = 'inventory_2';
