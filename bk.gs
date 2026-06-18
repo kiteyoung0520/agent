@@ -2261,6 +2261,60 @@ function getOptimizedHistoryFB(db, wsName, sessionId) {
     } catch(e) { return []; }
 }
 
+function getOrCreateAnyGemFolder() {
+    const props = PropertiesService.getScriptProperties();
+    let folderId = props.getProperty('ANYGEM_FOLDER_ID');
+    if (folderId) {
+        try {
+            return DriveApp.getFolderById(folderId);
+        } catch(e) {
+            // Folder might have been deleted, recreate
+        }
+    }
+    
+    // Find or create "anyGem_Storage" folder
+    const folders = DriveApp.getFoldersByName("anyGem_Storage");
+    let folder;
+    if (folders.hasNext()) {
+        folder = folders.next();
+    } else {
+        folder = DriveApp.createFolder("anyGem_Storage");
+    }
+    folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    props.setProperty('ANYGEM_FOLDER_ID', folder.getId());
+    return folder;
+}
+
+function saveImageToDrive(base64Data, filename = "AI_Image.png") {
+    if (!base64Data) return null;
+    if (String(base64Data).startsWith("http")) return base64Data;
+    try {
+        const folder = getOrCreateAnyGemFolder();
+        const blob = Utilities.newBlob(Utilities.base64Decode(base64Data), "image/png", filename);
+        const file = folder.createFile(blob);
+        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        return `https://drive.google.com/uc?export=view&id=${file.getId()}`;
+    } catch(e) {
+        console.error("Save image to Drive failed:", e);
+        return null;
+    }
+}
+
+function saveArtifactToDrive(code, toolName) {
+    if (!code) return null;
+    try {
+        const folder = getOrCreateAnyGemFolder();
+        const safeName = String(toolName || "tool").replace(/[^a-zA-Z0-9_\u4e00-\u9fa5]/g, "_");
+        const filename = `${safeName}_${new Date().getTime()}.html`;
+        const file = folder.createFile(filename, code, MimeType.HTML);
+        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        return file.getId();
+    } catch(e) {
+        console.error("Save artifact to Drive failed:", e);
+        return null;
+    }
+}
+
 function logToFirebaseAndCache(db, wsName, sessionId, userMsg, aiReply, htmlPresentation = null, htmlArtifact = null, image = null, mime = null, model = null) {
     const lock = LockService.getScriptLock();
     try {
@@ -2272,14 +2326,39 @@ function logToFirebaseAndCache(db, wsName, sessionId, userMsg, aiReply, htmlPres
         if (aiReply) {
             const aiMsg = { role: "ai", text: aiReply };
             if (htmlPresentation) aiMsg.html_presentation = htmlPresentation;
-            if (htmlArtifact) aiMsg.html_artifact = htmlArtifact;
-            if (image) aiMsg.image = image;
-            if (mime) aiMsg.mime = mime;
+            
+            // 🚀 將動態工具代碼儲存至 Google Drive，Firestore 只保留 fileId
+            if (htmlArtifact) {
+                let driveFileId = htmlArtifact.fileId || null;
+                if (htmlArtifact.code) {
+                    driveFileId = saveArtifactToDrive(htmlArtifact.code, htmlArtifact.name);
+                }
+                aiMsg.html_artifact = {
+                    name: htmlArtifact.name,
+                    description: htmlArtifact.description,
+                    fileId: driveFileId
+                };
+            }
+            
+            // 🚀 將生成圖片儲存至 Google Drive，Firestore 只保留 URL 連結
+            if (image) {
+                const driveImageUrl = saveImageToDrive(image);
+                if (driveImageUrl) {
+                    aiMsg.image = driveImageUrl;
+                    aiMsg.isDriveImage = true;
+                } else {
+                    aiMsg.image = image;
+                }
+                aiMsg.mime = mime;
+            }
+            
             if (model) aiMsg.model = model;
             hist.push(aiMsg);
         }
         session.updated_at = new Date(); session.history_json = hist; db.write("sessions", sessionId, session);
-    } catch(e) {} finally { lock.releaseLock(); }
+    } catch(e) {
+        console.error("logToFirebaseAndCache 失敗:", e);
+    } finally { lock.releaseLock(); }
     try {
         const cache = CacheService.getScriptCache(); const cacheKey = `history_${wsName}_${sessionId}`; let currentHistory = cache.get(cacheKey);
         if (currentHistory) {
@@ -2508,6 +2587,17 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
                 }
                 return response({ status: "error", message: "Session not found" });
             } catch(e) { return response({ status: "error", message: e.toString() }); }
+        },
+        'get_artifact_code': () => {
+            const fileId = payload.file_id;
+            if (!fileId) return response({ status: "error", message: "缺少 file_id" });
+            try {
+                const file = DriveApp.getFileById(fileId);
+                const code = file.getAs("text/plain").getDataAsString();
+                return response({ status: "success", code: code });
+            } catch(e) {
+                return response({ status: "error", message: `讀取雲端檔案失敗: ${e.toString()}` });
+            }
         }
     };
     if (routeHandlers[action]) return routeHandlers[action](); else return response({status: "error", message: "Unknown action"});
