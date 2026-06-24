@@ -107,9 +107,40 @@ function doGet(e) {
             .setMimeType(ContentService.MimeType.JSON);
     }
     
-    // 💡 [預設網頁] 渲染 anyGem 主控網頁
-    return HtmlService.createHtmlOutputFromFile('index')
-        .setTitle('anyGem')
+    // 💡 [預設網頁] 當直接存取後端網址時，顯示運作狀態並提供前端連結（避免找不到 index 檔案的錯誤）
+    const frontendUrl = "https://kiteyoung0520.github.io/agent/";
+    const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>anyGem Backend API</title>
+            <style>
+                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #1a1a1a; color: #fff; text-align: center; }
+                .card { background-color: #2a2b2f; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); max-width: 400px; }
+                h1 { color: #8ab4f8; margin-top: 0; font-size: 24px; }
+                p { color: #ccc; font-size: 14px; line-height: 1.6; }
+                .btn { display: inline-block; margin-top: 20px; padding: 12px 24px; background-color: #38bdf8; color: #000; text-decoration: none; border-radius: 10px; font-weight: bold; transition: all 0.2s; }
+                .btn:hover { background-color: #0ea5e9; transform: scale(1.05); }
+            </style>
+            <script>
+                // 自動導向到前端網頁
+                setTimeout(function() {
+                    window.location.href = "${frontendUrl}";
+                }, 3000);
+            </script>
+        </head>
+        <body>
+            <div class="card">
+                <h1>anyGem 後端服務已啟動</h1>
+                <p>後端 API 正在正常運行中。系統將在 3 秒後自動導向至託管於 GitHub Pages 的前端網頁...</p>
+                <a class="btn" href="${frontendUrl}">立刻前往前端</a>
+            </div>
+        </body>
+        </html>
+    `;
+    return HtmlService.createHtmlOutput(htmlContent)
+        .setTitle('anyGem Backend')
         .addMetaTag('viewport', 'width=device-width, initial-scale=1')
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
