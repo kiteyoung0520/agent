@@ -442,7 +442,7 @@ const AGENT_TOOLS = [{
 
         { 
             name: "create_presentation", 
-            description: "【首席簡報總監】製作全新的互動式網頁簡報。\n\n🎨 核心設計哲學：版面與配色絕對不寫死！你必須先深度閱讀使用者的文字內容，從文義、情緒、產業、受眾出發，動態選擇最適合的視覺風格。\n\n設計選擇指南：\n- 科技/AI類 → cyber 風格 + 深藍/青色系\n- 商業/簡報類 → minimalist 風格 + 企業藍/灰色系\n- 教育/學術類 → rounded 風格 + 溫暖橙/棕色系\n- 創意/文化類 → layered 風格 + 高彩度撞色\n- 能源/環境類 → dynamic 風格 + 綠色/大地色系\n- 醫療/健康類 → rounded 風格 + 藍綠/白色系\n\n你可以呼叫 google_search 搜尋『[主題] 簡報設計 配色 [年份]』來獲取最新設計趨勢，再做出最佳選擇。",
+            description: "【首席簡報總監】直接在 Google Drive 中製作全新的 Google 簡報 (Google Slides)。此工具會自動生成真實的簡報檔案，並返回編輯與開啟網址。\n\n🎨 核心設計哲學：版面與配色絕對不寫死！你必須先深度閱讀使用者的文字內容，從文義、情緒、產業、受眾出發，動態選擇最適合的視覺風格。\n\n設計選擇指南：\n- 科技/AI類 → cyber 風格 + 深藍/青色系\n- 商業/簡報類 → minimalist 風格 + 企業藍/灰色系\n- 教育/學術類 → rounded 風格 + 溫暖橙/棕色系\n- 創意/文化類 → layered 風格 + 高彩度撞色\n- 能源/環境類 → dynamic 風格 + 綠色/大地色系\n- 醫療/健康類 → rounded 風格 + 藍綠/白色系\n\n你可以呼叫 google_search 搜尋『[主題] 簡報設計 配色 [年份]』來獲取最新設計趨勢，再做出最佳選擇。",
             parameters: { 
                 type: "OBJECT", 
                 properties: { 
@@ -733,7 +733,7 @@ function doPost(e) {
         let wsName = String(workspace || "").trim();
         if (!wsName) {
             const excluded = [BASE_CONFIG.SETTING_SHEET_NAME, "Gems", "Models"];
-            const validSheets = ss.getSheets().filter(sh => !excluded.includes(sh.getName()));
+            const validSheets = ss.getSheets().filter(sh => !excluded.includes(sh.getName()) && !sh.getName().startsWith("_db_"));
             wsName = validSheets.length > 0 ? validSheets[0].getName() : "Main_Workspace";
         }
 
@@ -823,6 +823,7 @@ function doPost(e) {
 
         const agentResult = runAutonomousAgentLoop({
             ss: ss, apiKey: apiKey, prompt: finalMessage, model: modelId,
+            wsName: wsName,
             systemInstruction: finalSystemInstruction, history: history, tools: finalTools,
             imageData: file_data ? { mimeType: mime_type, data: file_data } : null,
             artistModel: CONFIG.MODEL_ARTIST || "gemini-3.1-flash-image-preview",
@@ -943,6 +944,7 @@ function handleLineWebhook(payload, ss, apiKey, lineToken, CONFIG, db) {
                 const agentResult = runAutonomousAgentLoop({
                     ss: ss, apiKey: apiKey, prompt: actualMessage, 
                     model: CONFIG.MODEL_LINE || fallbackModel,
+                    wsName: wsName,
                     systemInstruction: finalSystemInstruction, history: history, tools: finalTools,
                     imageData: fileData, 
                     artistModel: CONFIG.MODEL_ARTIST || "gemini-3.1-flash-image-preview",
@@ -1633,7 +1635,18 @@ function runAutonomousAgentLoop(config) {
                                     if (idMatch && idMatch[0]) targetSsForRead = SpreadsheetApp.openById(idMatch[0]);
                                     else throw new Error("無法解析的試算表網址");
                                 }
-                                const rsh = args.sheetName ? targetSsForRead.getSheetByName(args.sheetName) : targetSsForRead.getSheets()[0];
+                                let rsh;
+                                if (args.sheetName) {
+                                    rsh = targetSsForRead.getSheetByName(args.sheetName);
+                                } else {
+                                    const currentWs = config.wsName || "";
+                                    if (currentWs) rsh = targetSsForRead.getSheetByName(currentWs);
+                                    if (!rsh) {
+                                        const excluded = [BASE_CONFIG.SETTING_SHEET_NAME, "Gems", "Models"];
+                                        const validSheets = targetSsForRead.getSheets().filter(sh => !excluded.includes(sh.getName()) && !sh.getName().startsWith("_db_"));
+                                        rsh = validSheets.length > 0 ? validSheets[0] : targetSsForRead.getSheets()[0];
+                                    }
+                                }
                                 if (!rsh) throw new Error("找不到指定的工作表");
                                 
                                 let sheetData = (!args.range || args.range === 'ALL') ? rsh.getDataRange().getDisplayValues() : rsh.getRange(args.range).getDisplayValues();
@@ -1798,16 +1811,17 @@ function runAutonomousAgentLoop(config) {
                                 toolResult = { isTerminal: true, reply: `⚠️ **簡報建立失敗**\n\n簡報資料格式錯誤，無法解析內容：\n${e.toString()}` }; break; 
                             }
                             
-                            toolResult = { 
-                                isTerminal: true, 
-                                reply: `✨ **互動式網頁簡報已生成！**\n\n您可以直接在畫面中點擊文字進行修改。若需匯出為真正的 Google 簡報，請點擊畫面右上角的「匯出 Google 簡報」按鈕。`,
-                                html_presentation_data: {
-                                    topic: args.topic,
-                                    theme: themeToUse,
-                                    style: args.shapeStyle || 'minimalist',
-                                    slides: parsedData
-                                }
-                            };
+                            try {
+                                const isAutoImage = config.configData ? config.configData.autoImageEnabled : true;
+                                const pid = createGeometricSlides(args.topic, parsedData, themeToUse, args.shapeStyle || 'minimalist', isAutoImage, config.apiKey, config.artistModel);
+                                const presentationUrl = `https://docs.google.com/presentation/d/${pid}/edit`;
+                                toolResult = {
+                                    isTerminal: true,
+                                    reply: `🎉 **您的 Google 簡報已直接在雲端生成完成！**\n\n主題：${args.topic}\n投影片數量：${parsedData.length} 頁\n幾何風格：${args.shapeStyle || 'minimalist'}\n\n🔗 **[點擊開啟 Google 簡報](${presentationUrl})**`
+                                };
+                            } catch(e) {
+                                toolResult = { isTerminal: true, reply: `❌ **直接生成 Google 簡報失敗：**\n\n底層錯誤: ${e.toString()}` };
+                            }
                             break;
                         case "update_presentation":
                             let presIdMatch = args.presentationUrl.match(/[-\w]{25,}/);
@@ -2405,7 +2419,7 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
     const routeHandlers = {
         'get_workspaces': () => {
             const excluded = [BASE_CONFIG.SETTING_SHEET_NAME, "Gems", "Models"];
-            const workspaces = ss.getSheets().map(sh => sh.getName()).filter(name => !excluded.includes(name));
+            const workspaces = ss.getSheets().map(sh => sh.getName()).filter(name => !excluded.includes(name) && !name.startsWith("_db_"));
             return response({ workspaces: workspaces });
         },
         'move_session': () => {
@@ -3098,7 +3112,7 @@ function addMaterialIcon(slide, keyword, x, y, size, color) {
     style.setFontSize(size);
     style.setForegroundColor(color);
     style.setFontFamily("Material Icons"); 
-    box.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER);
+    txt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER);
     box.setContentAlignment(SlidesApp.ContentAlignment.MIDDLE);
     return box;
     return box;

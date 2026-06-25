@@ -84,18 +84,17 @@ function doGet(e) {
             diag.spreadsheet.LINE_CHANNEL_ACCESS_TOKEN_in_settings_exists = !!settings['LINE_CHANNEL_ACCESS_TOKEN'];
         } catch(err) { diag.spreadsheet.error = err.toString(); }
         
-        // 3. 檢查 Firebase
+        // 3. 檢查 Sheet 儲存庫
         try {
-            const db = new FirebaseClient();
-            diag.firebase.projectId = db.projectId;
-            diag.firebase.apiKey_exists = !!db.apiKey;
-            if (db.apiKey && db.projectId) {
-                const testGet = db.get("sessions", "line_verify_test");
-                diag.firebase.connection = "ok (authenticated)";
-            } else {
-                diag.firebase.connection = "failed (credentials missing)";
-            }
-        } catch(err) { diag.firebase.error = err.toString(); }
+            const db = new SheetDbClient();
+            const testGet = db.get("sessions", "line_verify_test");
+            diag.sheet_db = {
+                status: "ok",
+                sessions_count: db.ss.getSheetByName("_db_sessions") ? db.ss.getSheetByName("_db_sessions").getLastRow() - 1 : 0,
+                sources_count: db.ss.getSheetByName("_db_sources") ? db.ss.getSheetByName("_db_sources").getLastRow() - 1 : 0,
+                context_count: db.ss.getSheetByName("_db_context") ? db.ss.getSheetByName("_db_context").getLastRow() - 1 : 0
+            };
+        } catch(err) { diag.sheet_db = { status: "error", error: err.toString() }; }
         
         return ContentService.createTextOutput(JSON.stringify(diag, null, 2))
             .setMimeType(ContentService.MimeType.JSON);
@@ -150,98 +149,116 @@ const PPT_THEMES = {
 };
 
 // ==========================================
-// 🚀 Firebase 輕量化 REST 用戶端 (具備重試機制)
+// 🚀 Google Sheets 輕量化資料庫用戶端 (SheetDbClient)
 // ==========================================
-class FirebaseClient {
+class SheetDbClient {
     constructor() {
-        const props = PropertiesService.getScriptProperties();
-        this.projectId = props.getProperty('FB_PROJECT_ID');
-        this.apiKey = props.getProperty('FB_API_KEY');
-        
-        if (!this.projectId || !this.apiKey) {
-            console.error("Missing Firebase Credentials. 請先設定腳本屬性 FB_PROJECT_ID 與 FB_API_KEY。");
-        }
-        this.baseUrl = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents`;
+        const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID') || BASE_CONFIG.SHEET_ID;
+        this.ss = SpreadsheetApp.openById(sheetId);
     }
-
-    fetchWithRetry(url, options, retries = 3) {
-        for (let i = 0; i < retries; i++) {
-            try {
-                const res = UrlFetchApp.fetch(url, options);
-                if (res.getResponseCode() === 200 || res.getResponseCode() === 404) return res;
-            } catch (e) {
-                if (i === retries - 1) {
-                    console.error("Firebase API Error after retries:", e.toString());
-                    return null;
-                }
-            }
-            Utilities.sleep(Math.pow(2, i) * 1000);
+    
+    getOrCreateSheet(name, headers) {
+        let sheet = this.ss.getSheetByName(name);
+        if (!sheet) {
+            sheet = this.ss.insertSheet(name);
+            sheet.appendRow(headers);
+            sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold");
         }
-        return null;
+        return sheet;
     }
-
+    
     write(collection, docId, data) {
-        if (!this.apiKey) return false;
-        const encodedId = encodeURIComponent(docId);
-        const url = `${this.baseUrl}/${collection}/${encodedId}?key=${this.apiKey}`;
-        const options = {
-            method: "patch", 
-            contentType: "application/json",
-            payload: JSON.stringify({ fields: this._formatData(data) }),
-            muteHttpExceptions: true
-        };
-        const res = this.fetchWithRetry(url, options);
-        return res && res.getResponseCode() === 200;
+        const lock = LockService.getScriptLock();
+        try {
+            lock.waitLock(10000);
+            const headers = this.getHeaders(collection);
+            const sheet = this.getOrCreateSheet("_db_" + collection, headers);
+            const values = sheet.getDataRange().getValues();
+            
+            // 尋找符合 docId 的列（預設第一欄為 ID）
+            let rowIndex = -1;
+            for (let i = 1; i < values.length; i++) {
+                if (String(values[i][0]) === String(docId)) {
+                    rowIndex = i + 1; // 轉為 1-based index
+                    break;
+                }
+            }
+            
+            // 對齊表頭將欄位資料填入
+            const rowData = headers.map(header => {
+                if (header === "id" || header === "session_id") return docId;
+                let val = data[header];
+                if (val === undefined || val === null) return "";
+                if (typeof val === "object" || Array.isArray(val)) return JSON.stringify(val);
+                if (val instanceof Date) return val.toISOString();
+                return val;
+            });
+            
+            if (rowIndex !== -1) {
+                // 更新現有資料列
+                sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
+            } else {
+                // 新增一列
+                sheet.appendRow(rowData);
+            }
+            return true;
+        } catch (e) {
+            console.error("SheetDb write failed:", e);
+            return false;
+        } finally {
+            lock.releaseLock();
+        }
     }
-
+    
     get(collection, docId) {
-        if (!this.apiKey) return null;
-        const encodedId = encodeURIComponent(docId);
-        const url = `${this.baseUrl}/${collection}/${encodedId}?key=${this.apiKey}`;
-        const res = this.fetchWithRetry(url, { muteHttpExceptions: true });
-        if (res && res.getResponseCode() === 200) {
-            return this._parseData(JSON.parse(res.getContentText()).fields);
+        const headers = this.getHeaders(collection);
+        const sheet = this.ss.getSheetByName("_db_" + collection);
+        if (!sheet) return null;
+        const values = sheet.getDataRange().getValues();
+        
+        for (let i = 1; i < values.length; i++) {
+            if (String(values[i][0]) === String(docId)) {
+                return this.parseRow(headers, values[i]);
+            }
         }
         return null;
     }
-
+    
     delete(collection, docId) {
-        if (!this.apiKey) return;
-        const encodedId = encodeURIComponent(docId);
-        const url = `${this.baseUrl}/${collection}/${encodedId}?key=${this.apiKey}`;
-        this.fetchWithRetry(url, { method: "delete", muteHttpExceptions: true });
-    }
-
-    querySessions(workspace) {
-        if (!this.apiKey) return [];
-        const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents:runQuery?key=${this.apiKey}`;
-        const payload = {
-            structuredQuery: {
-                from: [{ collectionId: "sessions" }],
-                where: {
-                    fieldFilter: { field: { fieldPath: "workspace" }, op: "EQUAL", value: { stringValue: workspace } }
-                },
-                limit: 300
-            }
-        };
-        const res = this.fetchWithRetry(url, {
-            method: "post", contentType: "application/json", payload: JSON.stringify(payload), muteHttpExceptions: true
-        });
-        
-        if (!res) return [];
-        const json = JSON.parse(res.getContentText());
-        const results = [];
-        if (Array.isArray(json)) {
-            json.forEach(item => {
-                if (item.document && item.document.fields) {
-                    const d = this._parseData(item.document.fields);
-                    const docId = item.document.name.split('/').pop();
-                    if (!d.session_id) d.session_id = docId;
-                    results.push(d);
+        const lock = LockService.getScriptLock();
+        try {
+            lock.waitLock(10000);
+            const sheet = this.ss.getSheetByName("_db_" + collection);
+            if (!sheet) return;
+            const values = sheet.getDataRange().getValues();
+            for (let i = 1; i < values.length; i++) {
+                if (String(values[i][0]) === String(docId)) {
+                    sheet.deleteRow(i + 1);
+                    break;
                 }
-            });
+            }
+        } catch (e) {
+            console.error("SheetDb delete failed:", e);
+        } finally {
+            lock.releaseLock();
+        }
+    }
+    
+    querySessions(workspace) {
+        const headers = this.getHeaders("sessions");
+        const sheet = this.ss.getSheetByName("_db_sessions");
+        if (!sheet) return [];
+        const values = sheet.getDataRange().getValues();
+        const results = [];
+        
+        for (let i = 1; i < values.length; i++) {
+            const data = this.parseRow(headers, values[i]);
+            if (data.workspace === workspace) {
+                results.push(data);
+            }
         }
         
+        // 排序：有釘選的優先，其餘照更新時間倒序
         results.sort((a, b) => {
             if (a.pinned && !b.pinned) return -1;
             if (!a.pinned && b.pinned) return 1;
@@ -251,88 +268,78 @@ class FirebaseClient {
         });
         return results.slice(0, 50);
     }
-
+    
     querySources(workspace) {
-        if (!this.apiKey) return [];
-        const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents:runQuery?key=${this.apiKey}`;
-        const payload = {
-            structuredQuery: {
-                from: [{ collectionId: "sources" }],
-                where: {
-                    fieldFilter: { field: { fieldPath: "workspace" }, op: "EQUAL", value: { stringValue: workspace } }
-                }
-            }
-        };
-        const res = this.fetchWithRetry(url, {
-            method: "post", contentType: "application/json", payload: JSON.stringify(payload), muteHttpExceptions: true
-        });
-        if (!res) return [];
-        const json = JSON.parse(res.getContentText());
+        const headers = this.getHeaders("sources");
+        const sheet = this.ss.getSheetByName("_db_sources");
+        if (!sheet) return [];
+        const values = sheet.getDataRange().getValues();
         const results = [];
-        if (Array.isArray(json)) {
-            json.forEach(item => {
-                if (item.document && item.document.fields) {
-                    const d = this._parseData(item.document.fields);
-                    d.id = item.document.name.split('/').pop();
-                    results.push(d);
-                }
-            });
+        for (let i = 1; i < values.length; i++) {
+            const data = this.parseRow(headers, values[i]);
+            if (data.workspace === workspace) {
+                results.push(data);
+            }
         }
         return results;
     }
-
+    
     queryContext(workspace) {
-        if (!this.apiKey) return [];
-        const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents:runQuery?key=${this.apiKey}`;
-        const payload = {
-            structuredQuery: {
-                from: [{ collectionId: "context" }],
-                where: {
-                    fieldFilter: { field: { fieldPath: "workspace" }, op: "EQUAL", value: { stringValue: workspace } }
-                }
-            }
-        };
-        const res = this.fetchWithRetry(url, {
-            method: "post", contentType: "application/json", payload: JSON.stringify(payload), muteHttpExceptions: true
-        });
-        if (!res) return [];
-        const json = JSON.parse(res.getContentText());
+        const headers = this.getHeaders("context");
+        const sheet = this.ss.getSheetByName("_db_context");
+        if (!sheet) return [];
+        const values = sheet.getDataRange().getValues();
         const results = [];
-        if (Array.isArray(json)) {
-            json.forEach(item => {
-                if (item.document && item.document.fields) {
-                    const d = this._parseData(item.document.fields);
-                    d.id = item.document.name.split('/').pop();
-                    results.push(d);
-                }
-            });
+        for (let i = 1; i < values.length; i++) {
+            const data = this.parseRow(headers, values[i]);
+            if (data.workspace === workspace) {
+                results.push(data);
+            }
         }
         return results;
     }
-
-    _formatData(data) {
-        const fields = {};
-        for (const [key, value] of Object.entries(data)) {
-            if (value === null || value === undefined) continue;
-            if (typeof value === 'string') fields[key] = { stringValue: value };
-            else if (typeof value === 'number') fields[key] = { doubleValue: value };
-            else if (typeof value === 'boolean') fields[key] = { booleanValue: value };
-            else if (value instanceof Date) fields[key] = { timestampValue: value.toISOString() };
-            else fields[key] = { stringValue: JSON.stringify(value) };
+    
+    getHeaders(collection) {
+        if (collection === "sessions") {
+            return ["session_id", "workspace", "title", "customTitle", "pinned", "history_json", "updated_at"];
+        } else if (collection === "sources") {
+            return ["id", "workspace", "title", "url", "type", "content", "created_at"];
+        } else if (collection === "context") {
+            return ["id", "workspace", "text", "created_at"];
         }
-        return fields;
+        return ["id"];
     }
-
-    _parseData(fields) {
+    
+    parseRow(headers, row) {
         const data = {};
-        if (!fields) return data;
-        for (const [key, value] of Object.entries(fields)) {
-            if (value.stringValue !== undefined) data[key] = value.stringValue;
-            else if (value.doubleValue !== undefined) data[key] = value.doubleValue;
-            else if (value.integerValue !== undefined) data[key] = Number(value.integerValue);
-            else if (value.booleanValue !== undefined) data[key] = value.booleanValue;
-            else if (value.timestampValue !== undefined) data[key] = new Date(value.timestampValue);
-        }
+        headers.forEach((header, index) => {
+            let val = row[index];
+            if (val === "" || val === undefined || val === null) {
+                data[header] = "";
+                return;
+            }
+            if (header === "pinned") {
+                data[header] = (val === "true" || val === true);
+                return;
+            }
+            if (header === "history_json") {
+                try {
+                    data[header] = JSON.parse(val);
+                } catch(e) {
+                    data[header] = val;
+                }
+                return;
+            }
+            if (header === "updated_at" || header === "created_at") {
+                try {
+                    data[header] = new Date(val);
+                } catch(e) {
+                    data[header] = val;
+                }
+                return;
+            }
+            data[header] = val;
+        });
         return data;
     }
 }
@@ -442,7 +449,7 @@ const AGENT_TOOLS = [{
 
         { 
             name: "create_presentation", 
-            description: "【首席簡報總監】製作全新的互動式網頁簡報。\n\n🎨 核心設計哲學：版面與配色絕對不寫死！你必須先深度閱讀使用者的文字內容，從文義、情緒、產業、受眾出發，動態選擇最適合的視覺風格。\n\n設計選擇指南：\n- 科技/AI類 → cyber 風格 + 深藍/青色系\n- 商業/簡報類 → minimalist 風格 + 企業藍/灰色系\n- 教育/學術類 → rounded 風格 + 溫暖橙/棕色系\n- 創意/文化類 → layered 風格 + 高彩度撞色\n- 能源/環境類 → dynamic 風格 + 綠色/大地色系\n- 醫療/健康類 → rounded 風格 + 藍綠/白色系\n\n你可以呼叫 google_search 搜尋『[主題] 簡報設計 配色 [年份]』來獲取最新設計趨勢，再做出最佳選擇。",
+            description: "【首席簡報總監】直接在 Google Drive 中製作全新的 Google 簡報 (Google Slides)。此工具會自動生成真實的簡報檔案，並返回編輯與開啟網址。\n\n🎨 核心設計哲學：版面與配色絕對不寫死！你必須先深度閱讀使用者的文字內容，從文義、情緒、產業、受眾出發，動態選擇最適合的視覺風格。\n\n設計選擇指南：\n- 科技/AI類 → cyber 風格 + 深藍/青色系\n- 商業/簡報類 → minimalist 風格 + 企業藍/灰色系\n- 教育/學術類 → rounded 風格 + 溫暖橙/棕色系\n- 創意/文化類 → layered 風格 + 高彩度撞色\n- 能源/環境類 → dynamic 風格 + 綠色/大地色系\n- 醫療/健康類 → rounded 風格 + 藍綠/白色系\n\n你可以呼叫 google_search 搜尋『[主題] 簡報設計 配色 [年份]』來獲取最新設計趨勢，再做出最佳選擇。",
             parameters: { 
                 type: "OBJECT", 
                 properties: { 
@@ -722,7 +729,7 @@ function doPost(e) {
         const CONFIG = { ...BASE_CONFIG, ...loadSettings(ss) };
         const apiKey = getAccumulatedGeminiApiKeys(CONFIG);
         const lineToken = PropertiesService.getScriptProperties().getProperty('LINE_CHANNEL_ACCESS_TOKEN') || CONFIG.LINE_CHANNEL_ACCESS_TOKEN;
-        const db = new FirebaseClient();
+        const db = new SheetDbClient();
 
         // 👑 處理真實的 LINE 用戶對話
         if (payload.events && Array.isArray(payload.events)) {
@@ -733,7 +740,7 @@ function doPost(e) {
         let wsName = String(workspace || "").trim();
         if (!wsName) {
             const excluded = [BASE_CONFIG.SETTING_SHEET_NAME, "Gems", "Models"];
-            const validSheets = ss.getSheets().filter(sh => !excluded.includes(sh.getName()));
+            const validSheets = ss.getSheets().filter(sh => !excluded.includes(sh.getName()) && !sh.getName().startsWith("_db_"));
             wsName = validSheets.length > 0 ? validSheets[0].getName() : "Main_Workspace";
         }
 
@@ -823,6 +830,7 @@ function doPost(e) {
 
         const agentResult = runAutonomousAgentLoop({
             ss: ss, apiKey: apiKey, prompt: finalMessage, model: modelId,
+            wsName: wsName,
             systemInstruction: finalSystemInstruction, history: history, tools: finalTools,
             imageData: file_data ? { mimeType: mime_type, data: file_data } : null,
             artistModel: CONFIG.MODEL_ARTIST || "gemini-3.1-flash-image-preview",
@@ -943,6 +951,7 @@ function handleLineWebhook(payload, ss, apiKey, lineToken, CONFIG, db) {
                 const agentResult = runAutonomousAgentLoop({
                     ss: ss, apiKey: apiKey, prompt: actualMessage, 
                     model: CONFIG.MODEL_LINE || fallbackModel,
+                    wsName: wsName,
                     systemInstruction: finalSystemInstruction, history: history, tools: finalTools,
                     imageData: fileData, 
                     artistModel: CONFIG.MODEL_ARTIST || "gemini-3.1-flash-image-preview",
@@ -1633,7 +1642,18 @@ function runAutonomousAgentLoop(config) {
                                     if (idMatch && idMatch[0]) targetSsForRead = SpreadsheetApp.openById(idMatch[0]);
                                     else throw new Error("無法解析的試算表網址");
                                 }
-                                const rsh = args.sheetName ? targetSsForRead.getSheetByName(args.sheetName) : targetSsForRead.getSheets()[0];
+                                let rsh;
+                                if (args.sheetName) {
+                                    rsh = targetSsForRead.getSheetByName(args.sheetName);
+                                } else {
+                                    const currentWs = config.wsName || "";
+                                    if (currentWs) rsh = targetSsForRead.getSheetByName(currentWs);
+                                    if (!rsh) {
+                                        const excluded = [BASE_CONFIG.SETTING_SHEET_NAME, "Gems", "Models"];
+                                        const validSheets = targetSsForRead.getSheets().filter(sh => !excluded.includes(sh.getName()) && !sh.getName().startsWith("_db_"));
+                                        rsh = validSheets.length > 0 ? validSheets[0] : targetSsForRead.getSheets()[0];
+                                    }
+                                }
                                 if (!rsh) throw new Error("找不到指定的工作表");
                                 
                                 let sheetData = (!args.range || args.range === 'ALL') ? rsh.getDataRange().getDisplayValues() : rsh.getRange(args.range).getDisplayValues();
@@ -1798,16 +1818,17 @@ function runAutonomousAgentLoop(config) {
                                 toolResult = { isTerminal: true, reply: `⚠️ **簡報建立失敗**\n\n簡報資料格式錯誤，無法解析內容：\n${e.toString()}` }; break; 
                             }
                             
-                            toolResult = { 
-                                isTerminal: true, 
-                                reply: `✨ **互動式網頁簡報已生成！**\n\n您可以直接在畫面中點擊文字進行修改。若需匯出為真正的 Google 簡報，請點擊畫面右上角的「匯出 Google 簡報」按鈕。`,
-                                html_presentation_data: {
-                                    topic: args.topic,
-                                    theme: themeToUse,
-                                    style: args.shapeStyle || 'minimalist',
-                                    slides: parsedData
-                                }
-                            };
+                            try {
+                                const isAutoImage = config.configData ? config.configData.autoImageEnabled : true;
+                                const pid = createGeometricSlides(args.topic, parsedData, themeToUse, args.shapeStyle || 'minimalist', isAutoImage, config.apiKey, config.artistModel);
+                                const presentationUrl = `https://docs.google.com/presentation/d/${pid}/edit`;
+                                toolResult = {
+                                    isTerminal: true,
+                                    reply: `🎉 **您的 Google 簡報已直接在雲端生成完成！**\n\n主題：${args.topic}\n投影片數量：${parsedData.length} 頁\n幾何風格：${args.shapeStyle || 'minimalist'}\n\n🔗 **[點擊開啟 Google 簡報](${presentationUrl})**`
+                                };
+                            } catch(e) {
+                                toolResult = { isTerminal: true, reply: `❌ **直接生成 Google 簡報失敗：**\n\n底層錯誤: ${e.toString()}` };
+                            }
                             break;
                         case "update_presentation":
                             let presIdMatch = args.presentationUrl.match(/[-\w]{25,}/);
@@ -2386,6 +2407,9 @@ function logToFirebaseAndCache(db, wsName, sessionId, userMsg, aiReply, htmlPres
             if (model) aiMsg.model = model;
             hist.push(aiMsg);
         }
+        if (hist.length > 100) {
+            hist = hist.slice(hist.length - 100);
+        }
         session.updated_at = new Date(); session.history_json = hist; db.write("sessions", sessionId, session);
     } catch(e) {
         console.error("logToFirebaseAndCache 失敗:", e);
@@ -2405,7 +2429,7 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
     const routeHandlers = {
         'get_workspaces': () => {
             const excluded = [BASE_CONFIG.SETTING_SHEET_NAME, "Gems", "Models"];
-            const workspaces = ss.getSheets().map(sh => sh.getName()).filter(name => !excluded.includes(name));
+            const workspaces = ss.getSheets().map(sh => sh.getName()).filter(name => !excluded.includes(name) && !name.startsWith("_db_"));
             return response({ workspaces: workspaces });
         },
         'move_session': () => {
@@ -3098,7 +3122,7 @@ function addMaterialIcon(slide, keyword, x, y, size, color) {
     style.setFontSize(size);
     style.setForegroundColor(color);
     style.setFontFamily("Material Icons"); 
-    box.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER);
+    txt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER);
     box.setContentAlignment(SlidesApp.ContentAlignment.MIDDLE);
     return box;
     return box;
