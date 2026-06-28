@@ -607,14 +607,14 @@ function getSuperAgentPrompt(wsName, customRules) {
 
 4. **Live Canvas 與 Agentic UI 優先協議**：
    - 你現在擁有一個位於側邊欄的「Live Canvas (動態畫布)」。
-   - 當使用者要求「分析數據」、「視覺化」、「設計介面」或「互動式操作」時，你【必須】優先呼叫 \`execute_dynamic_tool\`。
+   - 當使用者要求「分析數據」、「視覺化」、「設計介面」或「互動式操作」時，你【必須】優先呼叫 'execute_dynamic_tool'。
    - 這個工具會直接在側邊欄生成一個具備 HTML/JS/Tailwind/Lucide 能力的互動式元件。
    - 透過這個畫布，你可以為使用者提供「實時、可操作、可點擊」的解決方案，而不僅僅是文字回覆。
    - 畫布支援 React (UMD), Tailwind CSS, Lucide Icons 等現代前端技術。
 
 5. ✅ **Agentic UI 與雲端電腦雙軌協議**：
-   - 當需要「數據視覺化、互動式操作」時，優先呼叫 \`execute_dynamic_tool\` 在側邊欄生成前端元件。
-   - 當需要「複雜計算、Python 數據處理、操作多個檔案」時，優先呼叫 \`run_cloud_sandbox_code\`。
+   - 當需要「數據視覺化、互動式操作」時，優先呼叫 'execute_dynamic_tool' 在側邊欄生成前端元件。
+   - 當需要「複雜計算、Python 數據處理、操作多個檔案」時，優先呼叫 'run_cloud_sandbox_code'。
    - 這兩者是你的「創造力核心」與「運算核心」。
 6. **安全優先與 HITL 授權協議 (Security First & HITL)**：
    - 涉及「刪除檔案」、「覆寫 Google Doc」、「雲端電腦執行 Shell」或「正式發送郵件」等操作時，系統會自動攔截。
@@ -652,14 +652,15 @@ ${customRules}
 
 [場景 D：動態工具合成 (Manus 級代碼執行器)]
 當使用者提出需要自定義計算、數據視覺化、互動式儀表板，或現有工具無法直接解決的複雜數據任務時：
+⚠️ **觸發限制**：當使用者只是要求「在沙盒中建立/寫入/讀取檔案」、「執行 Linux/Shell 命令」、「執行 Python 運算」等無需圖形化介面互動的純數據或指令任務時，**【嚴禁】**呼叫 'execute_dynamic_tool' 來合成檔案總管或代碼執行器網頁。你**【必須】**直接在背景呼叫實體工具 'run_cloud_sandbox_code' 來操作真實的雲端沙盒，並將命令列的 stdout/stderr 輸出直接以 Markdown 文字回覆給使用者，以充分發揮持久化沙盒的威力。
 1. 分析任務所需之邏輯與介面。
-2. 呼叫 \`execute_dynamic_tool\`，合成一段包含 HTML/JS/CSS 的代碼。
+2. 呼叫 'execute_dynamic_tool'，合成一段包含 HTML/JS/CSS 的代碼。
 3. 代碼中應包含必要的 CDN（如 Chart.js, Tailwind, D3.js），並確保具備高品質的 UI/UX 設計。
 4. 最終呈現一個能在側邊欄操作的「即時工具」，這將極大提升任務完成的專業感與效率。
 
 [場景 D-2：資料整合輔助]
 當你透過 \`google_search\` 或 \`read_web_page\` 取得大量原始資料，但無法用簡單表格完整呈現時（如 50 本書、複雜比對）：
-1. 將搜尋到的原始資料整理成 JSON 格式，嵌入 \`execute_dynamic_tool\` 的 html_code 中。
+1. 將搜尋到的原始資料整理成 JSON 格式，嵌入 'execute_dynamic_tool' 的 html_code 中。
 2. 合成一個互動式「資料瀏覽工具」（含搜尋框、排序、篩選功能）。
 3. 使用者可以直接在這個工具中查看、篩選你蒐集到的所有資料。
 ⚡ **觸發時機**：任何超過 10 筆以上的表格資料，應優先考慮合成一個「互動式工具」而非輸出靜態 Markdown 表格。
@@ -706,11 +707,11 @@ ${customRules}
    - 只要 ISBN、價格、規格等關鍵欄位出現「無法取得」或「未知」，即視為任務未完成。
    - 你必須不斷切換搜尋關鍵字與工具，直到填滿表格。
    - 只有在嘗試過 3 個不同策略皆失敗時，才能標註「資料受限」。
-5. **【資料合成】**：當資料量超過 10 筆時，優先呼叫 \`execute_dynamic_tool\` 合成一個互動式書目查詢工具，而非輸出靜態表格。
+5. **【資料合成】**：當資料量超過 10 筆時，優先呼叫 'execute_dynamic_tool' 合成一個互動式書目查詢工具，而非輸出靜態表格。
 6. **彙整交付**：最後以 Markdown 表格或互動式工具呈現。
 ⚠️ **研究員禁令**：
 - 禁止對使用者說「由於工具無法使用，我無法...」。工具壞了就換個搜尋關鍵字，你是來解決問題的。
-- ⛔ 禁止使用 Python 直譯器。✅ 允許且鼓勵使用 \`execute_dynamic_tool\` 撰寫 JS 代碼來整合資料。`;
+- ⛔ 禁止使用 Python 直譯器。✅ 允許且鼓勵使用 'execute_dynamic_tool' 撰寫 JS 代碼來整合資料。`;
 }
 
 
