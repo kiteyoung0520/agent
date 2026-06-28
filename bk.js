@@ -1871,7 +1871,7 @@ function runAutonomousAgentLoop(config) {
                                 let finalOutput = "";
                                 
                                 if (sandboxApiKey && sandboxApiKey !== "null") {
-                                                                                                            // --- 方案 A: E2B (強大、支援檔案系統且持久化) ---
+                                                                                                                                                // --- 方案 A: E2B (強大、支援檔案系統且持久化) ---
                                     try {
                                         const sandboxUrl = "https://api.e2b.app/sandboxes";
                                         const headers = { 
@@ -1904,25 +1904,104 @@ function runAutonomousAgentLoop(config) {
                                             PropertiesService.getScriptProperties().setProperty(sessionKey, sandboxID);
                                         }
                                         
+                                        // 定義內建 Connect RPC 執行命令函數
+                                        const runConnectRpc = function(apiKey, id, commandStr) {
+                                            const payload = {
+                                                process: {
+                                                    cmd: "/bin/bash",
+                                                    args: ["-c", commandStr]
+                                                }
+                                            };
+                                            const jsonStr = JSON.stringify(payload);
+                                            const jsonBytes = Utilities.newBlob(jsonStr).getBytes();
+                                            const len = jsonBytes.length;
+                                            
+                                            const toSigned = function(val) { return val > 127 ? val - 256 : val; };
+                                            const headerBytes = [
+                                                0,
+                                                toSigned((len >> 24) & 0xFF),
+                                                toSigned((len >> 16) & 0xFF),
+                                                toSigned((len >> 8) & 0xFF),
+                                                toSigned(len & 0xFF)
+                                            ];
+                                            
+                                            const totalBytes = headerBytes.concat(jsonBytes);
+                                            const blob = Utilities.newBlob(totalBytes);
+                                            
+                                            const rpcUrl = "https://sandbox.e2b.app/process.Process/Start";
+                                            const rpcHeaders = {
+                                                "X-API-Key": apiKey,
+                                                "E2b-Sandbox-Id": id,
+                                                "E2b-Sandbox-Port": "49983",
+                                                "Content-Type": "application/connect+json",
+                                                "connect-protocol-version": "1"
+                                            };
+                                            
+                                            const response = UrlFetchApp.fetch(rpcUrl, {
+                                                method: "post",
+                                                headers: rpcHeaders,
+                                                payload: blob,
+                                                muteHttpExceptions: true
+                                            });
+                                            
+                                            if (response.getResponseCode() !== 200) {
+                                                throw new Error("Connect RPC failed: " + response.getContentText());
+                                            }
+                                            
+                                            const responseBytes = response.getContent();
+                                            let offset = 0;
+                                            let stdout = "";
+                                            let stderr = "";
+                                            
+                                            while (offset < responseBytes.length) {
+                                                if (offset + 5 > responseBytes.length) break;
+                                                const flags = responseBytes[offset];
+                                                const msgLen = (responseBytes[offset+1] << 24) | (responseBytes[offset+2] << 16) | (responseBytes[offset+3] << 8) | responseBytes[offset+4];
+                                                offset += 5;
+                                                
+                                                if (offset + msgLen > responseBytes.length) break;
+                                                
+                                                const chunkBytes = responseBytes.slice(offset, offset + msgLen);
+                                                offset += msgLen;
+                                                
+                                                const chunkText = Utilities.newBlob(chunkBytes).getDataAsString("UTF-8");
+                                                const msg = JSON.parse(chunkText);
+                                                
+                                                if (msg.event) {
+                                                    const event = msg.event;
+                                                    if (event.data) {
+                                                        if (event.data.stdout) {
+                                                            stdout += Utilities.newBlob(Utilities.base64Decode(event.data.stdout)).getDataAsString("UTF-8");
+                                                        }
+                                                        if (event.data.stderr) {
+                                                            stderr += Utilities.newBlob(Utilities.base64Decode(event.data.stderr)).getDataAsString("UTF-8");
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            return { stdout: stdout, stderr: stderr };
+                                        };
+                                        
+                                        // 建立檔案 (如果有指定)
                                         if (args.files_to_create && Array.isArray(args.files_to_create)) {
                                             for (let f of args.files_to_create) {
-                                                UrlFetchApp.fetch(`${sandboxUrl}/${sandboxID}/files`, { method: "post", headers: headers, payload: JSON.stringify({ path: f.path, content: f.content }) });
+                                                const b64 = Utilities.base64Encode(Utilities.newBlob(f.content).getBytes());
+                                                const fileCmd = `python3 -c "import base64; import os; os.makedirs(os.path.dirname('${f.path}'), exist_ok=True) if os.path.dirname('${f.path}') else None; open('${f.path}', 'wb').write(base64.b64decode('${b64}'))"`;
+                                                runConnectRpc(sandboxApiKey, sandboxID, fileCmd);
                                             }
                                         }
                                         
                                         let cmd = args.language === 'python' ? `python3 -c "${args.code.replace(/"/g, '\\\\"')}"` : args.code;
                                         if (args.language === 'python' && args.code.includes('\n')) {
-                                            UrlFetchApp.fetch(`${sandboxUrl}/${sandboxID}/files`, { method: "post", headers: headers, payload: JSON.stringify({ path: "main.py", content: args.code }) });
+                                            const b64 = Utilities.base64Encode(Utilities.newBlob(args.code).getBytes());
+                                            const writeCmd = `python3 -c "import base64; open('main.py', 'wb').write(base64.b64decode('${b64}'))"`;
+                                            runConnectRpc(sandboxApiKey, sandboxID, writeCmd);
                                             cmd = "python3 main.py";
                                         }
                                         
-                                        let execRes = UrlFetchApp.fetch(`${sandboxUrl}/${sandboxID}/commands`, { method: "post", headers: headers, payload: JSON.stringify({ cmd: cmd }) });
-                                        let result = JSON.parse(execRes.getContentText());
-                                        
-                                        // ⚠️【持久化修改】不再於執行結束後刪除沙盒，改由 E2B 預設的 Lifecycle 自動清理
-                                        // UrlFetchApp.fetch(`${sandboxUrl}/${sandboxID}`, { method: "delete", headers: headers });
-                                        
+                                        const result = runConnectRpc(sandboxApiKey, sandboxID, cmd);
                                         finalOutput = result.stdout || result.stderr || "(無輸出)";
+
 
 
                                     } catch (err) {
