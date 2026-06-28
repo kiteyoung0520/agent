@@ -1884,10 +1884,14 @@ function runAutonomousAgentLoop(config) {
                                 let finalOutput = "";
                                 
                                 if (sandboxApiKey && sandboxApiKey !== "null") {
-                                                                        // --- 方案 A: E2B (強大、支援檔案系統且持久化) ---
+                                                                                                            // --- 方案 A: E2B (強大、支援檔案系統且持久化) ---
                                     try {
-                                        const sandboxUrl = "https://api.e2b.dev/sandboxes";
-                                        const headers = { "Authorization": "Bearer " + sandboxApiKey, "Content-Type": "application/json" };
+                                        const sandboxUrl = "https://api.e2b.app/sandboxes";
+                                        const headers = { 
+                                            "X-API-Key": sandboxApiKey,
+                                            "Authorization": "Bearer " + sandboxApiKey, 
+                                            "Content-Type": "application/json" 
+                                        };
                                         
                                         // 讀取此會話的持久化沙盒 ID
                                         const sessionKey = 'sandbox_' + (config.sessionId || "default");
@@ -1932,6 +1936,7 @@ function runAutonomousAgentLoop(config) {
                                         // UrlFetchApp.fetch(`${sandboxUrl}/${sandboxID}`, { method: "delete", headers: headers });
                                         
                                         finalOutput = result.stdout || result.stderr || "(無輸出)";
+
 
                                     } catch (err) {
                                         if (err.toString().includes("401")) {
