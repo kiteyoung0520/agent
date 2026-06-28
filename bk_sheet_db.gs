@@ -3084,9 +3084,41 @@ function appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, api
 }
 
 function createGeometricSlides(topic, slidesData, theme, style, enableAutoImage, apiKey, artistModel) {
-    const deck = SlidesApp.create(`PPT: ${topic}`); 
-    const slides = deck.getSlides(); if (slides.length > 0) slides[0].remove();
-    appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel);
+    let deck;
+    let templateId = null;
+    try {
+        const props = PropertiesService.getScriptProperties();
+        const sheetId = props.getProperty('SHEET_ID') || "1pIYPf8v1paZz6OE2qnc5ht5aub8Rm7IA-TfD5kInct8";
+        const ss = SpreadsheetApp.openById(sheetId);
+        const settings = loadSettings(ss);
+        const styleKey = `PPT_TEMPLATE_${String(style).toUpperCase()}_ID`;
+        templateId = settings[styleKey] || settings['PPT_TEMPLATE_ID'];
+    } catch(e) { console.warn("讀取簡報範本設定失敗:", e); }
+
+    if (templateId) {
+        try {
+            const templateFile = DriveApp.getFileById(templateId);
+            const copiedFile = templateFile.makeCopy(`PPT: ${topic}`);
+            deck = SlidesApp.openById(copiedFile.getId());
+            // 移除原本範本中的所有投影片，保持乾淨
+            const slides = deck.getSlides();
+            // 先加一個暫時的，避免刪除所有投影片時報錯 (Google Slides 至少要有一張)
+            const tempSlide = deck.appendSlide(SlidesApp.PredefinedLayout.BLANK);
+            slides.forEach(s => { try { s.remove(); } catch(err) {} });
+            appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel);
+            tempSlide.remove();
+        } catch(e) {
+            console.error("複製簡報範本失敗，改用空白簡報:", e);
+            deck = SlidesApp.create(`PPT: ${topic}`);
+            const slides = deck.getSlides(); if (slides.length > 0) slides[0].remove();
+            appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel);
+        }
+    } else {
+        deck = SlidesApp.create(`PPT: ${topic}`);
+        const slides = deck.getSlides(); if (slides.length > 0) slides[0].remove();
+        appendSlidesToDeck(deck, slidesData, theme, style, enableAutoImage, apiKey, artistModel);
+    }
+
     deck.saveAndClose(); 
     try { DriveApp.getFileById(deck.getId()).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.EDIT); } catch(e) { console.error("權限設定失敗", e); }
     return deck.getId();
