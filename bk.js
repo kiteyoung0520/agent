@@ -1870,14 +1870,34 @@ function runAutonomousAgentLoop(config) {
                                 let finalOutput = "";
                                 
                                 if (sandboxApiKey && sandboxApiKey !== "null") {
-                                    // --- 方案 A: E2B (強大、支援檔案系統) ---
+                                                                        // --- 方案 A: E2B (強大、支援檔案系統且持久化) ---
                                     try {
                                         const sandboxUrl = "https://api.e2b.dev/sandboxes";
                                         const headers = { "Authorization": "Bearer " + sandboxApiKey, "Content-Type": "application/json" };
                                         
-                                        let createRes = UrlFetchApp.fetch(sandboxUrl, { method: "post", headers: headers, payload: JSON.stringify({ templateID: "base" }) });
-                                        let sandbox = JSON.parse(createRes.getContentText());
-                                        let sandboxID = sandbox.sandboxID;
+                                        // 讀取此會話的持久化沙盒 ID
+                                        const sessionKey = 'sandbox_' + (config.sessionId || "default");
+                                        let sandboxID = PropertiesService.getScriptProperties().getProperty(sessionKey);
+                                        
+                                        let needsCreate = !sandboxID;
+                                        if (sandboxID) {
+                                            try {
+                                                // 測試該沙盒是否仍然存活
+                                                let testRes = UrlFetchApp.fetch(`${sandboxUrl}/${sandboxID}`, { method: "get", headers: headers, muteHttpExceptions: true });
+                                                if (testRes.getResponseCode() !== 200) {
+                                                    needsCreate = true;
+                                                }
+                                            } catch(e) { needsCreate = true; }
+                                        }
+                                        
+                                        if (needsCreate) {
+                                            let createRes = UrlFetchApp.fetch(sandboxUrl, { method: "post", headers: headers, payload: JSON.stringify({ templateID: "base" }) });
+                                            let sandbox = JSON.parse(createRes.getContentText());
+                                            sandboxID = sandbox.sandboxID;
+                                            
+                                            // 更新沙盒 ID 到屬性中
+                                            PropertiesService.getScriptProperties().setProperty(sessionKey, sandboxID);
+                                        }
                                         
                                         if (args.files_to_create && Array.isArray(args.files_to_create)) {
                                             for (let f of args.files_to_create) {
@@ -1885,7 +1905,7 @@ function runAutonomousAgentLoop(config) {
                                             }
                                         }
                                         
-                                        let cmd = args.language === 'python' ? `python3 -c "${args.code.replace(/"/g, '\\"')}"` : args.code;
+                                        let cmd = args.language === 'python' ? `python3 -c "${args.code.replace(/"/g, '\\\\"')}"` : args.code;
                                         if (args.language === 'python' && args.code.includes('\n')) {
                                             UrlFetchApp.fetch(`${sandboxUrl}/${sandboxID}/files`, { method: "post", headers: headers, payload: JSON.stringify({ path: "main.py", content: args.code }) });
                                             cmd = "python3 main.py";
@@ -1893,8 +1913,12 @@ function runAutonomousAgentLoop(config) {
                                         
                                         let execRes = UrlFetchApp.fetch(`${sandboxUrl}/${sandboxID}/commands`, { method: "post", headers: headers, payload: JSON.stringify({ cmd: cmd }) });
                                         let result = JSON.parse(execRes.getContentText());
-                                        UrlFetchApp.fetch(`${sandboxUrl}/${sandboxID}`, { method: "delete", headers: headers });
+                                        
+                                        // ⚠️【持久化修改】不再於執行結束後刪除沙盒，改由 E2B 預設的 Lifecycle 自動清理
+                                        // UrlFetchApp.fetch(`${sandboxUrl}/${sandboxID}`, { method: "delete", headers: headers });
+                                        
                                         finalOutput = result.stdout || result.stderr || "(無輸出)";
+
                                     } catch (err) {
                                         if (err.toString().includes("401")) {
                                             console.warn("E2B Key 無效，自動切換至 Piston 備援模式");
