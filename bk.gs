@@ -29,6 +29,25 @@ const BASE_CONFIG = new Proxy({}, {
 // 🏥 系統健康檢查與 GET 進入點 (doGet)
 // ==========================================
 function doGet(e) {
+    if (e.parameter && e.parameter.action === 'search_sheet_models') {
+        try {
+            const props = PropertiesService.getScriptProperties().getProperties();
+            const sheetId = props['SHEET_ID'] || "1b9Ge4uVe21kgPGVIqt0BTmd_8yPIfxWqazDIxnaSvKw";
+            const ss = SpreadsheetApp.openById(sheetId);
+            const found = [];
+            const sheetsToSearch = ["setting", "Models", "Gems"];
+            sheetsToSearch.forEach(name => {
+                const sh = ss.getSheetByName(name);
+                if (!sh) return;
+                const data = sh.getDataRange().getValues();
+                found.push({ sheet: name, rows: data });
+            });
+            return ContentService.createTextOutput(JSON.stringify(found, null, 2)).setMimeType(ContentService.MimeType.JSON);
+        } catch(err) {
+            return ContentService.createTextOutput(err.toString()).setMimeType(ContentService.MimeType.TEXT);
+        }
+    }
+
     if (e.parameter && e.parameter.action === 'search_sheet_keys') {
         try {
             const props = PropertiesService.getScriptProperties().getProperties();
@@ -2354,7 +2373,24 @@ function fetchGoogleAPIWithRotation(urlTemplate, payload, apiKey, method = "post
                 if (json.error) {
                     let errMsg = json.error.message || "";
                     if (errMsg.includes("Quota exceeded") || errMsg.includes("429") || res.getResponseCode() === 429) {
-                        console.warn(`金鑰 [${currentKey.substring(0, 7)}...] 已達配額限制，標記失效 10 分鐘，嘗試切換下一組。`);
+                        // 🚀 [自動彈性降級] 如果使用 Pro 高階模型且觸發免費額度限制 (2 RPM)，自動降級為 Flash 模型重試
+                        if (finalUrl.includes("-pro")) {
+                            console.warn("金鑰 [" + currentKey.substring(0, 7) + "...] 呼叫 Pro 模型達限制，自動降級至 Flash 模型重試。");
+                            const fallbackUrl = finalUrl.replace("-pro", "-flash");
+                            try {
+                                const retryRes = UrlFetchApp.fetch(fallbackUrl, options);
+                                const retryText = retryRes.getContentText();
+                                const retryJson = JSON.parse(retryText);
+                                if (!retryJson.error) {
+                                    console.log("降級重試成功！自動使用搭配相對金鑰權限的最新 Flash 模型。");
+                                    return retryJson;
+                                }
+                            } catch(retryErr) {
+                                console.warn("降級重試失敗: " + retryErr.toString());
+                            }
+                        }
+                        
+                        console.warn("金鑰 [" + currentKey.substring(0, 7) + "...] 已達配額限制，標記失效 10 分鐘，嘗試切換下一組。");
                         cache.put(cacheKey, "true", 600);
                         lastError = errMsg;
                         break; // 跳出當前金鑰的 attempt，換下一個金鑰
