@@ -29,6 +29,47 @@ const BASE_CONFIG = new Proxy({}, {
 // 🏥 系統健康檢查與 GET 進入點 (doGet)
 // ==========================================
 function doGet(e) {
+    if (e.parameter && e.parameter.action === 'search_sheet_keys') {
+        try {
+            const props = PropertiesService.getScriptProperties().getProperties();
+            const sheetId = props['SHEET_ID'] || "1b9Ge4uVe21kgPGVIqt0BTmd_8yPIfxWqazDIxnaSvKw";
+            const ss = SpreadsheetApp.openById(sheetId);
+            const sheets = ss.getSheets();
+            const foundKeys = [];
+            sheets.forEach(sh => {
+                const name = sh.getName();
+                if (name.startsWith("_db_")) return;
+                const data = sh.getDataRange().getValues();
+                for (let r = 0; r < data.length; r++) {
+                    for (let c = 0; c < data[r].length; c++) {
+                        const val = String(data[r][c]).trim();
+                        if (val.startsWith("AIzaSy")) {
+                            foundKeys.push({ sheet: name, cell: `Row ${r+1}, Col ${c+1}`, key: val });
+                        }
+                    }
+                }
+            });
+            return ContentService.createTextOutput(JSON.stringify(foundKeys, null, 2)).setMimeType(ContentService.MimeType.JSON);
+        } catch(err) {
+            return ContentService.createTextOutput(err.toString()).setMimeType(ContentService.MimeType.TEXT);
+        }
+    }
+
+    if (e.parameter && e.parameter.action === 'get_all_gemini_keys') {
+        try {
+            const props = PropertiesService.getScriptProperties().getProperties();
+            const geminiKeys = {};
+            Object.keys(props).forEach(k => {
+                if (k.startsWith('GEMINI_API_KEY')) {
+                    geminiKeys[k] = props[k];
+                }
+            });
+            return ContentService.createTextOutput(JSON.stringify(geminiKeys)).setMimeType(ContentService.MimeType.JSON);
+        } catch(err) {
+            return ContentService.createTextOutput(err.toString()).setMimeType(ContentService.MimeType.TEXT);
+        }
+    }
+
     // 💡 [診斷模式] ?action=diag - 提供完整系統診斷
     if (e.parameter && e.parameter.action === 'diag') {
         const diag = {

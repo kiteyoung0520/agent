@@ -2325,7 +2325,13 @@ function fetchGoogleAPIWithRotation(urlTemplate, payload, apiKey, method = "post
         }
     }
     
-    throw new Error(`所有配給的 Google API 金鑰均不可用。最後錯誤：${lastError}`);
+    let friendlyError = "所有配給的 Google API 金鑰均不可用。最後錯誤：" + lastError;
+    if (lastError.includes("API key not valid") || lastError.includes("not valid") || lastError.includes("400")) {
+        friendlyError = "⚠️ 【Gemini 金鑰無效】您目前設定的 GEMINI_API_KEY 無效或已過期（錯誤代碼 400）。\n👉 請至 Google AI Studio (https://aistudio.google.com/) 建立新的 API Key，並進入 Google Apps Script 的「專案設定」->「指令碼屬性」將新金鑰更新至 GEMINI_API_KEY 欄位中。";
+    } else if (lastError.includes("Quota exceeded") || lastError.includes("quota") || lastError.includes("429") || lastError.includes("limit: 0")) {
+        friendlyError = "⚠️ 【Gemini 金鑰超出配額/免費額度歸零】您目前設定的 GEMINI_API_KEY 已超出使用配額，或該免費專案帳號的免費額度已歸零（錯誤代碼 429 / limit: 0）。\n👉 請檢查您的 Google AI Studio 帳單狀態，或至 Google AI Studio 建立一個全新的專案並產生新的 API Key，再更新至 Apps Script 的「指令碼屬性」中。";
+    }
+    throw new Error(friendlyError);
 }
 
 function callGeminiAPI_Raw({ prompt, model, apiKey, systemInstruction, history = [], tools = [], imageData = null, isFunctionResponse = false }) {
