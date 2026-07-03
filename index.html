@@ -740,7 +740,41 @@
             else if (ext === 'docx') { const lid = appendLoading("?? Word ????..."); try { await loadMammoth(); r.onload = async (ev) => { try { setDocPayload(f.name, (await mammoth.extractRawText({ arrayBuffer: ev.target.result })).value); } catch(err) { alert("Word ????"); } finally { removeLoading(lid); } }; r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); alert("?? Word ????"); } } 
             else if (ext === 'xlsx' || ext === 'csv') { const lid = appendLoading("?? Excel ????..."); try { await loadXlsx(); r.onload = (ev) => { try { const wb = XLSX.read(ev.target.result, { type: 'array' }); let t = ""; wb.SheetNames.forEach(n => { t += `\n--- ??: ${n} ---\n`; let c = XLSX.utils.sheet_to_csv(wb.Sheets[n]); t += c.length > 500000 ? c.substring(0, 500000) + "\n...[??]..." : c; }); setDocPayload(f.name, t); } catch(err) { alert("Excel ????"); } finally { removeLoading(lid); } }; r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); alert("?? Excel ????"); } } 
 
+            else if (ext === 'pptx') { 
+                const lid = appendLoading("???????..."); 
+                if (f.size < 5 * 1024 * 1024) { 
+                    try {
+                        r.onload = async (ev) => {
+                            try {
+                                const base64Data = ev.target.result.split(',')[1];
+                                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'parse_pptx', file_name: f.name, file_data: base64Data }) });
+                                const data = await res.json();
+                                if (data.status === 'success') { setDocPayload(f.name, data.text); } else { throw new Error(data.message || "??????"); }
+                            } catch (err) { console.warn("?? PPTX ???????????...", err); fallbackJSZipParse(f, ev.target.result.split(',')[1], true, lid); } 
+                        }; r.readAsDataURL(f);
+                    } catch (err) { removeLoading(lid); }
+                } 
+                else { try { r.onload = (ev) => fallbackJSZipParse(f, ev.target.result, false, lid); r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); } }
+            } 
             else { r.onload = (ev) => setDocPayload(f.name, ev.target.result); r.readAsText(f); }
+        }
+
+        async function fallbackJSZipParse(fileObj, fileData, isBase64, loaderId) {
+            try { 
+                await loadJszip(); const zip = await (new JSZip()).loadAsync(fileData, isBase64 ? { base64: true } : {}); 
+                let t = `?????????? ${fileObj.name} (????????)?\n\n`; 
+                const sFiles = Object.keys(zip.files).filter(n => n.match(/^ppt\/slides\/slide\d+\.xml$/)).sort((a, b) => parseInt(a.match(/(\d+)\.xml$/)[1]) - parseInt(b.match(/(\d+)\.xml$/)[1]));
+                const nFiles = Object.keys(zip.files).filter(n => n.match(/^ppt\/notesSlides\/notesSlide\d+\.xml$/));
+                const parser = new DOMParser(); 
+                for (const p of sFiles) { 
+                    const sn = p.match(/(\d+)\.xml$/)[1]; t += `--- ? ${sn} ? ---\n`; 
+                    const sx = await zip.file(p).async("string"); 
+                    if (sx) { const xmlDoc = parser.parseFromString(sx, "text/xml"); const textNodes = Array.from(xmlDoc.getElementsByTagName("a:t")); let extText = textNodes.map(n => n.textContent).join(" "); t += `[?????]:\n${extText.trim()}\n`; } 
+                    const np = `ppt/notesSlides/notesSlide${sn}.xml`; 
+                    if (nFiles.includes(np)) { const nx = await zip.file(np).async("string"); if (nx) { const xmlDoc = parser.parseFromString(nx, "text/xml"); const textNodes = Array.from(xmlDoc.getElementsByTagName("a:t")); let extText = textNodes.map(n => n.textContent).join(" "); if (extText.trim()) t += `[?????]:\n${extText.trim()}\n`; } } 
+                    t += `\n`; 
+                } setDocPayload(fileObj.name, t); 
+            } catch (err) { alert("PPTX ????????"); } finally { removeLoading(loaderId); }
         }
 
         function setDocPayload(n, t) { currentDocumentName = n; currentDocumentText = t; document.getElementById('doc-filename').innerText = n; document.getElementById('doc-preview').classList.remove('hidden'); document.getElementById('image-preview').classList.add('hidden'); document.getElementById('youtube-preview').classList.add('hidden'); document.getElementById('upload-preview-container').classList.remove('hidden'); }
