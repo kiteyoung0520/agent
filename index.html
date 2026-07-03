@@ -156,25 +156,25 @@
             <div class="p-5 border-b border-[#333] flex items-center justify-between">
                 <div class="flex items-center gap-3">
                     <div class="p-2 bg-amber-500/10 rounded-lg"><span class="material-symbols-rounded text-amber-400">add_to_drive</span></div>
-                    <h3 class="font-bold text-white text-lg">????????</h3>
+                    <h3 class="font-bold text-white text-lg">選擇雲端硬碟檔案</h3>
                 </div>
                 <button onclick="closeDrivePicker()" class="p-2 text-gray-500 hover:text-white transition-colors"><span class="material-symbols-rounded">close</span></button>
             </div>
             <div class="p-4 bg-[#131314]">
                 <div class="relative">
-                    <input type="text" id="drive-search-input" onkeyup="if(event.key==='Enter') performDriveSearch()" placeholder="????????..." class="w-full pl-10 pr-4 py-3 bg-[#2a2b2f] border border-[#444] rounded-xl text-white text-sm outline-none focus:border-amber-500 transition-all">
+                    <input type="text" id="drive-search-input" onkeyup="if(event.key==='Enter') performDriveSearch()" placeholder="搜尋檔名或關鍵字..." class="w-full pl-10 pr-4 py-3 bg-[#2a2b2f] border border-[#444] rounded-xl text-white text-sm outline-none focus:border-amber-500 transition-all">
                     <span class="absolute left-3 top-3.5 material-symbols-rounded text-gray-500 text-sm">search</span>
-                    <button onclick="performDriveSearch()" class="absolute right-2 top-2 px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-lg transition-colors">??</button>
+                    <button onclick="performDriveSearch()" class="absolute right-2 top-2 px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-lg transition-colors">搜尋</button>
                 </div>
             </div>
             <div id="drive-results-list" class="flex-1 overflow-y-auto p-2 space-y-1 min-h-[300px]">
                 <div class="h-full flex flex-col items-center justify-center text-gray-500 py-10">
                     <span class="material-symbols-rounded text-4xl mb-2 opacity-20">inventory_2</span>
-                    <p class="text-sm">?????????????</p>
+                    <p class="text-sm">輸入關鍵字搜尋您的雲端硬碟</p>
                 </div>
             </div>
             <div id="drive-picker-footer" class="p-3 border-t border-[#333] bg-[#1e1f22] text-[10px] text-gray-500 text-center italic">
-                ?????????????????????
+                提示：點擊檔案即可直接將內容載入至對話框。
             </div>
         </div>
     </div>
@@ -197,30 +197,30 @@
                     <span class="material-symbols-rounded text-indigo-400 text-lg">person</span>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <div class="text-[10px] text-gray-500 uppercase font-bold tracking-tighter">??????</div>
-                    <div id="user-email" class="text-xs text-gray-300 truncate font-mono italic opacity-60 text-[10px]">???...</div>
+                    <div class="text-[10px] text-gray-500 uppercase font-bold tracking-tighter">當前雲端帳號</div>
+                    <div id="user-email" class="text-xs text-gray-300 truncate font-mono italic opacity-60 text-[10px]">載入中...</div>
                     <a href="https://accounts.google.com/AccountChooser" target="_blank" class="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-0.5 mt-0.5 transition-colors">
-                        <span class="material-symbols-rounded text-[12px]">sync_alt</span> ????
+                        <span class="material-symbols-rounded text-[12px]">sync_alt</span> 切換帳號
                     </a>
                 </div>
             </div>
             
             
             <div class="mb-4">
-                <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wider pl-1 mb-1 block">?? ?????? (Workspace)</label>
+                <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wider pl-1 mb-1 block">🗂️ 專案記憶空間 (Workspace)</label>
                 <div class="relative flex items-center mb-2">
                     <select id="workspace-selector" onchange="changeWorkspace()" class="w-full pl-3 pr-8 py-2 bg-[#2a2b2f] hover:bg-[#333] text-indigo-200 text-sm font-semibold rounded-lg border border-[#444] outline-none focus:border-indigo-500 transition-all appearance-none cursor-pointer shadow-sm truncate">
-                        <option value="">???...</option>
+                        <option value="">載入中...</option>
                     </select>
                     <span class="absolute right-2 text-gray-400 material-symbols-rounded text-[18px] pointer-events-none">expand_more</span>
                 </div>
                 <button onclick="createNewWorkspace()" class="w-full text-xs text-gray-400 hover:text-indigo-400 text-left pl-1 transition-colors flex items-center gap-1">
-                    <span class="material-symbols-rounded text-[14px]">add_circle</span> ???????
+                    <span class="material-symbols-rounded text-[14px]">add_circle</span> 建立新專案空間
                 </button>
             </div>
 
             <button onclick="startNewSession()" class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-all shadow-lg mt-2">
-                <span class="material-symbols-rounded">add</span> ???
+                <span class="material-symbols-rounded">add</span> 新對話
             </button>
         </div>
         
@@ -230,16 +230,16 @@
             <button onclick="toggleBookmarks()" class="w-full flex items-center justify-between px-3 mb-1 group cursor-pointer outline-none hover:bg-[#2a2b2f] p-2 rounded-lg transition-colors">
                 <div class="flex items-center gap-2">
                     <span class="material-symbols-rounded text-gray-500 text-[16px] group-hover:text-blue-400 transition-colors">bookmarks</span>
-                    <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider group-hover:text-white transition-colors">???? (Tools)</span>
+                    <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider group-hover:text-white transition-colors">外部工具 (Tools)</span>
                 </div>
                 <span id="bookmark-chevron" class="material-symbols-rounded text-gray-500 text-sm transition-transform duration-200">expand_more</span>
             </button>
             <div id="bookmark-list" class="space-y-1 hidden mt-2">
                 <a href="https://ppt-azure.vercel.app/" target="_blank" class="flex items-center gap-3 p-3 rounded-xl text-gray-400 hover:bg-[#2a2b2f] hover:text-white transition-all group">
-                    <span class="material-symbols-rounded text-lg shrink-0 group-hover:text-blue-400 transition-colors">style</span><span class="truncate text-sm">????</span>
+                    <span class="material-symbols-rounded text-lg shrink-0 group-hover:text-blue-400 transition-colors">style</span><span class="truncate text-sm">智慧圖卡</span>
                 </a>
                 <a href="https://kiteyoung0520.github.io/p/" target="_blank" class="flex items-center gap-3 p-3 rounded-xl text-gray-400 hover:bg-[#2a2b2f] hover:text-white transition-all group">
-                    <span class="material-symbols-rounded text-lg shrink-0 group-hover:text-amber-400 transition-colors">slideshow</span><span class="truncate text-sm">?????</span>
+                    <span class="material-symbols-rounded text-lg shrink-0 group-hover:text-amber-400 transition-colors">slideshow</span><span class="truncate text-sm">魔法簡報師</span>
                 </a>
             </div>
         </div>
@@ -251,20 +251,20 @@
         <header class="flex items-center justify-between px-4 border-b border-[#333] bg-[#1e1f22] shrink-0 z-20" style="padding-top: env(safe-area-inset-top); height: calc(3.5rem &#43; env(safe-area-inset-top));">
             <div class="flex items-center gap-2">
                 <button onclick="toggleSidebar()" class="p-2 text-gray-400 md:hidden"><span class="material-symbols-rounded">menu</span></button>
-                <span class="font-semibold text-sm truncate md:text-base text-gray-200" id="mobile-title">???</span>
+                <span class="font-semibold text-sm truncate md:text-base text-gray-200" id="mobile-title">新對話</span>
             </div>
             <div class="flex items-center gap-2">
                 <button id="canvas-tab-btn" onclick="switchRightPanel('canvas')" class="flex items-center gap-2 px-3 py-1.5 bg-[#2a2b2f] hover:bg-[#333] text-emerald-400 rounded-lg border border-[#444] transition-all group">
                     <span class="material-symbols-rounded text-[20px]">deployed_code</span>
-                    <span class="text-xs font-bold hidden sm:inline">????</span>
+                    <span class="text-xs font-bold hidden sm:inline">動態畫布</span>
                 </button>
                 <button id="library-tab-btn" onclick="switchRightPanel('library')" class="flex items-center gap-2 px-3 py-1.5 bg-[#2a2b2f] hover:bg-[#333] text-blue-400 rounded-lg border border-[#444] transition-all group">
                     <span class="material-symbols-rounded text-[20px]">library_books</span>
-                    <span class="text-xs font-bold hidden sm:inline">?????</span>
+                    <span class="text-xs font-bold hidden sm:inline">專案圖書館</span>
                 </button>
                 <button id="settings-tab-btn" onclick="switchRightPanel('settings')" class="flex items-center gap-2 px-3 py-1.5 bg-[#2a2b2f] hover:bg-[#333] text-purple-400 rounded-lg border border-[#444] transition-all group">
                     <span class="material-symbols-rounded text-[20px]">tune</span>
-                    <span class="text-xs font-bold hidden sm:inline">????</span>
+                    <span class="text-xs font-bold hidden sm:inline">功能設定</span>
                 </button>
             </div>
         </header>
@@ -273,8 +273,8 @@
             <div class="max-w-3xl mx-auto flex gap-4 sm:gap-6 w-full">
                 <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center shadow-lg shrink-0"><span class="material-symbols-rounded text-white">smart_toy</span></div>
                 <div class="flex-1">
-                    <h2 class="text-2xl sm:text-3xl font-bold text-white mb-2">???? anyGem ???</h2>
-                    <p class="text-gray-400 text-base sm:text-lg leading-relaxed">????? <strong>???? (Inner QA)</strong> ???????????????????????</p>
+                    <h2 class="text-2xl sm:text-3xl font-bold text-white mb-2">我是您的 anyGem 代理人</h2>
+                    <p class="text-gray-400 text-base sm:text-lg leading-relaxed">我們已開啟 <strong>內部品管 (Inner QA)</strong> 防護網！介面按鈕已修復，您可以順利傳送指令了。</p>
                 </div>
             </div>
         </div>
@@ -283,15 +283,15 @@
         <div id="source-peek" class="hidden">
             <div class="peek-header">
                 <span id="peek-icon" class="material-symbols-rounded text-blue-400">description</span>
-                <span id="peek-title" class="peek-title">???????...</span>
+                <span id="peek-title" class="peek-title">來源標題載入中...</span>
                 <button onclick="closePeek()" class="text-gray-500 hover:text-white"><span class="material-symbols-rounded text-[18px]">close</span></button>
             </div>
             <div id="peek-content" class="peek-content text-gray-300">
-                ????????...
+                正在抓取內容摘錄...
             </div>
             <div class="peek-action">
                 <a id="peek-link" href="#" target="_blank" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg flex items-center gap-1 transition-all">
-                    <span class="material-symbols-rounded text-[14px]">open_in_new</span> ??????
+                    <span class="material-symbols-rounded text-[14px]">open_in_new</span> 開啟原始檔案
                 </a>
             </div>
         </div>
@@ -311,7 +311,7 @@
                             <img id="yt-thumbnail" src="" class="h-10 w-16 sm:h-12 sm:w-20 object-cover rounded-lg border border-[#444]">
                             <div class="flex flex-col">
                                 <span class="text-[10px] text-red-400 font-bold uppercase tracking-wider">YouTube</span>
-                                <span class="text-xs sm:text-sm font-medium text-gray-200">???????</span>
+                                <span class="text-xs sm:text-sm font-medium text-gray-200">影片連結已載入</span>
                             </div>
                         </div>
                         <button onclick="clearUpload()" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md"><span class="material-symbols-rounded text-[14px] block">close</span></button>
@@ -325,7 +325,7 @@
                         <div class="relative flex items-center shrink-0">
                             <span class="absolute left-2 text-blue-400 material-symbols-rounded text-[14px] pointer-events-none">diamond</span>
                             <select id="gem-selector" class="pl-7 pr-6 py-1.5 bg-[#2a2b2f] hover:bg-[#333] text-blue-100 text-xs font-bold tracking-wide rounded-lg border border-[#444] outline-none focus:border-blue-500 transition-all appearance-none cursor-pointer max-w-[130px] sm:max-w-[160px] truncate shadow-sm">
-                                <option value="">? ????</option>
+                                <option value="">🤖 全能助理</option>
                             </select>
                             <span class="absolute right-1.5 text-gray-400 material-symbols-rounded text-[16px] pointer-events-none">arrow_drop_down</span>
                         </div>
@@ -333,7 +333,7 @@
                         <div class="relative flex items-center mr-auto shrink-0">
                             <span class="absolute left-2 text-purple-400 material-symbols-rounded text-[14px] pointer-events-none">memory</span>
                             <select id="model-selector" class="pl-7 pr-6 py-1.5 bg-[#2a2b2f] hover:bg-[#333] text-purple-100 text-xs font-bold tracking-wide rounded-lg border border-[#444] outline-none focus:border-purple-500 transition-all appearance-none cursor-pointer max-w-[130px] sm:max-w-[160px] truncate shadow-sm">
-                                <option value="">? ???? (??)</option>
+                                <option value="">🧠 預設模型 (自動)</option>
                             </select>
                             <span class="absolute right-1.5 text-gray-400 material-symbols-rounded text-[16px] pointer-events-none">arrow_drop_down</span>
                         </div>
@@ -345,11 +345,11 @@
                 <div id="attachment-menu" class="hidden absolute bottom-full left-0 mb-2 w-48 bg-[#1e1f22] border border-[#444] rounded-xl shadow-2xl overflow-hidden z-50 animate-in slide-in-from-bottom-2 duration-200">
                     <button onclick="document.getElementById('file-upload').click(); hideAttachmentMenu();" class="w-full flex items-center gap-3 p-3 hover:bg-[#2a2b2f] text-gray-300 transition-colors">
                         <span class="material-symbols-rounded text-blue-400">upload_file</span>
-                        <span class="text-sm font-medium">?????</span>
+                        <span class="text-sm font-medium">從本機上傳</span>
                     </button>
                     <button onclick="openDrivePicker(); hideAttachmentMenu();" class="w-full flex items-center gap-3 p-3 hover:bg-[#2a2b2f] text-gray-300 transition-colors">
                         <span class="material-symbols-rounded text-amber-400">add_to_drive</span>
-                        <span class="text-sm font-medium">???????</span>
+                        <span class="text-sm font-medium">從雲端硬碟選擇</span>
                     </button>
                 </div>
 
@@ -358,11 +358,11 @@
                 </button>
                         <input type="file" id="file-upload" class="hidden" onchange="handleFileUpload(event)" accept="image/*,application/pdf,text/*,.docx,.xlsx,.csv,.pptx">
                         
-                        <button id="mic-btn" type="button" onclick="toggleRecording()" class="input-tool-btn p-2 sm:p-3 shrink-0 text-gray-400 hover:text-white rounded-xl transition-all" title="??????">
+                        <button id="mic-btn" type="button" onclick="toggleRecording()" class="input-tool-btn p-2 sm:p-3 shrink-0 text-gray-400 hover:text-white rounded-xl transition-all" title="點擊開始說話">
                             <span class="material-symbols-rounded block">mic</span>
                         </button>
 
-                        <textarea id="user-input" rows="1" placeholder="????..." class="w-full bg-transparent border-none outline-none text-gray-100 py-2.5 sm:py-3 px-1 sm:px-2 resize-none max-h-32 sm:max-h-60 text-base sm:text-lg leading-relaxed"></textarea>
+                        <textarea id="user-input" rows="1" placeholder="輸入指令..." class="w-full bg-transparent border-none outline-none text-gray-100 py-2.5 sm:py-3 px-1 sm:px-2 resize-none max-h-32 sm:max-h-60 text-base sm:text-lg leading-relaxed"></textarea>
                         
                         <button id="send-btn" class="p-2.5 sm:p-3 shrink-0 bg-white text-black rounded-xl hover:bg-gray-200 transition-all shadow-md flex items-center justify-center">
                             <span class="material-symbols-rounded block">send</span>
@@ -379,7 +379,7 @@
         <div class="p-5 border-b border-[#333] flex items-center justify-between">
             <div id="right-panel-header" class="flex items-center gap-2">
                 <span class="material-symbols-rounded text-blue-400" id="panel-icon">inventory_2</span>
-                <h3 class="text-sm font-bold text-white uppercase tracking-wider" id="panel-title">?????</h3>
+                <h3 class="text-sm font-bold text-white uppercase tracking-wider" id="panel-title">專案圖書館</h3>
             </div>
             <button onclick="toggleRightPanel()" class="p-1 hover:bg-[#333] rounded-md text-gray-500 md:hidden"><span class="material-symbols-rounded">close</span></button>
         </div>
@@ -391,7 +391,7 @@
         <div class="p-4 border-t border-[#333] bg-[#1a1b1e]">
             <p class="text-[10px] text-gray-500 leading-relaxed text-center" id="panel-footer-text">
                 <span class="material-symbols-rounded text-[12px] align-middle mr-1">info</span>
-                ????????????? AI ????????
+                所有來源與片段均會自動作為 AI 思考的背景知識。
             </p>
         </div>
     </aside>
@@ -477,14 +477,14 @@
             recognition.onerror = () => stopRecording(); recognition.onend = () => stopRecording();
         }
         function startRecording() { if (!recognition) return; if (!isRecording) { isRecording = true; finalTranscript = userInput.value; try { recognition.start(); } catch(e) { isRecording = false; } } }
-        function toggleRecording() { if (!recognition) { alert('???????????'); return; } isRecording ? stopRecording() : startRecording(); }
+        function toggleRecording() { if (!recognition) { alert('瀏覽器不支援語音輸入。'); return; } isRecording ? stopRecording() : startRecording(); }
         function stopRecording() { isRecording = false; clearTimeout(silenceTimer); document.getElementById('mic-btn').classList.remove('recording-pulse', 'text-white'); document.getElementById('mic-btn').classList.add('text-gray-400'); if (recognition) try { recognition.stop(); } catch(e) {} }
 
         function speakText(text, isAutoPlay = false) {
             if (isAutoPlay && !settings.voiceOutput) return false;
             if (!window.speechSynthesis) return false; window.speechSynthesis.cancel(); 
             const bt = String.fromCharCode(96, 96, 96);
-            let cleanText = text.replace(/<thought_process>[\s\S]*?<\/thought_process>/g, '').replace(new RegExp(bt + '[\\s\\S]*?' + bt, 'g'), '').replace(new RegExp('https?:\\/\\/[^\\s]+', 'g'), '??').replace(new RegExp('[*_#~|]', 'g'), '').trim();
+            let cleanText = text.replace(/<thought_process>[\s\S]*?<\/thought_process>/g, '').replace(new RegExp(bt + '[\\s\\S]*?' + bt, 'g'), '').replace(new RegExp('https?:\\/\\/[^\\s]+', 'g'), '網址').replace(new RegExp('[*_#~|]', 'g'), '').trim();
             if (!cleanText) return false;
             let utterance = new SpeechSynthesisUtterance(cleanText);
             let v = window.speechSynthesis.getVoices(), sv = null;
@@ -586,7 +586,7 @@
             if (gs.value !== "") { agp = currentGemsList[parseInt(gs.value)].prompt; agm = currentGemsList[parseInt(gs.value)].model; }
 
             let dMsg = newText;
-            if (agp) dMsg = `??????${currentGemsList[parseInt(gs.value)].name}${agm ? ` (${agm})` : ''}?\n${newText}`;
+            if (agp) dMsg = `【使用角色：${currentGemsList[parseInt(gs.value)].name}${agm ? ` (${agm})` : ''}】\n${newText}`;
 
             appendMessage('user', dMsg, null);
             
@@ -604,10 +604,10 @@
             toggleSendButton(true); const lid = appendLoading(); abortController = new AbortController(); 
 
             try {
-                if(GAS_URL.includes("?????")) throw new Error("??? HTML ??? 117 ??? GAS_URL?");
+                if(GAS_URL.includes("請在此填入")) throw new Error("請先在 HTML 檔案第 117 行更換 GAS_URL！");
                 const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload), signal: abortController.signal });
                 const data = await res.json(); removeLoading(lid);
-                if (data.status === "error") throw new Error(data.error || "?????");
+                if (data.status === "error") throw new Error(data.error || "伺服器錯誤");
                 
                 if (data.python_browser_request) {
                     await handleBrowserPythonRequest(data.python_browser_request);
@@ -619,7 +619,7 @@
                     if (!speakText(data.reply, true) && settings.continuousMode) setTimeout(startRecording, 500); 
                 }
                 loadSessions(); 
-            } catch (err) { removeLoading(lid); appendMessage('ai', err.name === 'AbortError' ? `? **??????**` : `? ?????\n\`\`\`text\n${err.message}\n\`\`\``); } 
+            } catch (err) { removeLoading(lid); appendMessage('ai', err.name === 'AbortError' ? `🛑 **生成已中止。**` : `❌ 執行失敗：\n\`\`\`text\n${err.message}\n\`\`\``); } 
             finally { toggleSendButton(false); abortController = null; }
         }
 
@@ -637,20 +637,20 @@
             if (gs.value !== "") { agp = currentGemsList[parseInt(gs.value)].prompt; agm = currentGemsList[parseInt(gs.value)].model; }
 
             let dMsg = text;
-            if (currentDocumentName) dMsg = `? [??: ${currentDocumentName}]\n${text}`;
-            if (currentYouTubeId) dMsg = `? [YouTube ??]\n${text}`;
-            if (agp && !currentDocumentName && !currentYouTubeId) dMsg = `??????${currentGemsList[parseInt(gs.value)].name}${agm ? ` (${agm})` : ''}?\n${text}`;
+            if (currentDocumentName) dMsg = `📎 [文件: ${currentDocumentName}]\n${text}`;
+            if (currentYouTubeId) dMsg = `📺 [YouTube 影片]\n${text}`;
+            if (agp && !currentDocumentName && !currentYouTubeId) dMsg = `【使用角色：${currentGemsList[parseInt(gs.value)].name}${agm ? ` (${agm})` : ''}】\n${text}`;
 
             appendMessage('user', dMsg, currentImageData);
             
-            let pText = text || "??????";
-            if (currentDocumentText) pText = `????????????????${currentDocumentName}?\n${currentDocumentText}\n\n---\n???????${pText}`;
-            else if (currentYouTubeId) pText = `?????https:
+            let pText = text || "請分析此內容";
+            if (currentDocumentText) pText = `【系統強制附加解析好的檔案內容：${currentDocumentName}】\n${currentDocumentText}\n\n---\n使用者的指令：${pText}`;
+            else if (currentYouTubeId) pText = `【影片】：https:
 
             userInput.value = ''; userInput.style.height = 'auto'; finalTranscript = ''; 
             
             const payload = { 
-                message: settings.globalProfile ? `????????????\n${settings.globalProfile}\n\n---\n${pText}` : pText,
+                message: settings.globalProfile ? `【全域個人思維偏好注入】\n${settings.globalProfile}\n\n---\n${pText}` : pText,
                 session_id: currentSessionId, workspace: currentWorkspace,
                 file_data: currentImageData ? currentImageData.split(',')[1] : null, mime_type: currentMimeType, 
                 web_search: settings.webSearch, 
@@ -663,10 +663,10 @@
             clearUpload(); toggleSendButton(true); const lid = appendLoading(); abortController = new AbortController(); 
 
             try {
-                if(GAS_URL.includes("?????")) throw new Error("??? HTML ??? 117 ??? GAS_URL?");
+                if(GAS_URL.includes("請在此填入")) throw new Error("請先在 HTML 檔案第 117 行更換 GAS_URL！");
                 const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload), signal: abortController.signal });
                 const data = await res.json(); removeLoading(lid);
-                if (data.status === "error") throw new Error(data.error || "?????");
+                if (data.status === "error") throw new Error(data.error || "伺服器錯誤");
                 
                 if (data.python_browser_request) {
                     await handleBrowserPythonRequest(data.python_browser_request);
@@ -678,7 +678,7 @@
                     if (!speakText(data.reply, true) && settings.continuousMode) setTimeout(startRecording, 500); 
                 }
                 loadSessions(); 
-            } catch (err) { removeLoading(lid); appendMessage('ai', err.name === 'AbortError' ? `? **??????**` : `? ?????\n\`\`\`text\n${err.message}\n\`\`\``); } 
+            } catch (err) { removeLoading(lid); appendMessage('ai', err.name === 'AbortError' ? `🛑 **生成已中止。**` : `❌ 執行失敗：\n\`\`\`text\n${err.message}\n\`\`\``); } 
             finally { toggleSendButton(false); abortController = null; }
         }
 
@@ -689,12 +689,12 @@
             const confirmationDiv = btn.closest('.animate-pulse');
             
             if (!isConfirmed) {
-                confirmationDiv.innerHTML = '<div class="text-gray-500 italic text-sm py-2">? ?????????</div>';
+                confirmationDiv.innerHTML = '<div class="text-gray-500 italic text-sm py-2">🚫 已拒絕執行此動作。</div>';
                 confirmationDiv.classList.remove('animate-pulse', 'bg-amber-500/10', 'border-amber-500/30');
                 return;
             }
 
-            confirmationDiv.innerHTML = '<div class="flex items-center gap-2 text-emerald-400 font-bold py-2 text-sm"><span class="material-symbols-rounded animate-spin">sync</span> ???????...</div>';
+            confirmationDiv.innerHTML = '<div class="flex items-center gap-2 text-emerald-400 font-bold py-2 text-sm"><span class="material-symbols-rounded animate-spin">sync</span> 正在授權執行中...</div>';
             
             
             const ms = document.getElementById('model-selector');
@@ -713,14 +713,14 @@
                 confirmed: true 
             };
 
-            toggleSendButton(true); const lid = appendLoading("?????..."); abortController = new AbortController(); 
+            toggleSendButton(true); const lid = appendLoading("授權執行中..."); abortController = new AbortController(); 
 
             try {
                 const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload), signal: abortController.signal });
                 const data = await res.json(); 
                 removeLoading(lid);
                 
-                if (data.status === "error") throw new Error(data.error || "?????");
+                if (data.status === "error") throw new Error(data.error || "伺服器錯誤");
                 
                 
                 confirmationDiv.remove();
@@ -729,7 +729,7 @@
                 }
             } catch (err) { 
                 removeLoading(lid); 
-                confirmationDiv.innerHTML = `<div class="text-red-400 text-xs py-2">? ???????${err.message}</div>`;
+                confirmationDiv.innerHTML = `<div class="text-red-400 text-xs py-2">❌ 授權執行失敗：${err.message}</div>`;
             } finally { 
                 toggleSendButton(false); 
                 abortController = null; 
@@ -740,11 +740,11 @@
             const f = e.target.files[0]; if (!f) return; const r = new FileReader(), ext = f.name.split('.').pop().toLowerCase();
             
             if (f.type.startsWith('image/')) { r.onload = (ev) => { currentImageData = ev.target.result; currentMimeType = f.type; document.getElementById('image-preview').src = currentImageData; document.getElementById('image-preview').classList.remove('hidden'); document.getElementById('doc-preview').classList.add('hidden'); document.getElementById('youtube-preview').classList.add('hidden'); document.getElementById('upload-preview-container').classList.remove('hidden'); }; r.readAsDataURL(f); } 
-            else if (f.type === 'application/pdf' || ext === 'pdf') { const lid = appendLoading("?? PDF ????..."); try { await loadPdfJs(); r.onload = async (ev) => { try { const pdf = await pdfjsLib.getDocument(new Uint8Array(ev.target.result)).promise; let t = ""; for (let i=1; i<=pdf.numPages; i++) t += (await (await pdf.getPage(i)).getTextContent()).items.map(s => s.str).join(' ') + "\n"; setDocPayload(f.name, t); } catch (err) { alert("PDF ????"); } finally { removeLoading(lid); } }; r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); alert("?? PDF ????"); } } 
-            else if (ext === 'docx') { const lid = appendLoading("?? Word ????..."); try { await loadMammoth(); r.onload = async (ev) => { try { setDocPayload(f.name, (await mammoth.extractRawText({ arrayBuffer: ev.target.result })).value); } catch(err) { alert("Word ????"); } finally { removeLoading(lid); } }; r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); alert("?? Word ????"); } } 
-            else if (ext === 'xlsx' || ext === 'csv') { const lid = appendLoading("?? Excel ????..."); try { await loadXlsx(); r.onload = (ev) => { try { const wb = XLSX.read(ev.target.result, { type: 'array' }); let t = ""; wb.SheetNames.forEach(n => { t += `\n--- ??: ${n} ---\n`; let c = XLSX.utils.sheet_to_csv(wb.Sheets[n]); t += c.length > 500000 ? c.substring(0, 500000) + "\n...[??]..." : c; }); setDocPayload(f.name, t); } catch(err) { alert("Excel ????"); } finally { removeLoading(lid); } }; r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); alert("?? Excel ????"); } } 
+            else if (f.type === 'application/pdf' || ext === 'pdf') { const lid = appendLoading("載入 PDF 解析引擎..."); try { await loadPdfJs(); r.onload = async (ev) => { try { const pdf = await pdfjsLib.getDocument(new Uint8Array(ev.target.result)).promise; let t = ""; for (let i=1; i<=pdf.numPages; i++) t += (await (await pdf.getPage(i)).getTextContent()).items.map(s => s.str).join(' ') + "\n"; setDocPayload(f.name, t); } catch (err) { alert("PDF 解析失敗"); } finally { removeLoading(lid); } }; r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); alert("載入 PDF 引擎失敗"); } } 
+            else if (ext === 'docx') { const lid = appendLoading("載入 Word 解析引擎..."); try { await loadMammoth(); r.onload = async (ev) => { try { setDocPayload(f.name, (await mammoth.extractRawText({ arrayBuffer: ev.target.result })).value); } catch(err) { alert("Word 解析失敗"); } finally { removeLoading(lid); } }; r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); alert("載入 Word 引擎失敗"); } } 
+            else if (ext === 'xlsx' || ext === 'csv') { const lid = appendLoading("載入 Excel 解析引擎..."); try { await loadXlsx(); r.onload = (ev) => { try { const wb = XLSX.read(ev.target.result, { type: 'array' }); let t = ""; wb.SheetNames.forEach(n => { t += `\n--- 表單: ${n} ---\n`; let c = XLSX.utils.sheet_to_csv(wb.Sheets[n]); t += c.length > 500000 ? c.substring(0, 500000) + "\n...[截斷]..." : c; }); setDocPayload(f.name, t); } catch(err) { alert("Excel 解析失敗"); } finally { removeLoading(lid); } }; r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); alert("載入 Excel 引擎失敗"); } } 
             else if (ext === 'pptx') { 
-                const lid = appendLoading("???????..."); 
+                const lid = appendLoading("正在解析簡報檔..."); 
                 if (f.size < 5 * 1024 * 1024) { 
                     try {
                         r.onload = async (ev) => {
@@ -752,8 +752,8 @@
                                 const base64Data = ev.target.result.split(',')[1];
                                 const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'parse_pptx', file_name: f.name, file_data: base64Data }) });
                                 const data = await res.json();
-                                if (data.status === 'success') { setDocPayload(f.name, data.text); } else { throw new Error(data.message || "??????"); }
-                            } catch (err) { console.warn("?? PPTX ???????????...", err); fallbackJSZipParse(f, ev.target.result.split(',')[1], true, lid); } 
+                                if (data.status === 'success') { setDocPayload(f.name, data.text); } else { throw new Error(data.message || "雲端轉檔失敗"); }
+                            } catch (err) { console.warn("雲端 PPTX 解析失敗，啟動備用引擎...", err); fallbackJSZipParse(f, ev.target.result.split(',')[1], true, lid); } 
                         }; r.readAsDataURL(f);
                     } catch (err) { removeLoading(lid); }
                 } 
@@ -765,19 +765,19 @@
         async function fallbackJSZipParse(fileObj, fileData, isBase64, loaderId) {
             try { 
                 await loadJszip(); const zip = await (new JSZip()).loadAsync(fileData, isBase64 ? { base64: true } : {}); 
-                let t = `?????????? ${fileObj.name} (????????)?\n\n`; 
+                let t = `【系統解析：簡報檔名 ${fileObj.name} (啟動本機輕量模式)】\n\n`; 
                 const sFiles = Object.keys(zip.files).filter(n => n.match(/^ppt\/slides\/slide\d+\.xml$/)).sort((a, b) => parseInt(a.match(/(\d+)\.xml$/)[1]) - parseInt(b.match(/(\d+)\.xml$/)[1]));
                 const nFiles = Object.keys(zip.files).filter(n => n.match(/^ppt\/notesSlides\/notesSlide\d+\.xml$/));
                 const parser = new DOMParser(); 
                 for (const p of sFiles) { 
-                    const sn = p.match(/(\d+)\.xml$/)[1]; t += `--- ? ${sn} ? ---\n`; 
+                    const sn = p.match(/(\d+)\.xml$/)[1]; t += `--- 第 ${sn} 頁 ---\n`; 
                     const sx = await zip.file(p).async("string"); 
-                    if (sx) { const xmlDoc = parser.parseFromString(sx, "text/xml"); const textNodes = Array.from(xmlDoc.getElementsByTagName("a:t")); let extText = textNodes.map(n => n.textContent).join(" "); t += `[?????]:\n${extText.trim()}\n`; } 
+                    if (sx) { const xmlDoc = parser.parseFromString(sx, "text/xml"); const textNodes = Array.from(xmlDoc.getElementsByTagName("a:t")); let extText = textNodes.map(n => n.textContent).join(" "); t += `[投影片內容]:\n${extText.trim()}\n`; } 
                     const np = `ppt/notesSlides/notesSlide${sn}.xml`; 
-                    if (nFiles.includes(np)) { const nx = await zip.file(np).async("string"); if (nx) { const xmlDoc = parser.parseFromString(nx, "text/xml"); const textNodes = Array.from(xmlDoc.getElementsByTagName("a:t")); let extText = textNodes.map(n => n.textContent).join(" "); if (extText.trim()) t += `[?????]:\n${extText.trim()}\n`; } } 
+                    if (nFiles.includes(np)) { const nx = await zip.file(np).async("string"); if (nx) { const xmlDoc = parser.parseFromString(nx, "text/xml"); const textNodes = Array.from(xmlDoc.getElementsByTagName("a:t")); let extText = textNodes.map(n => n.textContent).join(" "); if (extText.trim()) t += `[講者備忘錄]:\n${extText.trim()}\n`; } } 
                     t += `\n`; 
                 } setDocPayload(fileObj.name, t); 
-            } catch (err) { alert("PPTX ????????"); } finally { removeLoading(loaderId); }
+            } catch (err) { alert("PPTX 本機備用解析失敗"); } finally { removeLoading(loaderId); }
         }
 
         function setDocPayload(n, t) { currentDocumentName = n; currentDocumentText = t; document.getElementById('doc-filename').innerText = n; document.getElementById('doc-preview').classList.remove('hidden'); document.getElementById('image-preview').classList.add('hidden'); document.getElementById('youtube-preview').classList.add('hidden'); document.getElementById('upload-preview-container').classList.remove('hidden'); }
@@ -794,7 +794,7 @@
             const kw = document.getElementById('drive-search-input').value.trim();
             if(!kw) return;
             const container = document.getElementById('drive-results-list');
-            container.innerHTML = '<div class="flex flex-col items-center justify-center py-20"><span class="material-symbols-rounded animate-spin text-amber-500 text-3xl">sync</span><p class="mt-4 text-gray-400 text-sm">????????...</p></div>';
+            container.innerHTML = '<div class="flex flex-col items-center justify-center py-20"><span class="material-symbols-rounded animate-spin text-amber-500 text-3xl">sync</span><p class="mt-4 text-gray-400 text-sm">正在掃描雲端硬碟...</p></div>';
             
             try {
                 const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'search_drive_files', keyword: kw }) });
@@ -809,24 +809,24 @@
                             <div class="p-2 bg-amber-500/10 rounded-lg group-hover:bg-amber-500/20 transition-colors"><span class="material-symbols-rounded text-amber-400 text-[20px]">description</span></div>
                             <div class="flex-1 min-w-0">
                                 <div class="text-sm font-medium text-gray-200 truncate">${file.name}</div>
-                                <div class="text-[10px] text-gray-500 truncate">${file.type || 'Google ????'}</div>
+                                <div class="text-[10px] text-gray-500 truncate">${file.type || 'Google 雲端檔案'}</div>
                             </div>
                             <span class="material-symbols-rounded text-gray-600 group-hover:text-amber-500 text-sm">arrow_forward_ios</span>
                         `;
                         container.appendChild(div);
                     });
                 } else if (data.status === 'error') {
-                    container.innerHTML = `<div class="text-center py-20 text-red-400 text-sm"><p>?? ??????<br>${data.error_message || data.message || "????"}</p></div>`;
+                    container.innerHTML = `<div class="text-center py-20 text-red-400 text-sm"><p>⚠️ 伺服器錯誤：<br>${data.error_message || data.message || "未知錯誤"}</p></div>`;
                 } else {
-                    container.innerHTML = `<div class="text-center py-20 text-gray-500"><p>${data.data || "???????"}</p></div>`;
+                    container.innerHTML = `<div class="text-center py-20 text-gray-500"><p>${data.data || "找不到相關檔案"}</p></div>`;
                 }
             } catch(e) {
-                container.innerHTML = `<div class="text-center py-20 text-red-400 text-sm"><p>?????${e.message}</p></div>`;
+                container.innerHTML = `<div class="text-center py-20 text-red-400 text-sm"><p>搜尋失敗：${e.message}</p></div>`;
             }
         }
 
         async function selectDriveFile(url, name) {
-            const lid = appendLoading(`????????${name}...`);
+            const lid = appendLoading(`正在從雲端讀取：${name}...`);
             closeDrivePicker();
             try {
                 const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'read_drive_file', fileUrl: url }) });
@@ -834,10 +834,10 @@
                 if(data.status === 'success') {
                     setDocPayload(name, data.data);
                 } else {
-                    throw new Error(data.error_message || "????");
+                    throw new Error(data.error_message || "讀取失敗");
                 }
             } catch(e) {
-                alert(`???????${e.message}`);
+                alert(`雲端讀取失敗：${e.message}`);
             } finally {
                 removeLoading(lid);
             }
@@ -854,59 +854,59 @@
                 let cleanText = text;
                 if (isAI) {
                     const nl = String.fromCharCode(10);
-                    cleanText = cleanText.split('<think>').join('<details class="text-xs text-gray-500 mb-2 border-l-2 border-gray-600 pl-2"><summary class="cursor-pointer font-bold">??????</summary>' + nl + nl)
+                    cleanText = cleanText.split('<think>').join('<details class="text-xs text-gray-500 mb-2 border-l-2 border-gray-600 pl-2"><summary class="cursor-pointer font-bold">查看思考過程</summary>' + nl + nl)
                                  .split('</think>').join(nl + nl + '</details>' + nl)
-                                 .split('<thought>').join('<details class="text-xs text-gray-500 mb-2 border-l-2 border-gray-600 pl-2"><summary class="cursor-pointer font-bold">??????</summary>' + nl + nl)
+                                 .split('<thought>').join('<details class="text-xs text-gray-500 mb-2 border-l-2 border-gray-600 pl-2"><summary class="cursor-pointer font-bold">查看思考過程</summary>' + nl + nl)
                                  .split('</thought>').join(nl + nl + '</details>' + nl);
                 }
                 let parsedText = isAI ? marked.parse(cleanText) : cleanText.split('\\n').join('<br>');
                 if (isAI) {
-                    parsedText = parsedText.replace(/\[??\s*(\d+)\]/g, '<span class="citation" onclick="highlightSource($1)">[?? $1]</span>');
+                    parsedText = parsedText.replace(/\[來源\s*(\d+)\]/g, '<span class="citation" onclick="highlightSource($1)">[來源 $1]</span>');
                 }
-                b += `<div class="prose prose-invert text-gray-200 bg-[#1e1f22] p-4 sm:p-5 rounded-2xl rounded-tl-none shadow-sm text-base sm:text-lg leading-relaxed text-left ${isShared ? 'shared-message' : ''}">${parsedText}${isShared ? '<span class="shared-badge">????</span>' : ''}</div>`;
+                b += `<div class="prose prose-invert text-gray-200 bg-[#1e1f22] p-4 sm:p-5 rounded-2xl rounded-tl-none shadow-sm text-base sm:text-lg leading-relaxed text-left ${isShared ? 'shared-message' : ''}">${parsedText}${isShared ? '<span class="shared-badge">專案共用</span>' : ''}</div>`;
                 
                 if (needsConfirmation && isAI) {
                     b += `
                         <div class="mt-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl animate-pulse">
                             <div class="flex items-center gap-2 text-amber-400 font-bold mb-3 text-sm">
                                 <span class="material-symbols-rounded">security</span>
-                                ????????
+                                敏感操作授權請求
                             </div>
                             <div class="flex flex-wrap gap-2">
                                 <button onclick="confirmAction(this, true)" class="confirm-yes-btn flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-sm font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center gap-1">
-                                    <span class="material-symbols-rounded text-[18px]">check_circle</span> ????
+                                    <span class="material-symbols-rounded text-[18px]">check_circle</span> 授權執行
                                 </button>
                                 <button onclick="confirmAction(this, false)" class="confirm-no-btn flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-1">
-                                    <span class="material-symbols-rounded text-[18px]">cancel</span> ??
+                                    <span class="material-symbols-rounded text-[18px]">cancel</span> 取消
                                 </button>
                             </div>
                         </div>
                     `;
-                    // ?????? Tool Call ?????????
+                    // 儲存待處理的 Tool Call 資訊以便確認後使用
                     w.dataset.pendingToolCall = JSON.stringify(pendingToolCall);
-                    w.dataset.originalMessage = userInput.value || ""; // ??????
+                    w.dataset.originalMessage = userInput.value || ""; // 記錄當前訊息
                 }
 
                 if (htmlPresentation && isAI) {
-                    b += `<div class="mt-3"><button class="open-ppt-btn flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-3 rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 font-bold text-sm sm:text-base"><span class="material-symbols-rounded">presentation_play</span> ? ??????</button></div>`;
+                    b += `<div class="mt-3"><button class="open-ppt-btn flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-3 rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 font-bold text-sm sm:text-base"><span class="material-symbols-rounded">presentation_play</span> 🎨 開啟互動簡報</button></div>`;
                 }
                 if (htmlArtifact && isAI) {
-                    b += `<div class="mt-3"><button class="open-artifact-btn flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-5 py-3 rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 font-bold text-sm sm:text-base"><span class="material-symbols-rounded">deployed_code</span> ?? ??????</button></div>`;
+                    b += `<div class="mt-3"><button class="open-artifact-btn flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-5 py-3 rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 font-bold text-sm sm:text-base"><span class="material-symbols-rounded">deployed_code</span> 🛠️ 啟動動態工具</button></div>`;
                 }
             }
             
             b += `<div class="flex items-center gap-2 mt-2 opacity-100 sm:opacity-50 sm:group-hover:opacity-100 transition-opacity ${!isAI ? 'justify-end' : ''}">`;
             if (isAI && text) {
-                b += `<button class="share-btn p-1.5 text-gray-400 hover:text-yellow-400 hover:bg-[#333] rounded-md" title="?????????"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">verified</span></button>`;
-                b += `<button class="copy-btn p-1.5 text-gray-400 hover:text-white hover:bg-[#333] rounded-md" title="??"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">content_copy</span></button>`;
-                b += `<button class="speak-btn p-1.5 text-gray-400 hover:text-green-400 hover:bg-[#333] rounded-md" title="?????"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">volume_up</span></button>`;
+                b += `<button class="share-btn p-1.5 text-gray-400 hover:text-yellow-400 hover:bg-[#333] rounded-md" title="同步至專案共用資料"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">verified</span></button>`;
+                b += `<button class="copy-btn p-1.5 text-gray-400 hover:text-white hover:bg-[#333] rounded-md" title="複製"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">content_copy</span></button>`;
+                b += `<button class="speak-btn p-1.5 text-gray-400 hover:text-green-400 hover:bg-[#333] rounded-md" title="朗讀此訊息"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">volume_up</span></button>`;
             } 
             if (!isAI && text) {
-                b += `<button class="share-btn p-1.5 text-gray-400 hover:text-yellow-400 hover:bg-[#333] rounded-md" title="?????????"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">verified</span></button>`;
-                b += `<button class="edit-btn p-1.5 text-gray-400 hover:text-blue-400 hover:bg-[#333] rounded-md transition-colors" title="???????"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">edit</span></button>`;
+                b += `<button class="share-btn p-1.5 text-gray-400 hover:text-yellow-400 hover:bg-[#333] rounded-md" title="同步至專案共用資料"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">verified</span></button>`;
+                b += `<button class="edit-btn p-1.5 text-gray-400 hover:text-blue-400 hover:bg-[#333] rounded-md transition-colors" title="編輯並重新生成"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">edit</span></button>`;
             }
             if (text || imageSrc) {
-                b += `<button class="delete-btn p-1.5 text-gray-400 hover:text-red-400 hover:bg-[#333] rounded-md transition-colors" title="?????"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">delete</span></button>`;
+                b += `<button class="delete-btn p-1.5 text-gray-400 hover:text-red-400 hover:bg-[#333] rounded-md transition-colors" title="刪除此訊息"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">delete</span></button>`;
             }
             b += `</div></div>`; 
             
@@ -915,7 +915,7 @@
             chatContainer.appendChild(w);
 
             if (isAI) { 
-                w.querySelectorAll('pre code').forEach(c => { if (c.className.includes('language-html') || c.className.includes('language-jsx') || c.className.includes('language-javascript')) { let btn = document.createElement('button'); btn.className = "absolute top-2 sm:top-3 right-2 sm:right-3 bg-blue-600 hover:bg-blue-500 text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg flex items-center gap-1 shadow-lg"; btn.innerHTML = '<span class="material-symbols-rounded text-[12px] sm:text-sm">play_circle</span> ??'; btn.onclick = () => openPreview(c.innerText); c.parentElement.appendChild(btn); } }); 
+                w.querySelectorAll('pre code').forEach(c => { if (c.className.includes('language-html') || c.className.includes('language-jsx') || c.className.includes('language-javascript')) { let btn = document.createElement('button'); btn.className = "absolute top-2 sm:top-3 right-2 sm:right-3 bg-blue-600 hover:bg-blue-500 text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg flex items-center gap-1 shadow-lg"; btn.innerHTML = '<span class="material-symbols-rounded text-[12px] sm:text-sm">play_circle</span> 預覽'; btn.onclick = () => openPreview(c.innerText); c.parentElement.appendChild(btn); } }); 
                 const pptBtn = w.querySelector('.open-ppt-btn');
                 if (pptBtn && htmlPresentation) {
                     pptBtn.onclick = () => openHtmlPresentation(htmlPresentation);
@@ -941,8 +941,8 @@
                 w.querySelector('.edit-btn').onclick = () => {
                     const contentDiv = w.querySelector('.prose'); const actionsDiv = w.querySelector('.flex.items-center.gap-2.mt-2'); contentDiv.classList.add('hidden'); actionsDiv.classList.add('hidden');
                     const editContainer = document.createElement('div'); editContainer.className = "w-full mt-2 flex flex-col gap-2 text-left";
-                    let cleanEditText = text.replace(new RegExp('^??????.*??\\n'), '').replace(new RegExp('^? \\[(?:??|??): .*?\\]\\n'), '').replace(new RegExp('^? \\[YouTube ??\\]\\n'), '');
-                    editContainer.innerHTML = `<textarea class="w-full bg-[#2a2b2f] text-white p-3 rounded-xl border border-blue-500 outline-none resize-y min-h-[100px] text-base leading-relaxed">${cleanEditText}</textarea><div class="flex justify-end gap-2"><button class="cancel-edit-btn px-3 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-[#333] transition-colors">??</button><button class="save-edit-btn px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1 transition-colors shadow-md"><span class="material-symbols-rounded text-[16px]">send</span> ????</button></div>`;
+                    let cleanEditText = text.replace(new RegExp('^【使用角色：.*?】\\n'), '').replace(new RegExp('^📎 \\[(?:文件|檔案): .*?\\]\\n'), '').replace(new RegExp('^📺 \\[YouTube 影片\\]\\n'), '');
+                    editContainer.innerHTML = `<textarea class="w-full bg-[#2a2b2f] text-white p-3 rounded-xl border border-blue-500 outline-none resize-y min-h-[100px] text-base leading-relaxed">${cleanEditText}</textarea><div class="flex justify-end gap-2"><button class="cancel-edit-btn px-3 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-[#333] transition-colors">取消</button><button class="save-edit-btn px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1 transition-colors shadow-md"><span class="material-symbols-rounded text-[16px]">send</span> 重新發送</button></div>`;
                     w.querySelector('.flex-1').appendChild(editContainer);
                     editContainer.querySelector('.cancel-edit-btn').onclick = () => { editContainer.remove(); contentDiv.classList.remove('hidden'); actionsDiv.classList.remove('hidden'); };
                     editContainer.querySelector('.save-edit-btn').onclick = () => {
@@ -955,7 +955,7 @@
 
             if (w.querySelector('.delete-btn')) {
                 w.querySelector('.delete-btn').onclick = () => {
-                    if (confirm("???????????\n(??????????????)")) {
+                    if (confirm("確定要刪除這則訊息嗎？\n(刪除後系統將徹底忘記這段對話)")) {
                         w.remove(); fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'delete_message', session_id: currentSessionId, workspace: currentWorkspace, target_text: text, target_role: role }) });
                     }
                 };
@@ -965,7 +965,7 @@
 
         function appendLoading(customMsg) { 
             const id = 'loader-' + Date.now(), d = document.createElement('div'); d.id = id; d.className = "flex gap-3 sm:gap-4 max-w-4xl mx-auto w-full"; 
-            let msg = customMsg || "???????";
+            let msg = customMsg || "代理人正忙碌中";
             d.innerHTML = `<div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-600 flex items-center justify-center shrink-0 animate-pulse"><span class="material-symbols-rounded text-white text-[18px] sm:text-xl">hourglass_empty</span></div><div class="pt-1.5 sm:pt-3 flex gap-2 items-center text-gray-500 text-sm sm:text-base italic typing-indicator">${msg}<span></span><span></span><span></span></div>`; 
             chatContainer.appendChild(d); scrollToBottom(); return id; 
         }
@@ -986,7 +986,7 @@
         function startNewSession() { 
             currentSessionId = generateUUID(); 
             chatContainer.innerHTML = ''; 
-            appendMessage('ai', `???? **${currentWorkspace || "?"}** ?????\n??????????????????????\n(?????????????????)`); 
+            appendMessage('ai', `您已進入 **${currentWorkspace || "主"}** 專案空間。\n我會自動隔離記憶，確保任務上下文精準不發散！\n(下方的麥克風與進階功能選單皆已就緒)`); 
             if (window.innerWidth < 768) toggleSidebar(); 
             loadSessions(); loadWorkspaceContext(); loadSources();
         }
@@ -1012,7 +1012,7 @@
         function changeWorkspace() { currentWorkspace = document.getElementById('workspace-selector').value; startNewSession(); loadWorkspaceContext(); loadSources(); }
         
         function createNewWorkspace() {
-            const name = prompt("???????? (Workspace) ????");
+            const name = prompt("請輸入新專案空間 (Workspace) 的名稱：");
             if (name && name.trim()) { currentWorkspace = name.trim(); const sel = document.getElementById('workspace-selector'); sel.innerHTML += `<option value="${currentWorkspace}">${currentWorkspace}</option>`; sel.value = currentWorkspace; startNewSession(); }
         }
 
@@ -1021,13 +1021,13 @@
             currentSessionId = id; 
             document.getElementById('mobile-title').innerText = title; 
             chatContainer.innerHTML = ''; 
-            const lid = appendLoading("????????..."); 
+            const lid = appendLoading("正在載入歷史對話..."); 
             if (window.innerWidth < 768) toggleSidebar(); 
             try { 
                 const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'load_session', session_id: id, workspace: currentWorkspace }) })).json(); 
                 removeLoading(lid); 
                 
-                // ?????????????????
+                // 重設並重新載入該對話的動態工具歷史
                 artifactHistory = [];
                 if (Array.isArray(d.logs)) {
                     d.logs.forEach(l => {
@@ -1051,14 +1051,14 @@
                         );
                     });
                     
-                    // ????????????????????
+                    // 設定當前預覽程式碼為該對話最新的動態工具
                     if (artifactHistory.length > 0) {
                         currentRenderCode = artifactHistory[0].code;
                     } else {
                         currentRenderCode = '';
                     }
                     
-                    // ????????????????????? (????????)
+                    // 若右側面板為開啟狀態，重新渲染右側面板內容 (包含工具歷史列表)
                     const rightPanel = document.getElementById('right-panel');
                     if (rightPanel && rightPanel.classList.contains('right-panel-open')) {
                         renderRightPanelContent();
@@ -1069,18 +1069,18 @@
                 loadWorkspaceContext(); 
                 loadSources(); 
             } catch (e) {
-                console.error("????????", e);
+                console.error("載入對話紀錄失敗", e);
             } 
         }
         
-        async function loadGems() { try { const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_gems', workspace: currentWorkspace }) })).json(); if (d && d.gems) { currentGemsList = d.gems; const s = document.getElementById('gem-selector'); s.innerHTML = '<option value="">? ????</option>'; currentGemsList.forEach((g, i) => s.innerHTML += `<option value="${i}">? ${g.name}</option>`); } } catch (e) {} }
+        async function loadGems() { try { const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_gems', workspace: currentWorkspace }) })).json(); if (d && d.gems) { currentGemsList = d.gems; const s = document.getElementById('gem-selector'); s.innerHTML = '<option value="">🤖 全能助理</option>'; currentGemsList.forEach((g, i) => s.innerHTML += `<option value="${i}">💎 ${g.name}</option>`); } } catch (e) {} }
         
         async function loadModels() { 
             try { 
                 const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_models', workspace: currentWorkspace }) })).json(); 
-                const s = document.getElementById('model-selector'); s.innerHTML = '<option value="">? ???? (??)</option>'; 
+                const s = document.getElementById('model-selector'); s.innerHTML = '<option value="">🧠 預設模型 (自動)</option>'; 
                 if (d && d.models && d.models.length > 0) { d.models.forEach(m => s.innerHTML += `<option value="${m.id}">${m.name}</option>`); } 
-                else { s.innerHTML += `<option value="gemini-2.5-flash">? ?? (2.5 Flash)</option><option value="gemini-2.5-pro">? ?? (2.5 Pro)</option><option value="gemini-3.1-flash-lite-preview">? ??? (3.1 Lite)</option>`; }
+                else { s.innerHTML += `<option value="gemini-2.5-flash">⚡ 閃電 (2.5 Flash)</option><option value="gemini-2.5-pro">🧠 專家 (2.5 Pro)</option><option value="gemini-3.1-flash-lite-preview">🔍 審查員 (3.1 Lite)</option>`; }
             } catch (e) {} 
         }
 
@@ -1091,18 +1091,18 @@
                 if (Array.isArray(d.sessions)) d.sessions.forEach(s => { 
                     const act = s.id === currentSessionId, pin = s.pinned, i = document.createElement('div'); 
                     i.className = `group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${act ? 'active-session' : 'text-gray-400 hover:bg-[#2a2b2f] hover:text-white'}`; 
-                    i.innerHTML = `<div class="flex items-center gap-3 truncate flex-1 min-w-0"><span class="material-symbols-rounded text-lg shrink-0 ${pin ? 'pinned-icon' : ''}">${pin ? 'push_pin' : (act ? 'chat_bubble' : 'chat')}</span><span class="truncate text-sm font-medium tracking-wide">${s.title}</span></div><div class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 shrink-0 ml-2 transition-opacity"><button class="p-1 pin-btn ${pin ? 'text-blue-500' : ''} hover:bg-[#333] rounded-md transition-colors" title="??"><span class="material-symbols-rounded text-[16px]">push_pin</span></button><button class="p-1 move-btn hover:text-green-400 hover:bg-[#333] rounded-md transition-colors" title="???????"><span class="material-symbols-rounded text-[16px]">drive_file_move</span></button><button class="p-1 edit-btn hover:text-blue-400 hover:bg-[#333] rounded-md transition-colors" title="????"><span class="material-symbols-rounded text-[16px]">edit</span></button><button class="p-1 del-btn hover:text-red-400 hover:bg-[#333] rounded-md transition-colors" title="????"><span class="material-symbols-rounded text-[16px]">delete</span></button></div>`; 
+                    i.innerHTML = `<div class="flex items-center gap-3 truncate flex-1 min-w-0"><span class="material-symbols-rounded text-lg shrink-0 ${pin ? 'pinned-icon' : ''}">${pin ? 'push_pin' : (act ? 'chat_bubble' : 'chat')}</span><span class="truncate text-sm font-medium tracking-wide">${s.title}</span></div><div class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 shrink-0 ml-2 transition-opacity"><button class="p-1 pin-btn ${pin ? 'text-blue-500' : ''} hover:bg-[#333] rounded-md transition-colors" title="釘選"><span class="material-symbols-rounded text-[16px]">push_pin</span></button><button class="p-1 move-btn hover:text-green-400 hover:bg-[#333] rounded-md transition-colors" title="歸檔至其他專案"><span class="material-symbols-rounded text-[16px]">drive_file_move</span></button><button class="p-1 edit-btn hover:text-blue-400 hover:bg-[#333] rounded-md transition-colors" title="重新命名"><span class="material-symbols-rounded text-[16px]">edit</span></button><button class="p-1 del-btn hover:text-red-400 hover:bg-[#333] rounded-md transition-colors" title="刪除對話"><span class="material-symbols-rounded text-[16px]">delete</span></button></div>`; 
                     i.onclick = () => switchSession(s.id, s.title); 
                     
                     i.querySelector('.pin-btn').onclick = (e) => { e.stopPropagation(); fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'pin_session', session_id: s.id, is_pinned: !pin, workspace: currentWorkspace }) }).then(loadSessions); }; 
-                    i.querySelector('.edit-btn').onclick = (e) => { e.stopPropagation(); const n = prompt("????", s.title); if (n && n.trim()) fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'rename_session', session_id: s.id, new_title: n, workspace: currentWorkspace }) }).then(loadSessions); }; 
-                    i.querySelector('.del-btn').onclick = (e) => { e.stopPropagation(); if (confirm("???????")) fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'delete_session', session_id: s.id, workspace: currentWorkspace }) }).then(() => s.id === currentSessionId ? startNewSession() : loadSessions()); }; 
+                    i.querySelector('.edit-btn').onclick = (e) => { e.stopPropagation(); const n = prompt("重命名：", s.title); if (n && n.trim()) fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'rename_session', session_id: s.id, new_title: n, workspace: currentWorkspace }) }).then(loadSessions); }; 
+                    i.querySelector('.del-btn').onclick = (e) => { e.stopPropagation(); if (confirm("確定要刪除嗎？")) fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'delete_session', session_id: s.id, workspace: currentWorkspace }) }).then(() => s.id === currentSessionId ? startNewSession() : loadSessions()); }; 
                     
                     i.querySelector('.move-btn').onclick = (e) => { 
                         e.stopPropagation(); 
-                        const targetWs = prompt(`????${s.title}???\n??????????? (?????????)?`, "????"); 
+                        const targetWs = prompt(`將對話「${s.title}」歸檔\n請輸入目標專案空間名稱 (若不存在將自動建立)：`, "歸檔專案"); 
                         if (targetWs && targetWs.trim() && targetWs.trim() !== currentWorkspace) {
-                            const lid = appendLoading("????????...");
+                            const lid = appendLoading("正在轉移對話紀錄...");
                             fetch(GAS_URL, { 
                                 method: 'POST', 
                                 body: JSON.stringify({ mode: 'system', action: 'move_session', session_id: s.id, workspace: currentWorkspace, target_workspace: targetWs.trim() }) 
@@ -1129,7 +1129,7 @@
                      `<script src="https://unpkg.com/@babel/standalone/babel.min.js">\x3C/script>` + 
                      `<script src="https://cdn.tailwindcss.com">\x3C/script>` + 
                      `<script src="https://unpkg.com/lucide@latest">\x3C/script>` + 
-                     `</head><body class="bg-gray-50"><div id="root"></div><script type="text/babel">const { useState, useEffect, useRef, useMemo, useCallback } = React; try { ${cc} const root = ReactDOM.createRoot(document.getElementById('root')); root.render(<${cm ? cm[1] : 'App'} />); setTimeout(() => { if(window.lucide) window.lucide.createIcons(); }, 100); } catch(err) { document.getElementById('root').innerHTML = '<div class="p-4 text-red-700">????:<br>' + err.message + '</div>'; } \x3C/script></body></html>`;
+                     `</head><body class="bg-gray-50"><div id="root"></div><script type="text/babel">const { useState, useEffect, useRef, useMemo, useCallback } = React; try { ${cc} const root = ReactDOM.createRoot(document.getElementById('root')); root.render(<${cm ? cm[1] : 'App'} />); setTimeout(() => { if(window.lucide) window.lucide.createIcons(); }, 100); } catch(err) { document.getElementById('root').innerHTML = '<div class="p-4 text-red-700">渲染錯誤:<br>' + err.message + '</div>'; } \x3C/script></body></html>`;
             }
             currentRenderCode = rc; document.getElementById('preview-modal').classList.remove('hidden'); document.getElementById('preview-modal').classList.add('flex'); document.getElementById('preview-iframe').srcdoc = rc;
         }
@@ -1138,9 +1138,9 @@
         async function openHtmlArtifact(data) {
             if (!data) return;
             
-            // ? ??????????? ID???????????????
+            // 🚀 若無程式碼但有雲端檔案 ID，則發送請求向後端加載工具代碼
             if (!data.code && data.fileId) {
-                const lid = appendLoading("?? ?????????????...");
+                const lid = appendLoading("⚙️ 正在從雲端硬碟讀取工具代碼...");
                 try {
                     const res = await fetch(GAS_URL, { 
                         method: 'POST', 
@@ -1155,12 +1155,12 @@
                     if (resJson.status === "success" && resJson.code) {
                         data.code = resJson.code;
                     } else {
-                        alert(`????: ${resJson.message || '????'}`);
+                        alert(`載入失敗: ${resJson.message || '未知錯誤'}`);
                         return;
                     }
                 } catch(e) {
                     removeLoading(lid);
-                    alert(`????: ${e.toString()}`);
+                    alert(`連線失敗: ${e.toString()}`);
                     return;
                 }
             }
@@ -1169,28 +1169,28 @@
             const code = data.code;
             currentRenderCode = code;
             
-            // ?????? (?? fileId ??)
+            // 加入歷史紀錄 (支援 fileId 對照)
             if (!artifactHistory.some(a => a.name === data.name && (a.code === data.code || (a.fileId && a.fileId === data.fileId)))) {
                 artifactHistory.unshift({ name: data.name, description: data.description, code: data.code, fileId: data.fileId || null, time: new Date() });
             }
 
-            // ????
+            // 切換面板
             if (currentRightTab !== 'canvas') switchRightPanel('canvas');
 
             const iframe = document.getElementById('canvas-iframe');
             if (!iframe) return;
 
-            // ????? JSX/React ?? ?? HTML
+            // 判斷是否為 JSX/React 還是 完整 HTML
             const isFullHtml = code.trim().toLowerCase().startsWith('<!doctype html') || code.trim().toLowerCase().startsWith('<html');
             
             if (isFullHtml) {
                 iframe.srcdoc = code;
-                isCanvasReady = false; // ?????
+                isCanvasReady = false; // 破壞了基座
             } else {
-                // ????????????
+                // 如果基座沒了，先重建基座
                 if (!isCanvasReady || !iframe.contentWindow) {
                     iframe.srcdoc = CANVAS_HOST_PAGE;
-                    // ?????????
+                    // 等待基座就緒後發送
                     const checker = setInterval(() => {
                         if (isCanvasReady) {
                             iframe.contentWindow.postMessage({ type: 'render_artifact', code: code }, '*');
@@ -1207,12 +1207,12 @@
         }
 
         async function handleBrowserPythonRequest(req) {
-            const lid = appendLoading("? ??????? Python ?? (????? 10 ?)...");
+            const lid = appendLoading("🐍 正在載入瀏覽器 Python 引擎 (第一次約需 10 秒)...");
             try {
                 const py = await getPyodide();
-                updateLoading(lid, "?? ????? Python ??...");
+                updateLoading(lid, "⚙️ 正在初始化 Python 環境...");
                 
-                // ???? stdout
+                // 準備捕捉 stdout
                 await py.runPythonAsync(`
                     import sys
                     import io
@@ -1220,7 +1220,7 @@
                     sys.stderr = io.StringIO()
                 `);
                 
-                updateLoading(lid, "? ????????...");
+                updateLoading(lid, "📊 正在進行本地運算...");
                 await py.runPythonAsync(req.code);
                 
                 const stdout = py.runPython("sys.stdout.getvalue()");
@@ -1229,16 +1229,16 @@
 
                 const finalOutput = (stdout + "\n" + stderr).trim();
                 
-                // ????????????
+                // 強制重置狀態以利自動發送
                 isWaiting = false;
                 toggleSendButton(false);
 
-                // ????????????
-                userInput.value = `???? Python ??????\n\`\`\`\n${finalOutput || "(????????)"}\n\`\`\``;
+                // 將結果回傳給後端繼續任務
+                userInput.value = `【瀏覽器 Python 執行結果】：\n\`\`\`\n${finalOutput || "(執行成功，無輸出)"}\n\`\`\``;
                 sendMessage();
             } catch (err) {
                 removeLoading(lid);
-                appendMessage('ai', `? ??? Python ?????\n\`\`\`text\n${err.message}\n\`\`\``);
+                appendMessage('ai', `❌ 瀏覽器 Python 執行失敗：\n\`\`\`text\n${err.message}\n\`\`\``);
                 console.error("Pyodide Error:", err);
             }
         }
@@ -1342,7 +1342,7 @@
 
         function copyCanvasCode() {
             if (!currentRenderCode) {
-                alert("??????????");
+                alert("沒有可複製的程式碼！");
                 return;
             }
             navigator.clipboard.writeText(currentRenderCode).then(() => {
@@ -1353,13 +1353,13 @@
                     setTimeout(() => { btn.innerHTML = originalHtml; }, 2000);
                 }
             }).catch(err => {
-                alert("?????" + err);
+                alert("複製失敗：" + err);
             });
         }
 
         function downloadCanvasHtml() {
             if (!currentRenderCode) {
-                alert("?????????");
+                alert("沒有可下載的內容！");
                 return;
             }
             const isFullHtml = currentRenderCode.trim().toLowerCase().startsWith('<!doctype html') || currentRenderCode.trim().toLowerCase().startsWith('<html');
@@ -1416,7 +1416,7 @@
                 isCanvasReady = true;
             } else if (e.data && e.data.type === 'export_google_slides') {
                 const data = e.data.payload;
-                const lid = appendLoading("???????????? Google ??...");
+                const lid = appendLoading("正在將編輯好的版本匯出至 Google 簡報...");
                 try {
                     const res = await fetch(GAS_URL, { 
                         method: 'POST', 
@@ -1433,17 +1433,17 @@
                     const result = await res.json();
                     removeLoading(lid);
                     if (result.status === "success") {
-                        appendMessage('ai', `? **?????????????**\n? [???? Google ??](${result.url})`);
+                        appendMessage('ai', `✅ **您的客製化簡報已匯出完成！**\n🔗 [點擊開啟 Google 簡報](${result.url})`);
                         closePreview();
                     } else {
-                        alert("?????" + result.message);
+                        alert("匯出失敗：" + result.message);
                     }
                 } catch(err) {
                     removeLoading(lid);
-                    alert("????");
+                    alert("匯出錯誤");
                 }
             } else if (e.data && e.data.type === 'update_presentation_data') {
-                // ??????????????
+                // 背景自動儲存編輯後的簡報內容
                 fetch(GAS_URL, { 
                     method: 'POST', 
                     body: JSON.stringify({ 
@@ -1457,24 +1457,24 @@
         });
 
         function openHtmlPresentation(data) {
-            // ??????? theme ? colors ??
+            // 防錯機制：確保 theme 和 colors 存在
             const theme = data.theme || { colors: { background: "#0f172a", text: "#f8fafc", accent: "#38bdf8", shape: "#1e293b" } };
             const colors = theme.colors || { background: "#0f172a", text: "#f8fafc", accent: "#38bdf8", shape: "#1e293b" };
 
             const renderList = (content) => {
                 if (!content) return '';
                 let arr = Array.isArray(content) ? content : String(content).split(/\\n|\n/);
-                return arr.map(c => c.trim() ? `<li class="relative pl-6 mb-4 leading-relaxed before:content-[''] before:absolute before:left-0 before:top-2.5 before:w-1.5 before:h-1.5 before:bg-current"><span class="opacity-90">${c.replace(/^- /, '').replace(/^? /, '')}</span></li>` : '').join('');
+                return arr.map(c => c.trim() ? `<li class="relative pl-6 mb-4 leading-relaxed before:content-[''] before:absolute before:left-0 before:top-2.5 before:w-1.5 before:h-1.5 before:bg-current"><span class="opacity-90">${c.replace(/^- /, '').replace(/^• /, '')}</span></li>` : '').join('');
             };
 
             const slidesHtml = data.slides.map((slide, index) => {
                 let layoutHtml = '';
                 
-                // Manus ??????? (Eyebrow)
+                // Manus 風格：提取眉批 (Eyebrow)
                 let titleText = slide.title || "";
                 let eyebrowText = slide.label || "";
-                if (!eyebrowText && titleText.startsWith('?') && titleText.includes('?')) {
-                    const match = titleText.match(/?(.*?)?/);
+                if (!eyebrowText && titleText.startsWith('【') && titleText.includes('】')) {
+                    const match = titleText.match(/【(.*?)】/);
                     if (match) {
                         eyebrowText = match[0];
                         titleText = titleText.replace(eyebrowText, '').trim();
@@ -1483,7 +1483,7 @@
 
                 const eyebrowHtml = eyebrowText ? `<div class="text-sm md:text-base font-bold tracking-wider mb-8 outline-none hover:bg-black/5 p-1 inline-block rounded transition-colors" style="color: ${colors.accent}" contenteditable="true" onblur="updateSlideData(${index}, 'label', this.innerText)">${eyebrowText}</div>` : '';
                 
-                // Manus ??????????????
+                // Manus 風格：極簡、無底色的粗體標題
                 const titleHtml = titleText ? `<h1 class="text-4xl md:text-5xl font-extrabold mb-6 leading-snug tracking-tight outline-none hover:bg-black/5 p-2 rounded transition-colors animate-[fadeInUp_0.8s_ease-out]" contenteditable="true" onblur="updateSlideData(${index}, 'title', this.innerText)">${titleText}</h1>` : '';
                 
                 const subtitleHtml = slide.subtitle ? `<h2 class="text-lg md:text-xl opacity-75 mb-8 leading-relaxed outline-none hover:bg-black/5 p-2 rounded transition-colors animate-[fadeInUp_1s_ease-out]" contenteditable="true" onblur="updateSlideData(${index}, 'subtitle', this.innerText)">${slide.subtitle}</h2>` : '';
@@ -1497,7 +1497,7 @@
                             </div>
                             <div class="flex flex-col items-center justify-center h-full text-center max-w-5xl mx-auto px-8 relative z-10">
                                 <div class="w-16 h-16 mb-12 flex items-center justify-center rounded border-[3px] transform rotate-6 opacity-80" style="border-color: ${colors.accent}; color: ${colors.accent}">
-                                    <span class="text-2xl font-black -rotate-6">${eyebrowText.replace(/[??]/g, '').substring(0,2) || '??'}</span>
+                                    <span class="text-2xl font-black -rotate-6">${eyebrowText.replace(/[【】]/g, '').substring(0,2) || '簡報'}</span>
                                 </div>
                                 ${titleHtml}
                                 <div class="text-xl opacity-60 mt-4 tracking-widest outline-none hover:bg-black/5 p-2 rounded" contenteditable="true" onblur="updateSlideData(${index}, 'subtitle', this.innerText)">${slide.subtitle || slide.content || ''}</div>
@@ -1509,10 +1509,10 @@
                             <div class="flex flex-col items-center justify-center h-full text-center max-w-5xl mx-auto px-12 relative">
                                 ${eyebrowHtml}
                                 <div class="text-4xl md:text-6xl font-serif font-bold my-10 leading-snug outline-none hover:bg-black/5 p-6 rounded transition-colors z-10" contenteditable="true" onblur="updateSlideData(${index}, 'content', this.innerText)">
-                                    ${slide.content || slide.subtitle || '????'}
+                                    ${slide.content || slide.subtitle || '金句內容'}
                                 </div>
                                 <div class="text-xl font-light tracking-widest mt-8 opacity-60" contenteditable="true" onblur="updateSlideData(${index}, 'title', this.innerText)">
-                                    ? ${titleText || '??'}
+                                    — ${titleText || '講者'}
                                 </div>
                             </div>`;
                         break;
@@ -1537,7 +1537,7 @@
                                 </div>
                             </div>`;
                         break;
-                    case 'split_column': // Manus ????? (?2, ?5)
+                    case 'split_column': // Manus 非對稱排版 (圖2, 圖5)
                         layoutHtml = `
                             <div class="flex flex-col h-full max-w-6xl mx-auto w-full pt-16 px-12">
                                 ${eyebrowHtml}
@@ -1553,7 +1553,7 @@
                                     </div>
                                     <div class="col-span-12 md:col-span-7">
                                         <ul class="text-xl space-y-6 outline-none hover:bg-black/5 p-6 rounded" style="color: ${colors.accent}" contenteditable="true" onblur="updateSlideData(${index}, 'right', this.innerHTML)">
-                                            ${renderList(slide.right || slide.points?.join('\\n') || '????')}
+                                            ${renderList(slide.right || slide.points?.join('\\n') || '右側內容')}
                                         </ul>
                                     </div>
                                 </div>
@@ -1561,13 +1561,13 @@
                         break;
                     case 'icon_grid':
                     case 'card_deck':
-                    case 'grid': // Manus ?????? (?3)
+                    case 'grid': // Manus 四欄文字排版 (圖3)
                         let gridItemsHtml = '';
                         if (slide.gridItems && Array.isArray(slide.gridItems)) {
                             gridItemsHtml = slide.gridItems.map((item, i) => `
                                 <div class="flex flex-col text-center items-center group">
                                     <div class="text-2xl font-bold mb-3 transition-colors" style="color: ${colors.accent}">${item.title}</div>
-                                    <div class="text-xs font-bold py-1 px-3 mb-6 rounded-sm opacity-80" style="background-color: ${colors.accent}15; color: ${colors.accent}">${item.iconKeyword || '??'}</div>
+                                    <div class="text-xs font-bold py-1 px-3 mb-6 rounded-sm opacity-80" style="background-color: ${colors.accent}15; color: ${colors.accent}">${item.iconKeyword || '要點'}</div>
                                     <div class="text-[0.95rem] opacity-75 leading-relaxed">${item.content}</div>
                                 </div>
                             `).join('');
@@ -1594,7 +1594,7 @@
                                     ${slide.value || (slide.points && slide.points[0]) || '99%'}
                                 </div>
                                 <div class="text-xl font-light opacity-80 max-w-3xl leading-relaxed outline-none hover:bg-black/5 p-4 rounded" contenteditable="true" onblur="updateSlideData(${index}, 'content', this.innerText)">
-                                    ${slide.content || slide.subtitle || '???????'}
+                                    ${slide.content || slide.subtitle || '請輸入資料說明'}
                                 </div>
                             </div>`;
                         break;
@@ -1655,11 +1655,11 @@
 </head>
 <body>
     <div class="toolbar text-sm font-medium">
-        <button onclick="document.documentElement.requestFullscreen()" class="hover:text-blue-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg> ??</button>
+        <button onclick="document.documentElement.requestFullscreen()" class="hover:text-blue-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg> 播放</button>
         <div class="w-px bg-white/20"></div>
-        <button onclick="window.print()" class="hover:text-pink-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg> ?? PDF</button>
+        <button onclick="window.print()" class="hover:text-pink-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg> 轉存 PDF</button>
         <div class="w-px bg-white/20"></div>
-        <button onclick="exportToGoogleSlides(this)" class="hover:text-green-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> ?? Google ??</button>
+        <button onclick="exportToGoogleSlides(this)" class="hover:text-green-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> 匯出 Google 簡報</button>
     </div>
     <div id="slider">
         ${slidesHtml}
@@ -1670,18 +1670,18 @@
         function updateSlideData(index, field, value) {
             if (field === 'content') {
                 const temp = document.createElement('div');
-                temp.innerHTML = value.replace(/<p>/g, '').replace(/<\\/p>/g, '\\n').replace(/? /g, '').replace(/<li>/g, '').replace(/<\\/li>/g, '\\n');
+                temp.innerHTML = value.replace(/<p>/g, '').replace(/<\\/p>/g, '\\n').replace(/• /g, '').replace(/<li>/g, '').replace(/<\\/li>/g, '\\n');
                 presentationData.slides[index][field] = temp.innerText.trim();
             } else {
                 presentationData.slides[index][field] = value;
             }
-            // ?????????????
+            // 通知父視窗同步資料到資料庫
             window.parent.postMessage({ type: 'update_presentation_data', presentationData: presentationData }, '*');
         }
 
         function exportToGoogleSlides(btn) {
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> ???...';
+            btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> 匯出中...';
             btn.disabled = true;
             window.parent.postMessage({ type: 'export_google_slides', payload: presentationData }, '*');
             setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 3000);
@@ -1696,8 +1696,8 @@
         }
         // closePreview and refreshPreview are defined globally above
 
-        function toggleSharedData() { /* ??????? */ }
-        function toggleSources() { /* ??????? */ }
+        function toggleSharedData() { /* 已整合至右面板 */ }
+        function toggleSources() { /* 已整合至右面板 */ }
         
         let currentRightTab = 'library';
         function switchRightPanel(tab) {
@@ -1732,32 +1732,32 @@
                 icon.innerText = 'deployed_code';
                 icon.className = 'material-symbols-rounded text-emerald-400';
                 title.innerText = 'Live Canvas';
-                footer.innerHTML = '<span class="material-symbols-rounded text-[12px] align-middle mr-1">bolt</span>?? Agent ????????????????????';
+                footer.innerHTML = '<span class="material-symbols-rounded text-[12px] align-middle mr-1">bolt</span>此為 Agent 專屬的動態生成介面，支援即時操作與預覽。';
                 container.innerHTML = `
                     <div class="flex flex-col h-full">
                         <div class="flex items-center justify-between mb-4 px-1">
-                            <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">???? (PREVIEW)</h4>
+                            <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">當前預覽 (PREVIEW)</h4>
                             <div class="flex gap-3">
-                                <button id="copy-canvas-btn" onclick="copyCanvasCode()" class="text-gray-500 hover:text-white transition-colors" title="?????"><span class="material-symbols-rounded text-[16px]">content_copy</span></button>
-                                <button id="download-canvas-btn" onclick="downloadCanvasHtml()" class="text-gray-500 hover:text-white transition-colors" title="????? HTML ??"><span class="material-symbols-rounded text-[16px]">download</span></button>
-                                <button onclick="refreshPreview()" class="text-gray-500 hover:text-white transition-colors" title="??"><span class="material-symbols-rounded text-[16px]">refresh</span></button>
-                                <button onclick="openPreviewInModal()" class="text-gray-500 hover:text-white transition-colors" title="???"><span class="material-symbols-rounded text-[16px]">fullscreen</span></button>
+                                <button id="copy-canvas-btn" onclick="copyCanvasCode()" class="text-gray-500 hover:text-white transition-colors" title="複製原始碼"><span class="material-symbols-rounded text-[16px]">content_copy</span></button>
+                                <button id="download-canvas-btn" onclick="downloadCanvasHtml()" class="text-gray-500 hover:text-white transition-colors" title="下載為獨立 HTML 檔案"><span class="material-symbols-rounded text-[16px]">download</span></button>
+                                <button onclick="refreshPreview()" class="text-gray-500 hover:text-white transition-colors" title="重整"><span class="material-symbols-rounded text-[16px]">refresh</span></button>
+                                <button onclick="openPreviewInModal()" class="text-gray-500 hover:text-white transition-colors" title="全螢幕"><span class="material-symbols-rounded text-[16px]">fullscreen</span></button>
                             </div>
                         </div>
                         <div class="bg-white rounded-xl overflow-hidden shadow-inner flex-1 min-h-[400px] relative border border-[#333]">
                             <iframe id="canvas-iframe" sandbox="allow-scripts allow-forms allow-modals" class="w-full h-full border-none absolute inset-0"></iframe>
                         </div>
                         <div class="mt-6">
-                            <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 px-1">???? (ARTIFACTS)</h4>
+                            <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 px-1">工具歷史 (ARTIFACTS)</h4>
                             <div id="artifact-history-list" class="space-y-2 max-h-[200px] overflow-y-auto">
-                                <div class="p-3 text-[11px] text-gray-500 italic text-center bg-[#2a2b2f]/50 rounded-xl border border-dashed border-[#444]">????????</div>
+                                <div class="p-3 text-[11px] text-gray-500 italic text-center bg-[#2a2b2f]/50 rounded-xl border border-dashed border-[#444]">尚無動態工具生成</div>
                             </div>
                         </div>
                     </div>
                 `;
                 if (currentRenderCode) {
                     setTimeout(() => {
-                        openHtmlArtifact({ name: "????", description: "???????", code: currentRenderCode });
+                        openHtmlArtifact({ name: "恢復預覽", description: "從分頁切換回來", code: currentRenderCode });
                     }, 50);
                 } else if (artifactHistory.length > 0) {
                     setTimeout(() => {
@@ -1769,25 +1769,25 @@
             } else if (currentRightTab === 'library') {
                 icon.innerText = 'inventory_2';
                 icon.className = 'material-symbols-rounded text-blue-400';
-                title.innerText = '?????';
-                footer.innerHTML = '<span class="material-symbols-rounded text-[12px] align-middle mr-1">info</span>????????????? AI ????????';
+                title.innerText = '專案圖書館';
+                footer.innerHTML = '<span class="material-symbols-rounded text-[12px] align-middle mr-1">info</span>所有來源與片段均會自動作為 AI 思考的背景知識。';
                 container.innerHTML = `
                     <div class="mb-4">
                         <button onclick="generateWiki()" class="w-full py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95">
                             <span class="material-symbols-rounded text-[18px]">auto_stories</span>
-                            ?????? Wiki
+                            一鍵生成專案 Wiki
                         </button>
                     </div>
                     <section>
-                        <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 px-1 flex items-center justify-between">???? (SOURCES) <span class="bg-blue-600/20 text-blue-400 px-1.5 py-0.5 rounded text-[9px]" id="source-count">0</span></h4>
+                        <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 px-1 flex items-center justify-between">資料來源 (SOURCES) <span class="bg-blue-600/20 text-blue-400 px-1.5 py-0.5 rounded text-[9px]" id="source-count">0</span></h4>
                         <div class="space-y-3">
-                            <div class="flex gap-1 mb-2"><input type="text" id="source-input" placeholder="????? Drive ID..." class="flex-1 bg-[#2a2b2f] border border-[#444] rounded-md px-2 py-1.5 text-[10px] text-white outline-none focus:border-blue-500"><button onclick="handleAddSource()" class="bg-blue-600 hover:bg-blue-500 text-white p-1.5 rounded-md"><span class="material-symbols-rounded text-[16px]">add</span></button></div>
-                            <div id="sources-list" class="space-y-1.5"><div class="p-4 text-[11px] text-gray-500 italic text-center bg-[#2a2b2f]/50 rounded-xl border border-dashed border-[#444]">???...</div></div>
+                            <div class="flex gap-1 mb-2"><input type="text" id="source-input" placeholder="貼上網址或 Drive ID..." class="flex-1 bg-[#2a2b2f] border border-[#444] rounded-md px-2 py-1.5 text-[10px] text-white outline-none focus:border-blue-500"><button onclick="handleAddSource()" class="bg-blue-600 hover:bg-blue-500 text-white p-1.5 rounded-md"><span class="material-symbols-rounded text-[16px]">add</span></button></div>
+                            <div id="sources-list" class="space-y-1.5"><div class="p-4 text-[11px] text-gray-500 italic text-center bg-[#2a2b2f]/50 rounded-xl border border-dashed border-[#444]">載入中...</div></div>
                         </div>
                     </section>
                     <section class="pt-4 border-t border-[#333]">
-                        <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 px-1">?????? (FRAGMENTS)</h4>
-                        <div id="shared-data-list" class="space-y-1.5"><div class="p-4 text-[11px] text-gray-500 italic text-center bg-[#2a2b2f]/50 rounded-xl border border-dashed border-[#444]">???...</div></div>
+                        <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 px-1">釘選知識片段 (FRAGMENTS)</h4>
+                        <div id="shared-data-list" class="space-y-1.5"><div class="p-4 text-[11px] text-gray-500 italic text-center bg-[#2a2b2f]/50 rounded-xl border border-dashed border-[#444]">載入中...</div></div>
                     </section>
                 `;
                 loadSources();
@@ -1795,51 +1795,51 @@
             } else {
                 icon.innerText = 'tune';
                 icon.className = 'material-symbols-rounded text-purple-400';
-                title.innerText = '????';
-                footer.innerHTML = '<span class="material-symbols-rounded text-[12px] align-middle mr-1">settings</span>?? AI ?????????';
+                title.innerText = '功能設定';
+                footer.innerHTML = '<span class="material-symbols-rounded text-[12px] align-middle mr-1">settings</span>調整 AI 的執行模式與行為。';
                 container.innerHTML = `
                     <div class="space-y-6">
                         <section>
-                            <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 px-1">????</h4>
+                            <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 px-1">模式切換</h4>
                             <div class="space-y-4">
                                 <label class="flex items-center justify-between p-3 bg-[#2a2b2f] rounded-xl cursor-pointer group hover:bg-[#333] transition-all">
-                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-purple-400">palette</span><div class="flex flex-col"><span class="text-xs font-bold text-gray-200">??????</span><span class="text-[9px] text-gray-500">???????????</span></div></div>
+                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-purple-400">palette</span><div class="flex flex-col"><span class="text-xs font-bold text-gray-200">單純繪圖模式</span><span class="text-[9px] text-gray-500">僅生成圖片，不產生文字</span></div></div>
                                     <div class="relative"><input type="checkbox" id="draw-mode-toggle" class="sr-only peer"><div class="w-8 h-4.5 bg-gray-600 rounded-full peer peer-checked:bg-purple-600 after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-full"></div></div>
                                 </label>
                                 <label class="flex items-center justify-between p-3 bg-[#2a2b2f] rounded-xl cursor-pointer group hover:bg-[#333] transition-all">
-                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-blue-400">language</span><div class="flex flex-col"><span class="text-xs font-bold text-gray-200">??????</span><span class="text-[9px] text-gray-500">?? AI ????????</span></div></div>
+                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-blue-400">language</span><div class="flex flex-col"><span class="text-xs font-bold text-gray-200">即時聯網搜尋</span><span class="text-[9px] text-gray-500">允許 AI 存取最新網頁資訊</span></div></div>
                                     <div class="relative"><input type="checkbox" id="web-search-toggle" class="sr-only peer"><div class="w-8 h-4.5 bg-gray-600 rounded-full peer peer-checked:bg-blue-600 after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-full"></div></div>
                                 </label>
                                 <label class="flex items-center justify-between p-3 bg-[#2a2b2f] rounded-xl cursor-pointer group hover:bg-[#333] transition-all">
-                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-pink-400">imagesmode</span><div class="flex flex-col"><span class="text-xs font-bold text-gray-200">??????</span><span class="text-[9px] text-gray-500">????????????</span></div></div>
+                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-pink-400">imagesmode</span><div class="flex flex-col"><span class="text-xs font-bold text-gray-200">自動簡報配圖</span><span class="text-[9px] text-gray-500">建立簡報時自動生成示意圖</span></div></div>
                                     <div class="relative"><input type="checkbox" id="auto-image-toggle" class="sr-only peer"><div class="w-8 h-4.5 bg-gray-600 rounded-full peer peer-checked:bg-pink-600 after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-full"></div></div>
                                 </label>
                             </div>
                         </section>
                         <section class="pt-4 border-t border-[#333]">
-                            <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 px-1">????</h4>
+                            <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 px-1">互動偏好</h4>
                             <div class="space-y-4">
                                 <label class="flex items-center justify-between p-3 bg-[#2a2b2f] rounded-xl cursor-pointer group hover:bg-[#333] transition-all">
-                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-green-400">volume_up</span><div class="flex flex-col"><span class="text-xs font-bold text-gray-200">??????</span><span class="text-[9px] text-gray-500">AI ?????????</span></div></div>
+                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-green-400">volume_up</span><div class="flex flex-col"><span class="text-xs font-bold text-gray-200">語音自動播報</span><span class="text-[9px] text-gray-500">AI 回應後自動朗讀文字</span></div></div>
                                     <div class="relative"><input type="checkbox" id="voice-output-toggle" class="sr-only peer"><div class="w-8 h-4.5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-full"></div></div>
                                 </label>
                                 <label class="flex items-center justify-between p-3 bg-[#2a2b2f] rounded-xl cursor-pointer group hover:bg-[#333] transition-all">
-                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-yellow-400">all_inclusive</span><div class="flex flex-col"><span class="text-xs font-bold text-gray-200">??????</span><span class="text-[9px] text-gray-500">???????????????</span></div></div>
+                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-yellow-400">all_inclusive</span><div class="flex flex-col"><span class="text-xs font-bold text-gray-200">無限連續對話</span><span class="text-[9px] text-gray-500">不自動清空上下文，適合深度討論</span></div></div>
                                     <div class="relative"><input type="checkbox" id="continuous-mode-toggle" class="sr-only peer"><div class="w-8 h-4.5 bg-gray-600 rounded-full peer peer-checked:bg-yellow-500 after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-full"></div></div>
                                 </label>
                             </div>
                         <section class="pt-4 border-t border-[#333]">
-                            <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 px-1">????????</h4>
+                            <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 px-1">全域思維風格定義</h4>
                             <div class="space-y-2">
-                                <p class="text-[10px] text-gray-500 px-1 leading-relaxed">???????????????????????????</p>
+                                <p class="text-[10px] text-gray-500 px-1 leading-relaxed">在此輸入您的個人溝通習慣或決策邏輯（適用於所有專案）。</p>
                                 <textarea id="global-profile-input" rows="5" 
-                                    placeholder="???????????????????????????????????..." 
+                                    placeholder="例如：請優先使用條列式、說話請專業且簡潔、在提供建議時請先進行風險評估..." 
                                     class="w-full bg-[#1e1f22] border border-[#333] rounded-xl p-3 text-xs text-gray-200 outline-none focus:border-purple-500/50 transition-all resize-none shadow-inner"></textarea>
                             </div>
                         </section>
                     </div>
                 `;
-                // ?? Checkbox ??
+                // 恢復 Checkbox 狀態
                 document.getElementById('draw-mode-toggle').checked = settings.drawMode;
                 document.getElementById('web-search-toggle').checked = settings.webSearch;
                 document.getElementById('auto-image-toggle').checked = settings.autoImage;
@@ -1847,13 +1847,13 @@
                 document.getElementById('continuous-mode-toggle').checked = settings.continuousMode;
                 document.getElementById('global-profile-input').value = settings.globalProfile;
 
-                // ?????????
+                // 綁定文字框自動儲存
                 document.getElementById('global-profile-input').oninput = (e) => {
                     settings.globalProfile = e.target.value;
                     localStorage.setItem('globalProfile', e.target.value);
                 };
 
-                // ????
+                // 綁定事件
                 ['drawMode','webSearch','autoImage','voiceOutput','continuousMode'].forEach(key => {
                     const id = key.replace(/[A-Z]/g, m => '-' + m.toLowerCase()) + '-toggle';
                     const el = document.getElementById(id);
@@ -1871,7 +1871,7 @@
             const input = document.getElementById('source-input');
             const url = input.value.trim();
             if (!url) return;
-            const lid = appendLoading("?????????...");
+            const lid = appendLoading("正在抓取並分析來源...");
             try {
                 const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'add_source', workspace: currentWorkspace, url: url, title: url, type: url.includes('youtube.com') ? 'youtube' : 'web' }) });
                 const d = await res.json();
@@ -1880,7 +1880,7 @@
         }
 
         async function removeSource(id) {
-            if (!confirm("??????????")) return;
+            if (!confirm("確定要移除此來源嗎？")) return;
             try { await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'remove_source', workspace: currentWorkspace, source_id: id }) }); loadSources(); } catch (e) {}
         }
 
@@ -1893,7 +1893,7 @@
                         const prose = element.querySelector('.prose');
                         if (d.shared) {
                             prose.classList.add('shared-message');
-                            if (!prose.querySelector('.shared-badge')) prose.innerHTML += '<span class="shared-badge">????</span>';
+                            if (!prose.querySelector('.shared-badge')) prose.innerHTML += '<span class="shared-badge">專案共用</span>';
                         } else {
                             prose.classList.remove('shared-message');
                             const badge = prose.querySelector('.shared-badge');
@@ -1911,7 +1911,7 @@
             const isOpen = p.classList.toggle('right-panel-open');
             p.classList.toggle('right-panel-closed');
             
-            // ?????????????
+            // 手機版：切換遮罩並鎖定捲動
             if (window.innerWidth < 1024) {
                 o.classList.toggle('hidden');
                 document.body.style.overflow = isOpen ? 'hidden' : '';
@@ -1944,7 +1944,7 @@
                         div.querySelector('button').onclick = (e) => { e.stopPropagation(); removeSource(s.id); };
                         l.appendChild(div);
                     });
-                } else { countEl.innerText = '0'; l.innerHTML = '<div class="p-4 text-[11px] text-gray-500 italic text-center bg-[#2a2b2f]/50 rounded-xl border border-dashed border-[#444]">??????</div>'; }
+                } else { countEl.innerText = '0'; l.innerHTML = '<div class="p-4 text-[11px] text-gray-500 italic text-center bg-[#2a2b2f]/50 rounded-xl border border-dashed border-[#444]">尚無來源資料</div>'; }
             } catch (e) {}
         }
         
@@ -1965,7 +1965,7 @@
                         div.querySelector('button').onclick = (e) => { e.stopPropagation(); toggleMessageSharing(item.text, null, false); };
                         l.appendChild(div);
                     });
-                } else { l.innerHTML = '<div class="p-4 text-[11px] text-gray-500 italic text-center bg-[#2a2b2f]/50 rounded-xl border border-dashed border-[#444]">????</div>'; }
+                } else { l.innerHTML = '<div class="p-4 text-[11px] text-gray-500 italic text-center bg-[#2a2b2f]/50 rounded-xl border border-dashed border-[#444]">尚無片段</div>'; }
             } catch (e) {}
         }
 
@@ -1977,12 +1977,12 @@
             document.getElementById('peek-title').innerText = source.title;
             document.getElementById('peek-link').href = source.url;
             document.getElementById('peek-icon').innerText = source.type === 'youtube' ? 'subscriptions' : (source.type === 'web' ? 'public' : 'description');
-            document.getElementById('peek-content').innerText = source.content ? source.content.substring(0, 300) + '...' : '?????????????...';
+            document.getElementById('peek-content').innerText = source.content ? source.content.substring(0, 300) + '...' : '正在讀取文件摘要與關鍵段落...';
             
             peek.classList.remove('hidden');
             peek.style.display = 'block';
             
-            // ????????????
+            // 同步亮起右側面板中的項目
             switchRightPanel('library');
             setTimeout(() => {
                 const el = document.getElementById(`source-item-${num}`);
@@ -2003,15 +2003,15 @@
         async function generateWiki() {
             const btn = event.currentTarget;
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[18px]">sync</span> ??????...';
+            btn.innerHTML = '<span class="material-symbols-rounded animate-spin text-[18px]">sync</span> 正在分析專案...';
             btn.disabled = true;
 
-            const prompt = `??????????????????????? ${cachedSources.length} ????????????????????????????? Wiki????????????
-1. ???????
-2. ????????
-3. ??/?????
-4. ??????
-????? create_project_wiki ?????`;
+            const prompt = `請幫我分析目前的專案背景、現有的資料來源（包含 ${cachedSources.length} 個檔案）與我們先前的討論進度，自動建立一份結構完整的「專案 Wiki」導覽文件。內容請包含：
+1. 專案願景與目標
+2. 現有資料資產索引
+3. 開發/討論里程碑
+4. 後續建議行動
+請直接呼叫 create_project_wiki 工具執行。`;
 
             try {
                 const chatInput = document.getElementById('user-input');
@@ -2023,29 +2023,29 @@
             }
         }
 
-        // ????
+        // 啟動入口
         window.onload = () => { 
-            // ? ??????? await ??????????? Promise.all ????????????
+            // 🐛 修復：不再使用 await 阻塞整個畫面載入，改用 Promise.all 平行處理，並加上錯誤捕捉
             loadWorkspaces()
                 .then(() => {
                     loadSessions(); 
                     loadGems(); 
                     loadModels(); 
                 })
-                .catch(e => console.error("Workspace ????", e))
+                .catch(e => console.error("Workspace 載入失敗", e))
                 .finally(() => {
-                    // ???????????????????
+                    // 無論如何都先渲染右側面板，避免畫面卡白
                     renderRightPanelContent();
                 });
             
-            // ?????? (??????)
+            // 載入用戶資訊 (確認雲端帳號)
             fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_user_info' }) })
                 .then(res => res.json())
                 .then(data => {
-                    document.getElementById('user-email').innerText = data.email || "?????";
+                    document.getElementById('user-email').innerText = data.email || "未授權帳號";
                     document.getElementById('user-email').classList.remove('italic', 'opacity-60', 'text-[10px]');
                 })
-                .catch(e => { document.getElementById('user-email').innerText = "????"; });
+                .catch(e => { document.getElementById('user-email').innerText = "連線失敗"; });
         };
     </script>
 </body>
