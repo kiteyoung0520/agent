@@ -991,13 +991,6 @@
             loadSessions(); loadWorkspaceContext(); loadSources();
         }
         
-        window.addEventListener('error', function(e) {
-            alert('JavaScript 錯誤: ' + e.message + ' at ' + e.filename + ':' + e.lineno);
-        });
-        window.addEventListener('unhandledrejection', function(e) {
-            alert('Promise 錯誤: ' + e.reason);
-        });
-
         async function loadWorkspaces() { 
             try { 
                 const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_workspaces' }) })).json(); 
@@ -1014,9 +1007,8 @@
                     }
                 }
             } catch (e) {
-                document.getElementById('workspace-selector').innerHTML = `<option value="">⚠️ 載入失敗: ${e.message}</option>`;
-                alert("連線到伺服器失敗，請檢查網路或關閉阻擋追蹤/廣告插件：" + e.message);
-                throw e;
+                console.warn('Workspace 載入失敗', e);
+                document.getElementById('workspace-selector').innerHTML = `<option value="">⚠️ 無法連線</option>`;
             } 
         }
 
