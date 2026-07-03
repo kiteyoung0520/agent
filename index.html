@@ -235,8 +235,12 @@
                 <span id="bookmark-chevron" class="material-symbols-rounded text-gray-500 text-sm transition-transform duration-200">expand_more</span>
             </button>
             <div id="bookmark-list" class="space-y-1 hidden mt-2">
-                
-                
+                <a href="https://ppt-azure.vercel.app/" target="_blank" class="flex items-center gap-3 p-3 rounded-xl text-gray-400 hover:bg-[#2a2b2f] hover:text-white transition-all group">
+                    <span class="material-symbols-rounded text-lg shrink-0 group-hover:text-blue-400 transition-colors">style</span><span class="truncate text-sm">????</span>
+                </a>
+                <a href="https://kiteyoung0520.github.io/p/" target="_blank" class="flex items-center gap-3 p-3 rounded-xl text-gray-400 hover:bg-[#2a2b2f] hover:text-white transition-all group">
+                    <span class="material-symbols-rounded text-lg shrink-0 group-hover:text-amber-400 transition-colors">slideshow</span><span class="truncate text-sm">?????</span>
+                </a>
             </div>
         </div>
         <div class="p-4 border-t border-[#333] text-xs text-gray-500 text-center font-mono shrink-0">v87.5 Full Functional</div>
@@ -426,9 +430,9 @@
 
         
         const settings = {
-            drawMode: false,
+            drawMode: localStorage.getItem('drawMode') === 'true',
             webSearch: localStorage.getItem('webSearch') === 'true',
-            autoImage: false,
+            autoImage: localStorage.getItem('autoImage') === 'true',
             voiceOutput: localStorage.getItem('voiceOutput') === 'true',
             continuousMode: localStorage.getItem('continuousMode') === 'true',
             globalProfile: localStorage.getItem('globalProfile') || ""
@@ -739,7 +743,6 @@
             else if (f.type === 'application/pdf' || ext === 'pdf') { const lid = appendLoading("?? PDF ????..."); try { await loadPdfJs(); r.onload = async (ev) => { try { const pdf = await pdfjsLib.getDocument(new Uint8Array(ev.target.result)).promise; let t = ""; for (let i=1; i<=pdf.numPages; i++) t += (await (await pdf.getPage(i)).getTextContent()).items.map(s => s.str).join(' ') + "\n"; setDocPayload(f.name, t); } catch (err) { alert("PDF ????"); } finally { removeLoading(lid); } }; r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); alert("?? PDF ????"); } } 
             else if (ext === 'docx') { const lid = appendLoading("?? Word ????..."); try { await loadMammoth(); r.onload = async (ev) => { try { setDocPayload(f.name, (await mammoth.extractRawText({ arrayBuffer: ev.target.result })).value); } catch(err) { alert("Word ????"); } finally { removeLoading(lid); } }; r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); alert("?? Word ????"); } } 
             else if (ext === 'xlsx' || ext === 'csv') { const lid = appendLoading("?? Excel ????..."); try { await loadXlsx(); r.onload = (ev) => { try { const wb = XLSX.read(ev.target.result, { type: 'array' }); let t = ""; wb.SheetNames.forEach(n => { t += `\n--- ??: ${n} ---\n`; let c = XLSX.utils.sheet_to_csv(wb.Sheets[n]); t += c.length > 500000 ? c.substring(0, 500000) + "\n...[??]..." : c; }); setDocPayload(f.name, t); } catch(err) { alert("Excel ????"); } finally { removeLoading(lid); } }; r.readAsArrayBuffer(f); } catch (err) { removeLoading(lid); alert("?? Excel ????"); } } 
-
             else if (ext === 'pptx') { 
                 const lid = appendLoading("???????..."); 
                 if (f.size < 5 * 1024 * 1024) { 
@@ -1656,7 +1659,7 @@
         <div class="w-px bg-white/20"></div>
         <button onclick="window.print()" class="hover:text-pink-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg> ?? PDF</button>
         <div class="w-px bg-white/20"></div>
-        <button onclick="alert('????????')" style="display:none;" class="hover:text-green-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> ?? Google ??</button>
+        <button onclick="exportToGoogleSlides(this)" class="hover:text-green-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> ?? Google ??</button>
     </div>
     <div id="slider">
         ${slidesHtml}
@@ -1800,8 +1803,16 @@
                             <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 px-1">????</h4>
                             <div class="space-y-4">
                                 <label class="flex items-center justify-between p-3 bg-[#2a2b2f] rounded-xl cursor-pointer group hover:bg-[#333] transition-all">
+                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-purple-400">palette</span><div class="flex flex-col"><span class="text-xs font-bold text-gray-200">??????</span><span class="text-[9px] text-gray-500">???????????</span></div></div>
+                                    <div class="relative"><input type="checkbox" id="draw-mode-toggle" class="sr-only peer"><div class="w-8 h-4.5 bg-gray-600 rounded-full peer peer-checked:bg-purple-600 after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-full"></div></div>
+                                </label>
+                                <label class="flex items-center justify-between p-3 bg-[#2a2b2f] rounded-xl cursor-pointer group hover:bg-[#333] transition-all">
                                     <div class="flex items-center gap-3"><span class="material-symbols-rounded text-blue-400">language</span><div class="flex flex-col"><span class="text-xs font-bold text-gray-200">??????</span><span class="text-[9px] text-gray-500">?? AI ????????</span></div></div>
                                     <div class="relative"><input type="checkbox" id="web-search-toggle" class="sr-only peer"><div class="w-8 h-4.5 bg-gray-600 rounded-full peer peer-checked:bg-blue-600 after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-full"></div></div>
+                                </label>
+                                <label class="flex items-center justify-between p-3 bg-[#2a2b2f] rounded-xl cursor-pointer group hover:bg-[#333] transition-all">
+                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-pink-400">imagesmode</span><div class="flex flex-col"><span class="text-xs font-bold text-gray-200">??????</span><span class="text-[9px] text-gray-500">????????????</span></div></div>
+                                    <div class="relative"><input type="checkbox" id="auto-image-toggle" class="sr-only peer"><div class="w-8 h-4.5 bg-gray-600 rounded-full peer peer-checked:bg-pink-600 after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-full"></div></div>
                                 </label>
                             </div>
                         </section>
@@ -1829,7 +1840,9 @@
                     </div>
                 `;
                 // ?? Checkbox ??
+                document.getElementById('draw-mode-toggle').checked = settings.drawMode;
                 document.getElementById('web-search-toggle').checked = settings.webSearch;
+                document.getElementById('auto-image-toggle').checked = settings.autoImage;
                 document.getElementById('voice-output-toggle').checked = settings.voiceOutput;
                 document.getElementById('continuous-mode-toggle').checked = settings.continuousMode;
                 document.getElementById('global-profile-input').value = settings.globalProfile;
@@ -1841,7 +1854,7 @@
                 };
 
                 // ????
-                ['webSearch','voiceOutput','continuousMode'].forEach(key => {
+                ['drawMode','webSearch','autoImage','voiceOutput','continuousMode'].forEach(key => {
                     const id = key.replace(/[A-Z]/g, m => '-' + m.toLowerCase()) + '-toggle';
                     const el = document.getElementById(id);
                     if (el) {
