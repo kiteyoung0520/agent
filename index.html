@@ -338,6 +338,12 @@
                             <span class="absolute right-1.5 text-gray-400 material-symbols-rounded text-[16px] pointer-events-none">arrow_drop_down</span>
                         </div>
 
+                        <!-- 本機代理狀態指示 -->
+                        <div id="local-agent-tip" class="flex items-center gap-1.5 shrink-0 ml-1" title="本機代理：未連線">
+                            <div id="local-agent-dot" class="w-2 h-2 rounded-full bg-gray-600"></div>
+                            <span class="text-[10px] text-gray-500 hidden sm:inline font-mono">本機</span>
+                        </div>
+
                     </div>
                     
                     <div class="flex items-end gap-1 sm:gap-2 mt-1">
@@ -419,6 +425,27 @@
         window.sharedKnowledgeSet = new Set();
         let isCanvasReady = false, isModalCanvasReady = false;
         let pyodideInstance = null;
+        const LOCAL_AGENT_URL = 'http://127.0.0.1:3456';
+        let localAgentOnline = false;
+
+        // 定期檢查本機代理狀態
+        async function checkLocalAgent() {
+            try {
+                const r = await fetch(LOCAL_AGENT_URL + '/ping', { method: 'GET', signal: AbortSignal.timeout(1500) });
+                const d = await r.json();
+                localAgentOnline = d.status === 'ok';
+            } catch (e) {
+                localAgentOnline = false;
+            }
+            const dot = document.getElementById('local-agent-dot');
+            const tip = document.getElementById('local-agent-tip');
+            if (dot) {
+                dot.className = `w-2 h-2 rounded-full ${localAgentOnline ? 'bg-green-400 animate-pulse' : 'bg-gray-600'}`;
+                if (tip) tip.title = localAgentOnline ? '本機代理：已連線' : '本機代理：未連線（需啟動 local_agent\\agent.js）';
+            }
+        }
+        setInterval(checkLocalAgent, 8000);
+        setTimeout(checkLocalAgent, 1500);
 
         async function getPyodide() {
             if (pyodideInstance) return pyodideInstance;
@@ -670,6 +697,11 @@
                 
                 if (data.python_browser_request) {
                     await handleBrowserPythonRequest(data.python_browser_request);
+                    return;
+                }
+
+                if (data.local_agent_request) {
+                    await handleLocalAgentRequest(data.local_agent_request, payload);
                     return;
                 }
 
@@ -1701,6 +1733,57 @@
 
         function toggleSharedData() { /* 已整合至右面板 */ }
         function toggleSources() { /* 已整合至右面板 */ }
+
+        // 處理本機代理請求（磁碟搜尋/讀取/整理）
+        async function handleLocalAgentRequest(req, originalPayload) {
+            if (!localAgentOnline) {
+                removeLoading();
+                appendMessage('ai', `⚠️ **本機磁碟代理未連線**\n\n請先啟動本機代理程式：\n\`\`\`\nnode "D:\\ai 助理\\local_agent\\agent.js"\n\`\`\`\n或執行安裝程式：\`D:\\ai 助理\\local_agent\\setup_autostart.bat\`（需以系統管理員身分執行）`);
+                toggleSendButton(false);
+                return;
+            }
+
+            const { tool, args } = req;
+            let apiPayload = {};
+
+            // 將 tool 名稱對應到 agent API action
+            if (tool === 'local_disk_search') {
+                apiPayload = { action: 'search', query: args.query, root: args.root, ext: args.ext, search_content: args.search_content, max_results: args.max_results || 30 };
+            } else if (tool === 'local_disk_browse') {
+                apiPayload = { action: args.action || 'list', path: args.path };
+            } else if (tool === 'local_disk_read') {
+                apiPayload = { action: 'read', path: args.path };
+            } else if (tool === 'local_disk_organize') {
+                apiPayload = { action: 'organize', op: args.op, src: args.src, dest: args.dest };
+            }
+
+            try {
+                const agentRes = await fetch(LOCAL_AGENT_URL + '/api', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(apiPayload) });
+                const agentData = await agentRes.json();
+
+                // 將結果送回 GAS，讓 AI 產生回覆
+                const resultPayload = {
+                    ...originalPayload,
+                    message: originalPayload.message + `\n\n【本機磁碟工具執行結果 (${tool})】\n\`\`\`json\n${JSON.stringify(agentData, null, 2).substring(0, 8000)}\n\`\`\`\n請根據以上結果給出回覆。`,
+                    local_tool_result: true
+                };
+
+                const lid2 = appendLoading('正在分析磁碟結果...');
+                const gasRes = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(resultPayload), signal: abortController?.signal });
+                const gasData = await gasRes.json();
+                removeLoading(lid2);
+
+                if (gasData.reply) {
+                    appendMessage('ai', gasData.reply, null, gasData.model, gasData.html_presentation || null, gasData.html_artifact || null);
+                    if (!speakText(gasData.reply, true) && settings.continuousMode) setTimeout(startRecording, 500);
+                }
+            } catch (e) {
+                removeLoading();
+                appendMessage('ai', `❌ 本機代理執行失敗：${e.message}`);
+            }
+            toggleSendButton(false);
+            loadSessions();
+        }
         
         let currentRightTab = 'library';
         function switchRightPanel(tab) {
