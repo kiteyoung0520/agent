@@ -407,7 +407,7 @@
 
     <script>
         // ⚠️ 部署前，請務必將下方的網址替換為您的 Google Apps Script Web App URL ⚠️
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbyeQgxHf0uWrvO_mW9RTTwnbcBbjOL_CjVjL2X4DUkLH3aGLCQg0jSTBxbEtLarn4qR/exec"; 
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbyOs6Rd6Cr9otHDd0W42na_R7Y2uHxxv-UyNSu8ytfjC_qYp4_ZeDz7Xe21488pVKoH/exec"; 
 
         marked.use({
             renderer: {
@@ -425,13 +425,13 @@
         window.sharedKnowledgeSet = new Set();
         let isCanvasReady = false, isModalCanvasReady = false;
         let pyodideInstance = null;
-        const LOCAL_AGENT_URL = 'http://127.0.0.1:3456';
+        const LOCAL_AGENT_URL = 'https://ai-agent-kitey-2026.loca.lt';
         let localAgentOnline = false;
 
         // 定期檢查本機代理狀態
         async function checkLocalAgent() {
             try {
-                const r = await fetch(LOCAL_AGENT_URL + '/ping', { method: 'GET', signal: AbortSignal.timeout(1500) });
+                const r = await fetch(LOCAL_AGENT_URL + '/ping', { method: 'GET', headers: { 'Bypass-Tunnel-Reminder': 'true' }, signal: AbortSignal.timeout(1500) });
                 const d = await r.json();
                 localAgentOnline = d.status === 'ok';
             } catch (e) {
@@ -1755,10 +1755,37 @@
                 apiPayload = { action: 'read', path: args.path };
             } else if (tool === 'local_disk_organize') {
                 apiPayload = { action: 'organize', op: args.op, src: args.src, dest: args.dest };
+            } else if (tool === 'local_run_command') {
+                const proceed = window.confirm(`⚠️ AI 請求在您的本機執行以下終端機指令：\n\n指令：${args.command}\n目錄：${args.cwd || '預設'}\n\n您是否同意執行？\n(注意：請確認指令安全後再放行)`);
+                if (!proceed) {
+                    removeLoading();
+                    appendMessage('ai', `❌ 您已拒絕執行指令：\`${args.command}\``);
+                    toggleSendButton(false);
+                    return;
+                }
+                apiPayload = { action: 'run_command', command: args.command, cwd: args.cwd };
+            } else if (tool === 'local_write_file') {
+                const proceed = window.confirm(`⚠️ AI 請求寫入或覆寫您的本機檔案：\n\n路徑：${args.path}\n\n您是否同意寫入？`);
+                if (!proceed) {
+                    removeLoading();
+                    appendMessage('ai', `❌ 您已拒絕寫入檔案：\`${args.path}\``);
+                    toggleSendButton(false);
+                    return;
+                }
+                apiPayload = { action: 'write_file', path: args.path, content: args.content };
+            } else if (tool === 'local_docker_run_command') {
+                const proceed = window.confirm(`🐳 AI 請求在「Docker 隔離沙盒」中執行以下指令：\n\n指令：${args.command}\n目錄：${args.cwd || '預設 (/workspace)'}\n\n您是否同意啟動沙盒執行？\n(此為安全環境，執行完畢會自動銷毀)`);
+                if (!proceed) {
+                    removeLoading();
+                    appendMessage('ai', `❌ 您已取消啟動 Docker 沙盒：\`${args.command}\``);
+                    toggleSendButton(false);
+                    return;
+                }
+                apiPayload = { action: 'docker_run_command', command: args.command, cwd: args.cwd };
             }
 
             try {
-                const agentRes = await fetch(LOCAL_AGENT_URL + '/api', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(apiPayload) });
+                const agentRes = await fetch(LOCAL_AGENT_URL + '/api', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Bypass-Tunnel-Reminder': 'true' }, body: JSON.stringify(apiPayload) });
                 const agentData = await agentRes.json();
 
                 // 將結果送回 GAS，讓 AI 產生回覆
