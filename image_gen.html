@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 魔法畫廊 | 免費圖像生成</title>
+    <style>
+        :root {
+            --primary: #8a2be2;
+            --secondary: #ff1493;
+            --bg: #0f172a;
+            --surface: rgba(30, 41, 59, 0.7);
+            --text: #f8fafc;
+        }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 2rem;
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(138,43,226,0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(255,20,147,0.15) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        h1 {
+            font-size: 3rem;
+            background: linear-gradient(to right, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+        .glass-panel {
+            background: var(--surface);
+            backdrop-filter: blur(12px);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            margin-bottom: 3rem;
+        }
+        .input-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        input {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            font-size: 1.1rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.2);
+            color: white;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(138,43,226,0.3);
+        }
+        button {
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -10px var(--secondary);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+        .card {
+            background: var(--surface);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: transform 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .card img {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            display: block;
+        }
+        .card-content {
+            padding: 1.2rem;
+        }
+        .prompt-text {
+            font-size: 1rem;
+            color: #e2e8f0;
+            margin: 0 0 0.5rem 0;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .timestamp {
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+        #loading {
+            display: none;
+            text-align: center;
+            margin-top: 1rem;
+            color: #a78bfa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>AI 魔法畫廊</h1>
+            <p>輸入您的想像，AI 即刻為您捕捉。所有創作將永久展示於此。</p>
+        </div>
+
+        <div class="glass-panel">
+            <div class="input-group">
+                <input type="text" id="promptInput" placeholder="例如：一隻在太空喝珍珠奶茶的貓 (支援中文)" autocomplete="off">
+                <button id="generateBtn">施展魔法</button>
+            </div>
+            <div id="loading">✨ 魔法詠唱中，請稍候... ✨</div>
+        </div>
+
+        <div class="gallery" id="gallery">
+            <!-- 圖片將動態插入這裡 -->
+        </div>
+    </div>
+
+    <!-- Firebase SDK (v10 modular) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBc2UgxhcagZtH06HVpJHTZ4XRUMn8kIEo",
+            authDomain: "anygem-r1.firebaseapp.com",
+            projectId: "anygem-r1",
+            storageBucket: "anygem-r1.firebasestorage.app",
+            messagingSenderId: "322417557013",
+            appId: "1:322417557013:web:62dffa49c07cf1b6b3581c"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const imagesRef = collection(db, "ai_images");
+
+        const btn = document.getElementById('generateBtn');
+        const input = document.getElementById('promptInput');
+        const loading = document.getElementById('loading');
+        const gallery = document.getElementById('gallery');
+
+        // 生成圖片並存入資料庫
+        btn.addEventListener('click', async () => {
+            const prompt = input.value.trim();
+            if (!prompt) return;
+
+            btn.disabled = true;
+            loading.style.display = 'block';
+
+            // 加入隨機數避免瀏覽器快取同一張圖
+            const seed = Math.floor(Math.random() * 100000);
+            const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?seed=${seed}&width=800&height=800&nologo=true`;
+
+            try {
+                // 先測試圖片是否載入成功 (預載)
+                const img = new Image();
+                img.src = imageUrl;
+                
+                img.onload = async () => {
+                    // 圖片成功產生，存入 Firebase
+                    await addDoc(imagesRef, {
+                        prompt: prompt,
+                        url: imageUrl,
+                        createdAt: serverTimestamp()
+                    });
+                    
+                    input.value = '';
+                    btn.disabled = false;
+                    loading.style.display = 'none';
+                };
+                
+                img.onerror = () => {
+                    alert("生成失敗，請稍後再試。");
+                    btn.disabled = false;
+                    loading.style.display = 'none';
+                };
+                
+            } catch (error) {
+                console.error("Error adding document: ", error);
+                btn.disabled = false;
+                loading.style.display = 'none';
+            }
+        });
+
+        // 綁定 Enter 鍵
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') btn.click();
+        });
+
+        // 即時監聽資料庫 (雲端畫廊同步)
+        const q = query(imagesRef, orderBy("createdAt", "desc"));
+        onSnapshot(q, (snapshot) => {
+            gallery.innerHTML = ''; // 清空畫廊
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                // 處理剛新增時可能沒有 timestamp 的問題
+                const timeStr = data.createdAt ? data.createdAt.toDate().toLocaleString() : '剛剛';
+                
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <img src="${data.url}" alt="${data.prompt}" loading="lazy">
+                    <div class="card-content">
+                        <p class="prompt-text">${data.prompt}</p>
+                        <p class="timestamp">${timeStr}</p>
+                    </div>
+                `;
+                gallery.appendChild(card);
+            });
+        });
+    </script>
+</body>
+</html>
