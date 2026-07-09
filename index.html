@@ -428,7 +428,7 @@
         window.sharedKnowledgeSet = new Set();
         let isCanvasReady = false, isModalCanvasReady = false;
         let pyodideInstance = null;
-        const LOCAL_AGENT_URL = 'https://ai-agent-kitey-2026.loca.lt';
+        let LOCAL_AGENT_URL = localStorage.getItem('localDirectMode') === 'true' ? 'http://127.0.0.1:5000' : 'https://ai-agent-kitey-2026.loca.lt';
         let localAgentOnline = false;
 
         // 定期檢查本機代理狀態
@@ -460,6 +460,7 @@
 
         // ⚙️ 全域設定狀態 (Persistent Settings)
         const settings = {
+            localDirectMode: localStorage.getItem('localDirectMode') === 'true',
             drawMode: localStorage.getItem('drawMode') === 'true',
             webSearch: localStorage.getItem('webSearch') === 'true',
             autoImage: localStorage.getItem('autoImage') === 'true',
@@ -1943,6 +1944,10 @@
                                     <div class="flex items-center gap-3"><span class="material-symbols-rounded text-yellow-400">all_inclusive</span><div class="flex flex-col"><span class="text-xs font-bold text-gray-200">無限連續對話</span><span class="text-[9px] text-gray-500">不自動清空上下文，適合深度討論</span></div></div>
                                     <div class="relative"><input type="checkbox" id="continuous-mode-toggle" class="sr-only peer"><div class="w-8 h-4.5 bg-gray-600 rounded-full peer peer-checked:bg-yellow-500 after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-full"></div></div>
                                 </label>
+                                <label class="flex items-center justify-between p-3 bg-[#2a2b2f] rounded-xl cursor-pointer group hover:bg-[#333] transition-all">
+                                    <div class="flex items-center gap-3"><span class="material-symbols-rounded text-cyan-400">lan</span><div class="flex flex-col"><span class="text-xs font-bold text-gray-200">本機直連模式 (關閉純網端)</span><span class="text-[9px] text-gray-500">使用 127.0.0.1 直連代理，速度更快</span></div></div>
+                                    <div class="relative"><input type="checkbox" id="local-direct-mode-toggle" class="sr-only peer"><div class="w-8 h-4.5 bg-gray-600 rounded-full peer peer-checked:bg-cyan-600 after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-full"></div></div>
+                                </label>
                             </div>
                         <section class="pt-4 border-t border-[#333]">
                             <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 px-1">全域思維風格定義</h4>
@@ -1961,6 +1966,7 @@
                 document.getElementById('auto-image-toggle').checked = settings.autoImage;
                 document.getElementById('voice-output-toggle').checked = settings.voiceOutput;
                 document.getElementById('continuous-mode-toggle').checked = settings.continuousMode;
+                document.getElementById('local-direct-mode-toggle').checked = settings.localDirectMode;
                 document.getElementById('global-profile-input').value = settings.globalProfile;
 
                 // 綁定文字框自動儲存
@@ -1970,13 +1976,17 @@
                 };
 
                 // 綁定事件
-                ['drawMode','webSearch','autoImage','voiceOutput','continuousMode'].forEach(key => {
+                ['drawMode','webSearch','autoImage','voiceOutput','continuousMode','localDirectMode'].forEach(key => {
                     const id = key.replace(/[A-Z]/g, m => '-' + m.toLowerCase()) + '-toggle';
                     const el = document.getElementById(id);
                     if (el) {
                         el.onchange = (e) => {
                             settings[key] = e.target.checked;
                             localStorage.setItem(key, e.target.checked);
+                            if (key === 'localDirectMode') {
+                                LOCAL_AGENT_URL = settings.localDirectMode ? 'http://127.0.0.1:5000' : 'https://ai-agent-kitey-2026.loca.lt';
+                                checkLocalAgent();
+                            }
                         };
                     }
                 });
