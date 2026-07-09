@@ -1,0 +1,7 @@
+{
+  "allowed_roots": ["D:\\"],
+  "port": 3456,
+  "max_file_size_kb": 512,
+  "allowed_extensions": [".txt", ".md", ".csv", ".json", ".js", ".ts", ".py", ".html", ".css", ".xml", ".yaml", ".yml", ".ini", ".cfg", ".log", ".bat", ".ps1", ".docx", ".xlsx", ".pdf"],
+  "deny_patterns": ["node_modules", ".git", "System Volume Information", "$RECYCLE.BIN", "Windows", "Program Files"]
+}

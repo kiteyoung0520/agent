@@ -1,0 +1,97 @@
+# Claude Code 懶人包
+
+> 每支教學影片都會附一個 MD 檔（懶人包），丟給 Claude Code 桌面版就能自動完成。
+
+---
+
+## 使用方式
+
+### 方式一：直接叫 AI 幫你裝（最簡單）
+
+把這行貼給你的 AI agent（Claude Code / OpenCode / Codex）：
+
+```
+這是 Claude Code 懶人包全集 https://github.com/mathruffian-dot/claude-code-lazy-packs
+請讀取 repo 內容，列出所有可用的懶人包，問我要裝哪些。
+```
+
+AI 會自動讀取 `SKILL.md`（安裝入口），列出 12 個技能，讓你選擇後自動安裝。
+
+### 方式二：手動下載 MD 檔
+
+1. 看影片了解原理
+2. 下載對應的懶人包（MD 檔）
+3. 打開 Claude Code 桌面版（Pro 以上），把檔案丟給它
+4. AI 自動執行，遇到需要手動操作的地方會暫停指示你
+
+---
+
+## 🌟 每份懶人包都是獨立可執行的
+
+不管你從哪一集影片進來，都可以直接使用對應的懶人包。
+每份懶人包都會**自動檢查並安裝**需要的工具（Git、Node.js、uv 等），不需要先執行 #00 環境建置。
+
+---
+
+## 最低先備條件
+
+使用任何懶人包之前，請確認：
+
+- [ ] Claude 帳號已註冊（Pro 方案以上）
+- [ ] Claude Code 桌面版已安裝
+- [ ] 電腦有網路連線
+
+> 💡 建議先看過 EP01（Claude 全生態）和 EP02（Skills）以了解基本概念，但這不是必要條件。
+
+---
+
+## 懶人包清單
+
+| 編號 | 懶人包名稱 | 對應影片 | 狀態 | 說明 |
+|------|-----------|---------|------|------|
+| 00 | [環境建置](00-環境建置.md) | EP03 | v0.2 | 安裝 Git、GitHub CLI、uv 等基礎工具 |
+| 01 | [連接 NotebookLM](01-連接-NotebookLM.md) | EP03 | v0.2 | 安裝 NotebookLM MCP + 產生簡報與圖表 |
+| 02 | [連接 GitHub](02-連接-GitHub.md) | EP05 | v0.2 | 連接 GitHub + GitHub Pages 教材上線 |
+| 03 | [建立第二大腦 Obsidian](03-建立第二大腦-Obsidian.md) | EP07 | v0.5 | 安裝 Obsidian + MCP 連接 + Google Drive 同步 |
+| 03+ | [第二大腦設定指南](04-第二大腦設定指南.md) | EP08 | v1.0 | 三層結構 + CLAUDE.md + 模板 + 每週知識重整排程 |
+| 04 | [連接 Supabase 資料庫](04-連接-Supabase-資料庫.md) | EP09 | v0.2 | 連接雲端資料庫，讓程式「記得住」 |
+| 04.5 | [連接 Firebase 資料庫](04.5-連接-Firebase-資料庫.md) | EP09.5 | v0.7 | 對老師更友善的資料庫選擇（不會閒置暫停、千人研習撐得住、Firestore MCP 完整 CRUD） |
+| 05 | [安裝本地 AI Ollama](05-安裝本地AI-Ollama.md) | **EP14** | v0.2 | 安裝本地 AI，免費、隱私、離線可用 |
+| 06 | [設定 Gemini 免費 API](06-設定Gemini免費API.md) | **EP14** | v0.2 | 設定 Gemini 免費 API，不用信用卡 |
+| 07 | [初始化班級工具工作模式](07-初始化班級工具工作模式.md) | EP10 | v0.1 | 一鍵啟動「老師建專案模式」：建好總資料夾、CLAUDE.md、Obsidian 工作筆記、GitHub repo、安裝 `/收工` skill |
+| **08** 🆕 | [**把 ChatGPT Image 2.0 裝進 Claude Code**](08-安裝gpt-image-2生圖.md) | **EP11** | **v0.1** | **🆕 全域 `draw` Skill 安裝：OpenAI API Key + Individual 驗證 + `~/.claude/skills/draw/` + 第一張圖驗證。之後在任何專案對 Claude 說「畫一張 XX」就生圖；費用以 OpenAI 官方 pricing 為準** |
+
+> 懶人包會在不斷實作的過程中持續更新，最終成為最適合大眾使用的版本。
+
+---
+
+## 影片系列
+
+> 📌 **2026-04-23 系列重編號**：新增 EP11（生圖安裝篇）+ EP12（生圖應用篇），原 EP11-14 全部 +2 順延。
+> 📌 **2026-04-18 系列重編號**：「老師建專案指南」升格為 EP10（系列核心通識課），原 EP10-13 連鎖 +1。
+
+| 集數 | 主題 | 定位 |
+|------|------|------|
+| EP01 | 一次搞懂 Claude 全生態 | 概念 |
+| EP02 | 一次搞懂 Skills | 概念 |
+| EP03 | 懶人包先備工作 + NotebookLM | 安裝集 |
+| EP04 | NotebookLM 進階應用五大情境 | **應用高潮** |
+| EP05 | GitHub 懶人包與教學網頁上線 | 安裝集 |
+| EP06 | 教學駕駛艙（單機版） | **應用高潮** |
+| EP07 | Obsidian 第二大腦安裝 | 安裝集 |
+| EP08 | 第二大腦進階應用 | **應用高潮** |
+| EP09 | Supabase 資料庫懶人包 | 安裝集 |
+| EP09.5 | Firebase 資料庫懶人包（老師更該選的版本） | 安裝集 |
+| **EP10** | **老師建專案指南（系列核心通識課）** | **應用高潮** ⭐ |
+| **EP11** 🆕 | **把 ChatGPT Image 2.0 裝進 Claude Code** | **安裝集** |
+| **EP12** 🆕 | **gpt-image-2 × Claude Code 的三大教學應用** | **應用高潮** |
+| EP13 | 一人一碼的教學駕駛艙（舊 EP11） | **應用高潮** |
+| EP14 | 本地 AI + 免費 API 懶人包（舊 EP12） | 安裝集 |
+| EP15 | AI 個人化學習助教：系列集大成（舊 EP13） | **應用高潮** |
+| EP16 | 跨電腦工作術：GDrive + Obsidian + GitHub 三方同步（舊 EP14） | 進階 |
+
+---
+
+## 授權
+
+本專案採用 [MIT License](LICENSE) 授權，歡迎自由使用與分享。

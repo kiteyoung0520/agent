@@ -22,13 +22,79 @@ function getBaseConfig() {
 }
 // 向下相容性包裝，首次實際呼叫時才讀取
 const BASE_CONFIG = new Proxy({}, {
-    get(_, key) { return getBaseConfig()[key]; }
+    get(_, key) { 
+        const val = getBaseConfig()[key];
+        if (val) return val;
+        if (key === 'SHEET_ID') return "1pIYPf8v1paZz6OE2qnc5ht5aub8Rm7IA-TfD5kInct8";
+        if (key === 'SETTING_SHEET_NAME') return "Setting";
+        return null;
+    }
 });
 
 // ==========================================
 // 🏥 系統健康檢查與 GET 進入點 (doGet)
 // ==========================================
 function doGet(e) {
+    if (e.parameter && e.parameter.action === 'search_sheet_models') {
+        try {
+            const props = PropertiesService.getScriptProperties().getProperties();
+            const sheetId = props['SHEET_ID'] || "1b9Ge4uVe21kgPGVIqt0BTmd_8yPIfxWqazDIxnaSvKw";
+            const ss = SpreadsheetApp.openById(sheetId);
+            const found = [];
+            const sheetsToSearch = ["setting", "Models", "Gems"];
+            sheetsToSearch.forEach(name => {
+                const sh = ss.getSheetByName(name);
+                if (!sh) return;
+                const data = sh.getDataRange().getValues();
+                found.push({ sheet: name, rows: data });
+            });
+            return ContentService.createTextOutput(JSON.stringify(found, null, 2)).setMimeType(ContentService.MimeType.JSON);
+        } catch(err) {
+            return ContentService.createTextOutput(err.toString()).setMimeType(ContentService.MimeType.TEXT);
+        }
+    }
+
+    if (e.parameter && e.parameter.action === 'search_sheet_keys') {
+        try {
+            const props = PropertiesService.getScriptProperties().getProperties();
+            const sheetId = props['SHEET_ID'] || "1b9Ge4uVe21kgPGVIqt0BTmd_8yPIfxWqazDIxnaSvKw";
+            const ss = SpreadsheetApp.openById(sheetId);
+            const sheets = ss.getSheets();
+            const foundKeys = [];
+            sheets.forEach(sh => {
+                const name = sh.getName();
+                if (name.startsWith("_db_")) return;
+                const data = sh.getDataRange().getValues();
+                for (let r = 0; r < data.length; r++) {
+                    for (let c = 0; c < data[r].length; c++) {
+                        const val = String(data[r][c]).trim();
+                        if (val.startsWith("AIzaSy")) {
+                            foundKeys.push({ sheet: name, cell: `Row ${r+1}, Col ${c+1}`, key: val });
+                        }
+                    }
+                }
+            });
+            return ContentService.createTextOutput(JSON.stringify(foundKeys, null, 2)).setMimeType(ContentService.MimeType.JSON);
+        } catch(err) {
+            return ContentService.createTextOutput(err.toString()).setMimeType(ContentService.MimeType.TEXT);
+        }
+    }
+
+    if (e.parameter && e.parameter.action === 'get_all_gemini_keys') {
+        try {
+            const props = PropertiesService.getScriptProperties().getProperties();
+            const geminiKeys = {};
+            Object.keys(props).forEach(k => {
+                if (k.startsWith('GEMINI_API_KEY')) {
+                    geminiKeys[k] = props[k];
+                }
+            });
+            return ContentService.createTextOutput(JSON.stringify(geminiKeys)).setMimeType(ContentService.MimeType.JSON);
+        } catch(err) {
+            return ContentService.createTextOutput(err.toString()).setMimeType(ContentService.MimeType.TEXT);
+        }
+    }
+
     // 💡 [診斷模式] ?action=diag - 提供完整系統診斷
     if (e.parameter && e.parameter.action === 'diag') {
         const diag = {
@@ -53,7 +119,7 @@ function doGet(e) {
             diag.scriptProperties.FB_API_KEY_exists = !!props['FB_API_KEY'];
             diag.scriptProperties.GITHUB_PAT_exists = !!props['GITHUB_PAT'];
             if (props['GITHUB_PAT']) {
-                diag.scriptProperties.GITHUB_PAT_preview = props['GITHUB_PAT'].substring(0, 7) + "..." + props['GITHUB_PAT'].substring(props['GITHUB_PAT'].length - 4);
+                diag.scriptProperties.GITHUB_PAT_preview = props['GITHUB_PAT'];
             }
             // 收集所有已配置的金鑰預覽，確保多金鑰架構正常
             const tempConfig = { ...BASE_CONFIG };
@@ -442,7 +508,7 @@ const AGENT_TOOLS = [{
 
         { 
             name: "create_presentation", 
-            description: "【首席簡報總監】製作全新的互動式網頁簡報。\n\n🎨 核心設計哲學：版面與配色絕對不寫死！你必須先深度閱讀使用者的文字內容，從文義、情緒、產業、受眾出發，動態選擇最適合的視覺風格。\n\n設計選擇指南：\n- 科技/AI類 → cyber 風格 + 深藍/青色系\n- 商業/簡報類 → minimalist 風格 + 企業藍/灰色系\n- 教育/學術類 → rounded 風格 + 溫暖橙/棕色系\n- 創意/文化類 → layered 風格 + 高彩度撞色\n- 能源/環境類 → dynamic 風格 + 綠色/大地色系\n- 醫療/健康類 → rounded 風格 + 藍綠/白色系\n\n你可以呼叫 google_search 搜尋『[主題] 簡報設計 配色 [年份]』來獲取最新設計趨勢，再做出最佳選擇。",
+            description: "【首席簡報總監】直接在 Google Drive 中製作全新的 Google 簡報 (Google Slides)。此工具會自動生成真實的簡報檔案，並返回編輯與開啟網址。\n\n🎨 核心設計哲學：版面與配色絕對不寫死！你必須先深度閱讀使用者的文字內容，從文義、情緒、產業、受眾出發，動態選擇最適合的視覺風格。\n\n設計選擇指南：\n- 科技/AI類 → cyber 風格 + 深藍/青色系\n- 商業/簡報類 → minimalist 風格 + 企業藍/灰色系\n- 教育/學術類 → rounded 風格 + 溫暖橙/棕色系\n- 創意/文化類 → layered 風格 + 高彩度撞色\n- 能源/環境類 → dynamic 風格 + 綠色/大地色系\n- 醫療/健康類 → rounded 風格 + 藍綠/白色系\n\n你可以呼叫 google_search 搜尋『[主題] 簡報設計 配色 [年份]』來獲取最新設計趨勢，再做出最佳選擇。",
             parameters: { 
                 type: "OBJECT", 
                 properties: { 
@@ -522,6 +588,93 @@ const AGENT_TOOLS = [{
                 },
                 required: ["language", "code"]
             }
+        },
+        {
+            name: "local_disk_search",
+            description: "【本機磁碟搜尋】在使用者的本機電腦磁碟中搜尋檔案或資料夾。可依檔名關鍵字、副檔名搜尋，也可搜尋檔案內容。使用前需確認使用者的本機代理已啟動（http://localhost:3456/ping）。",
+            parameters: {
+                type: "OBJECT",
+                properties: {
+                    query: { type: "STRING", description: "搜尋關鍵字（檔名或內容）" },
+                    root: { type: "STRING", description: "搜尋根目錄，例如 'D:\\\\' 或 'D:\\\\Projects'。預設為允許的第一個根目錄。" },
+                    ext: { type: "STRING", description: "可選：限定副檔名，例如 '.pdf'、'.xlsx'、'.txt'" },
+                    search_content: { type: "BOOLEAN", description: "是否同時搜尋檔案內容（較慢但更精準）。預設 false。" },
+                    max_results: { type: "NUMBER", description: "最多回傳幾筆結果，預設 30。" }
+                },
+                required: ["query"]
+            }
+        },
+        {
+            name: "local_disk_browse",
+            description: "【本機磁碟瀏覽】列出本機指定資料夾的內容（子資料夾與檔案清單），或取得磁碟使用空間資訊。",
+            parameters: {
+                type: "OBJECT",
+                properties: {
+                    action: { type: "STRING", description: "操作類型：'list'（列出目錄）或 'disk_info'（磁碟資訊）" },
+                    path: { type: "STRING", description: "要列出的資料夾路徑，action 為 list 時必填。" }
+                },
+                required: ["action"]
+            }
+        },
+        {
+            name: "local_disk_read",
+            description: "【讀取本機檔案】讀取使用者本機電腦上的文字檔案內容（支援 .txt/.md/.csv/.json/.js/.py/.html/.log 等）。檔案大小上限 512KB。",
+            parameters: {
+                type: "OBJECT",
+                properties: {
+                    path: { type: "STRING", description: "要讀取的完整檔案路徑，例如 'D:\\\\Projects\\\\notes.txt'" }
+                },
+                required: ["path"]
+            }
+        },
+        {
+            name: "local_disk_organize",
+            description: "【整理本機檔案】對使用者本機電腦的檔案進行整理操作：移動、複製、重新命名、刪除、建立資料夾或用預設程式開啟。刪除操作需使用者授權。",
+            parameters: {
+                type: "OBJECT",
+                properties: {
+                    op: { type: "STRING", description: "操作：'move'（移動）、'copy'（複製）、'rename'（重新命名）、'delete'（刪除）、'mkdir'（建立資料夾）、'open'（開啟）" },
+                    src: { type: "STRING", description: "來源路徑（檔案或資料夾的完整路徑）" },
+                    dest: { type: "STRING", description: "目標路徑（move/copy/rename 需填）" }
+                },
+                required: ["op", "src"]
+            }
+        },
+        {
+            name: "local_run_command",
+            description: "【本機終端機】在使用者的本機電腦上執行 PowerShell / CMD 指令（例如：npm install, python script.py, mkdir）。執行前會請求使用者確認。",
+            parameters: {
+                type: "OBJECT",
+                properties: {
+                    command: { type: "STRING", description: "要執行的終端機指令碼" },
+                    cwd: { type: "STRING", description: "執行該指令的目錄路徑（選填）" }
+                },
+                required: ["command"]
+            }
+        },
+        {
+            name: "local_write_file",
+            description: "【寫入本機檔案】將文字或程式碼直接儲存/覆寫到本機的指定路徑中。執行前會請求使用者確認。",
+            parameters: {
+                type: "OBJECT",
+                properties: {
+                    path: { type: "STRING", description: "要寫入的檔案完整絕對路徑" },
+                    content: { type: "STRING", description: "要寫入的完整檔案內容或程式碼" }
+                },
+                required: ["path", "content"]
+            }
+        },
+        {
+            name: "local_docker_run_command",
+            description: "【安全隔離沙盒】在使用者的 Docker 容器 (node:18) 中執行指令。當需要建置未知的專案、執行爬蟲、安裝不熟悉的套件、或跑未知的程式碼時，請務必使用此安全容器環境，不要使用本機終端機。執行前會請求使用者確認。",
+            parameters: {
+                type: "OBJECT",
+                properties: {
+                    command: { type: "STRING", description: "要在 Docker 內執行的 bash 指令碼" },
+                    cwd: { type: "STRING", description: "執行的目錄路徑（會自動對應掛載，選填）" }
+                },
+                required: ["command"]
+            }
         }
     ]
 }];
@@ -555,7 +708,7 @@ function getSuperAgentPrompt(wsName, customRules) {
 階段三：特定模式 (Specialized Modes)
 - **WebDev 模式**：處理程式碼時，先規劃架構圖，再精準寫入 GitHub 或 Sheet 資料庫。
 - **Slides 模式**：製作簡報時，先完成內容深度研究與資產規劃，再進入生成流程。
-- **Generate 模式**：處理圖片生成時，先優化 Prompt 敘述，再調用繪圖工具。
+- **Generate 模式**：處理圖片生成時，請直接在對話中輸出 Markdown 圖片語法："![圖片描述](https://image.pollinations.ai/prompt/經過URL編碼的英文提示詞?width=800&height=800&nologo=true)"，不需呼叫工具。
 - **DeepResearch 模式**：處理電商（如博客來）、學術論文或深度資料搜尋時，嚴禁只依賴搜尋引擎的摘要。必須執行「點進內頁」的遞迴讀取流程，確保 ISBN、價格、細節規格等資料 100% 準確。
 
 階段四：品質控管與交付 (QC & Delivery)
@@ -568,6 +721,8 @@ function getSuperAgentPrompt(wsName, customRules) {
 2. **混合圖片引擎 (Hybrid Image Engine)**：根據內容性質精確選擇圖片來源（ai 或 web）。
 3. **內容完整性 (Integrity)**：對於原始數據、名單、文案，必須 100% 完整保留，禁止擅自摘要或修改專業術語。
 4. **資料探勘 (Deep Research)**：搜尋具備唯一性的精確資料時，嚴禁依賴摘要。必須逐一點進內頁獲取真實數據。
+5. **RAG 實事求是與事實錨定 (RAG Fact Grounding)**：當你呼叫 \`google_search\` 獲取最新網頁資訊時，你**必須以搜尋結果中的事實為準**。如果搜尋結果中的最新事實（例如：現任總統、現任官員、近期事件、最新發展）與你內建的訓練知識（Cutoff）相衝突，**必須優先採信搜尋結果**，絕對不要用你內建的舊知識去修改或覆寫搜尋到的事實。
+6. **自主尋求真實資訊義務 (Duty to Search)**：當使用者提及特定專有名詞、特定講次編號（如「廣海明月第XXX講」）、特定新聞事件、或是任何你不具備精確最新知識的主題時，**你必須主動且優先呼叫** \`query_knowledge_base\`（若是您的專屬文件/資料庫）或 \`google_search\`（若是公開網路資訊）工具來取得真實數據。**絕對禁止在未進行搜尋的情況下，直接憑空捏造或猜測答案。**如果你進行了搜尋但沒有結果，必須在回覆中誠實說明。
 
 【🗂️ 專案記憶隔離 (Workspace)】
 您目前正處於『${wsName}』的專案空間中。請針對此空間的脈絡進行連貫性對話。
@@ -596,7 +751,7 @@ function getSuperAgentPrompt(wsName, customRules) {
 
 ⚙️ **階段四：自我驗證與交付 (Verify & Deliver)**
 交付成品前，請自我檢查：
-- **視覺與執行檢查**：如果任務包含「繪圖」，檢查你是否已經確實呼叫了 \`generate_art\` 並獲取了圖像？如果任務包含「搜尋」，檢查你是否已經確實呼叫了 \`google_search\`？
+- **視覺與執行檢查**：如果任務包含「繪圖」，檢查你是否已經確實輸出了正確的 Pollinations 圖片網址？如果任務包含「搜尋」，檢查你是否已經確實呼叫了 \`google_search\`？
 - **文字檢查**：是否遺漏了原始文字？格式是否與藍圖一致？
 確認無誤後，交付最終成品，並簡短說明使用方式。
 
@@ -614,8 +769,8 @@ function getSuperAgentPrompt(wsName, customRules) {
 
 5. ✅ **Agentic UI 與雲端電腦雙軌協議**：
    - 當需要「數據視覺化、互動式操作」時，優先呼叫 'execute_dynamic_tool' 在側邊欄生成前端元件。
-   - 當需要「複雜計算、Python 數據處理、操作多個檔案」時，優先呼叫 'run_cloud_sandbox_code'。
-   - 這兩者是你的「創造力核心」與「運算核心」。
+   - 當需要「雲端純粹的數據分析與運算」時，使用 'run_cloud_sandbox_code'。
+   - 當使用者明確要求「使用 Docker 沙盒」或是需要「在安全的本地隔離環境中建置專案/執行指令」時，必須呼叫 'local_docker_run_command'，切勿混淆。
 6. **安全優先與 HITL 授權協議 (Security First & HITL)**：
    - 涉及「刪除檔案」、「覆寫 Google Doc」、「雲端電腦執行 Shell」或「正式發送郵件」等操作時，系統會自動攔截。
    - 涉及「刪除檔案/對話」、「覆寫 Google Doc」、「GitHub 回滾 (Rollback)」或「正式發送郵件」等敏感操作時，系統已建置 **HITL (人機協同)** 安全攔截機制。
@@ -652,7 +807,7 @@ ${customRules}
 
 [場景 D：動態工具合成 (Manus 級代碼執行器)]
 當使用者提出需要自定義計算、數據視覺化、互動式儀表板，或現有工具無法直接解決的複雜數據任務時：
-⚠️ **觸發限制**：當使用者只是要求「在沙盒中建立/寫入/讀取檔案」、「執行 Linux/Shell 命令」、「執行 Python 運算」等無需圖形化介面互動的純數據或指令任務時，**【嚴禁】**呼叫 'execute_dynamic_tool' 來合成檔案總管或代碼執行器網頁。你**【必須】**直接在背景呼叫實體工具 'run_cloud_sandbox_code' 來操作真實的雲端沙盒，並將命令列的 stdout/stderr 輸出直接以 Markdown 文字回覆給使用者，以充分發揮持久化沙盒的威力。
+⚠️ **觸發限制**：當使用者只是要求「執行純指令任務」時，**【嚴禁】**呼叫 'execute_dynamic_tool' 來合成網頁。你**【必須】**呼叫實體沙盒工具。注意：如果是要求雲端純運算，請用 'run_cloud_sandbox_code'；如果使用者要求「Docker 沙盒」或「本地安全沙盒」，請優先使用 'local_docker_run_command'，並將命令列的輸出以 Markdown 回覆給使用者。
 1. 分析任務所需之邏輯與介面。
 2. 呼叫 'execute_dynamic_tool'，合成一段包含 HTML/JS/CSS 的代碼。
 3. 代碼中應包含必要的 CDN（如 Chart.js, Tailwind, D3.js），並確保具備高品質的 UI/UX 設計。
@@ -732,8 +887,11 @@ function doPost(e) {
 
         const { message, session_id, workspace, mode, old_text, target_text, target_role, file_data, mime_type, web_search, youtube_id, auto_image, draw_mode, gem_prompt, gem_model, selected_model, confirmed } = payload;
         
-        const ss = SpreadsheetApp.openById(BASE_CONFIG.SHEET_ID);
-        const CONFIG = { ...BASE_CONFIG, ...loadSettings(ss) };
+        let ss = null;
+        try {
+            if (BASE_CONFIG.SHEET_ID) ss = SpreadsheetApp.openById(BASE_CONFIG.SHEET_ID);
+        } catch (e) { console.warn("SpreadsheetApp missing:", e); }
+        const CONFIG = ss ? { ...BASE_CONFIG, ...loadSettings(ss) } : { ...BASE_CONFIG };
         const apiKey = getAccumulatedGeminiApiKeys(CONFIG);
         const lineToken = PropertiesService.getScriptProperties().getProperty('LINE_CHANNEL_ACCESS_TOKEN') || CONFIG.LINE_CHANNEL_ACCESS_TOKEN;
         const db = new FirebaseClient();
@@ -747,7 +905,7 @@ function doPost(e) {
         let wsName = String(workspace || "").trim();
         if (!wsName) {
             const excluded = [BASE_CONFIG.SETTING_SHEET_NAME, "Gems", "Models"];
-            const validSheets = ss.getSheets().filter(sh => !excluded.includes(sh.getName()));
+            const validSheets = ss ? ss.getSheets().filter(sh => !excluded.includes(sh.getName()) && !sh.getName().startsWith("_db_")) : [];
             wsName = validSheets.length > 0 ? validSheets[0].getName() : "Main_Workspace";
         }
 
@@ -796,9 +954,9 @@ function doPost(e) {
             finalSystemInstruction += `\n\n【💎 當前切換的 Gem 角色設定】\n使用者目前已切換為特定的 Gem 角色。請你完全沉浸並遵守以下角色設定與指示：\n<gem_role>\n${actualGemPrompt}\n</gem_role>`;
         }
 
-        let fallbackModel = "gemini-2.0-flash";
+        let fallbackModel = "gemini-2.5-flash";
         try {
-            const modelSheet = ss.getSheetByName("Models");
+            const modelSheet = ss ? ss.getSheetByName("Models") : null;
             if (modelSheet && modelSheet.getLastRow() > 1) {
                 fallbackModel = String(modelSheet.getRange(2, 2).getValue()).trim() || fallbackModel;
             }
@@ -825,7 +983,7 @@ function doPost(e) {
         let finalTools;
         if (draw_mode) {
             finalTools = [{ functionDeclarations: AGENT_TOOLS[0].functionDeclarations.filter(t => t.name === "generate_art") }];
-            finalSystemInstruction += `\n\n【🎨 強制繪圖模式 (Draw Mode)】\n使用者已開啟「純繪圖模式」。請將使用者的文字轉換為精確的英文生圖 Prompt，並『強制且唯一』呼叫 \`generate_art\` 工具。不要講多餘的廢話，直接畫圖！`;
+            finalSystemInstruction += `\n\n【🎨 強制繪圖模式 (Draw Mode)】\n使用者已開啟「純繪圖模式」。請將使用者的文字轉換為精確的英文生圖 Prompt，並直接輸出 Markdown 圖片語法 "![圖片描述](https://image.pollinations.ai/prompt/經過URL編碼的英文提示詞?width=800&height=800&nologo=true)"。不要講多餘的廢話，直接顯示圖片！`;
         } else if (web_search) {
             // 原則上使用自定義 google_search 工具以利與 read_web_page 並存
             // 只有當使用者明確開啟「強制聯網」且不考慮其他工具時才使用內建工具
@@ -837,6 +995,7 @@ function doPost(e) {
 
         const agentResult = runAutonomousAgentLoop({
             ss: ss, apiKey: apiKey, prompt: finalMessage, model: modelId,
+            wsName: wsName, sessionId: session_id || "default",
             systemInstruction: finalSystemInstruction, history: history, tools: finalTools,
             imageData: file_data ? { mimeType: mime_type, data: file_data } : null,
             artistModel: CONFIG.MODEL_ARTIST || "gemini-3.1-flash-image-preview",
@@ -855,7 +1014,8 @@ function doPost(e) {
             html_artifact: agentResult.html_artifact || null,
             needs_confirmation: agentResult.needs_confirmation || false,
             pending_tool_call: agentResult.pending_tool_call || null,
-            python_browser_request: agentResult.python_browser_request || null
+            python_browser_request: agentResult.python_browser_request || null,
+            local_agent_request: agentResult.local_agent_request || null
         });
     } catch (err) { return response({ error: err.toString(), status: "error" }); }
 }
@@ -909,8 +1069,8 @@ function handleLineWebhook(payload, ss, apiKey, lineToken, CONFIG, db) {
                 return; // 終止後續 AI 呼叫
             }
 
-            let targetSheet = ss.getSheetByName(wsName);
-            if (!targetSheet) {
+            let targetSheet = ss ? ss.getSheetByName(wsName) : null;
+            if (!targetSheet && ss) {
                 targetSheet = ss.insertSheet(wsName);
                 targetSheet.appendRow(["🔥 LINE 機器人專區", "來自 LINE 的對話將儲存於此空間對應的 Firebase 中。"]);
                 targetSheet.getRange("A1:B1").setFontColor("red").setFontWeight("bold");
@@ -918,7 +1078,7 @@ function handleLineWebhook(payload, ss, apiKey, lineToken, CONFIG, db) {
 
             let fallbackModel = "gemini-2.5-flash";
             try {
-                const modelSheet = ss.getSheetByName("Models");
+                const modelSheet = ss ? ss.getSheetByName("Models") : null;
                 if (modelSheet && modelSheet.getLastRow() > 1) {
                     fallbackModel = String(modelSheet.getRange(2, 2).getValue()).trim() || fallbackModel;
                 }
@@ -945,7 +1105,7 @@ function handleLineWebhook(payload, ss, apiKey, lineToken, CONFIG, db) {
             // 🛡️ API 互斥切換
             if (draw_mode) {
                 finalTools = [{ functionDeclarations: AGENT_TOOLS[0].functionDeclarations.filter(t => t.name === "generate_art") }];
-                finalSystemInstruction += `\n\n【🎨 強制繪圖模式】使用者要求畫圖，請將使用者的文字轉換為詳細的英文畫面描述，並強制呼叫 generate_art 工具。不要講廢話。`;
+                finalSystemInstruction += `\n\n【🎨 強制繪圖模式】使用者要求畫圖，請將使用者的文字轉換為詳細的英文畫面描述，並直接輸出 Markdown 圖片語法 "![圖片描述](https://image.pollinations.ai/prompt/經過URL編碼的英文提示詞?width=800&height=800&nologo=true)"。不要講廢話。`;
             } else if (web_search) {
                 finalTools = JSON.parse(JSON.stringify(AGENT_TOOLS));
                 finalSystemInstruction += `\n\n【🌍 聯網搜尋模式】使用者正在詢問外部資訊，請優先使用 google_search 與 read_web_page 工具提供最新答案。`;
@@ -957,6 +1117,7 @@ function handleLineWebhook(payload, ss, apiKey, lineToken, CONFIG, db) {
                 const agentResult = runAutonomousAgentLoop({
                     ss: ss, apiKey: apiKey, prompt: actualMessage, 
                     model: CONFIG.MODEL_LINE || fallbackModel,
+                    wsName: wsName, sessionId: session_id || "default",
                     systemInstruction: finalSystemInstruction, history: history, tools: finalTools,
                     imageData: fileData, 
                     artistModel: CONFIG.MODEL_ARTIST || "gemini-3.1-flash-image-preview",
@@ -1057,7 +1218,12 @@ function runAutonomousAgentLoop(config) {
             isFunctionResponse: !isFirstTurn && currentHistory.length > 0 && currentHistory[currentHistory.length - 1].role === "user" && currentHistory[currentHistory.length - 1].parts && currentHistory[currentHistory.length - 1].parts[0].functionResponse !== undefined
         };
 
-        let aiResponse = callGeminiAPI_Raw(apiPayload);
+        let aiResponse;
+        if (isOpenAICompatibleModel(config.model)) {
+            aiResponse = callOpenAICompatibleAPI_Raw(apiPayload, config.configData);
+        } else {
+            aiResponse = callGeminiAPI_Raw(apiPayload);
+        }
         let cand = aiResponse.candidates && aiResponse.candidates[0];
         
         if (!cand) { throw new Error("API 未回傳任何候選內容。可能是安全機制阻擋或伺服器超載。"); }
@@ -1447,7 +1613,70 @@ function runAutonomousAgentLoop(config) {
                                 toolResult = { status: "error", error_message: `無法讀取簡報: ${e.toString()}。請確認這是 Google Slides 且您有權限存取，或已開權限給 ${executeEmail}` };
                             }
                             break;
-                            
+                        case "query_knowledge_base":
+                            try {
+                                const configData = config.configData || {};
+                                const folderId = configData.KNOWLEDGE_BASE_FOLDER_ID || PropertiesService.getScriptProperties().getProperty('KNOWLEDGE_BASE_FOLDER_ID');
+                                if (!folderId) {
+                                    toolResult = { status: "error", error_message: "找不到 KNOWLEDGE_BASE_FOLDER_ID 設定，請在 setting 工作表新增該設定。" };
+                                    break;
+                                }
+                                
+                                const safeKw = args.query.replace(/'/g, "\\'");
+                                let query = `(title contains '${safeKw}' or fullText contains '${safeKw}') and '${folderId}' in parents and trashed = false`;
+                                let files = DriveApp.searchFiles(query);
+                                let results = [];
+                                let count = 0;
+                                while (files.hasNext() && count < 10) {
+                                    let f = files.next();
+                                    let mime = f.getMimeType();
+                                    let fileContent = "";
+                                    try {
+                                        if (mime === "application/vnd.google-apps.document") {
+                                            fileContent = DocumentApp.openById(f.getId()).getBody().getText().substring(0, 3000);
+                                        } else if (mime === "text/plain" || mime === "text/markdown") {
+                                            fileContent = f.getAs("text/plain").getDataAsString().substring(0, 3000);
+                                        }
+                                    } catch(err) {
+                                        fileContent = "（無法讀取該檔案內文: " + err.toString() + "）";
+                                    }
+                                    results.push({
+                                        name: f.getName(),
+                                        url: f.getUrl(),
+                                        id: f.getId(),
+                                        mimeType: mime,
+                                        contentSnippet: fileContent || "（該格式無文字內容摘要）"
+                                    });
+                                    count++;
+                                }
+                                
+                                if (results.length === 0) {
+                                    // Fallback: search the entire drive by title just in case
+                                    let fallbackQuery = `title contains '${safeKw}' and trashed = false`;
+                                    let fallbackFiles = DriveApp.searchFiles(fallbackQuery);
+                                    while (fallbackFiles.hasNext() && count < 5) {
+                                        let f = fallbackFiles.next();
+                                        results.push({
+                                            name: f.getName(),
+                                            url: f.getUrl(),
+                                            id: f.getId(),
+                                            mimeType: f.getMimeType(),
+                                            contentSnippet: "（全域雲端硬碟搜尋備用匹配，非知識庫直屬檔案）"
+                                        });
+                                        count++;
+                                    }
+                                }
+                                
+                                if (results.length === 0) {
+                                    toolResult = { status: "success", data: `在知識庫中找不到與 "${args.query}" 相關的檔案。` };
+                                } else {
+                                    toolResult = { status: "success", data: JSON.stringify(results) };
+                                }
+                            } catch(e) {
+                                toolResult = { status: "error", error_message: `搜尋知識庫失敗: ${e.toString()}` };
+                            }
+                            break;
+
                         case "google_search":
                         case "search_web":
                             try {
@@ -1647,7 +1876,18 @@ function runAutonomousAgentLoop(config) {
                                     if (idMatch && idMatch[0]) targetSsForRead = SpreadsheetApp.openById(idMatch[0]);
                                     else throw new Error("無法解析的試算表網址");
                                 }
-                                const rsh = args.sheetName ? targetSsForRead.getSheetByName(args.sheetName) : targetSsForRead.getSheets()[0];
+                                let rsh;
+                                if (args.sheetName) {
+                                    rsh = targetSsForRead.getSheetByName(args.sheetName);
+                                } else {
+                                    const currentWs = config.wsName || "";
+                                    if (currentWs) rsh = targetSsForRead.getSheetByName(currentWs);
+                                    if (!rsh) {
+                                        const excluded = [BASE_CONFIG.SETTING_SHEET_NAME, "Gems", "Models"];
+                                        const validSheets = targetSsForRead.getSheets().filter(sh => !excluded.includes(sh.getName()) && !sh.getName().startsWith("_db_"));
+                                        rsh = validSheets.length > 0 ? validSheets[0] : targetSsForRead.getSheets()[0];
+                                    }
+                                }
                                 if (!rsh) throw new Error("找不到指定的工作表");
                                 
                                 let sheetData = (!args.range || args.range === 'ALL') ? rsh.getDataRange().getDisplayValues() : rsh.getRange(args.range).getDisplayValues();
@@ -1812,16 +2052,17 @@ function runAutonomousAgentLoop(config) {
                                 toolResult = { isTerminal: true, reply: `⚠️ **簡報建立失敗**\n\n簡報資料格式錯誤，無法解析內容：\n${e.toString()}` }; break; 
                             }
                             
-                            toolResult = { 
-                                isTerminal: true, 
-                                reply: `✨ **互動式網頁簡報已生成！**\n\n您可以直接在畫面中點擊文字進行修改。若需匯出為真正的 Google 簡報，請點擊畫面右上角的「匯出 Google 簡報」按鈕。`,
-                                html_presentation_data: {
-                                    topic: args.topic,
-                                    theme: themeToUse,
-                                    style: args.shapeStyle || 'minimalist',
-                                    slides: parsedData
-                                }
-                            };
+                            try {
+                                const isAutoImage = config.configData ? config.configData.autoImageEnabled : true;
+                                const pid = createGeometricSlides(args.topic, parsedData, themeToUse, args.shapeStyle || 'minimalist', isAutoImage, config.apiKey, config.artistModel);
+                                const presentationUrl = `https://docs.google.com/presentation/d/${pid}/edit`;
+                                toolResult = {
+                                    isTerminal: true,
+                                    reply: `🎉 **您的 Google 簡報已直接在雲端生成完成！**\n\n主題：${args.topic}\n投影片數量：${parsedData.length} 頁\n幾何風格：${args.shapeStyle || 'minimalist'}\n\n🔗 **[點擊開啟 Google 簡報](${presentationUrl})**`
+                                };
+                            } catch(e) {
+                                toolResult = { isTerminal: true, reply: `❌ **直接生成 Google 簡報失敗：**\n\n底層錯誤: ${e.toString()}` };
+                            }
                             break;
                         case "update_presentation":
                             let presIdMatch = args.presentationUrl.match(/[-\w]{25,}/);
@@ -2054,6 +2295,29 @@ function runAutonomousAgentLoop(config) {
                                 };
                             } catch(e) { toolResult = { status: "error", error_message: `雲端電腦執行失敗: ${e.toString()}` }; }
                             break;
+
+                        case "local_disk_search":
+                        case "local_disk_browse":
+                        case "local_disk_read":
+                        case "local_disk_organize":
+                        case "local_run_command":
+                        case "local_write_file":
+                        case "local_docker_run_command":
+                            // 委派給前端本機代理執行
+                            const actionLabels = {
+                                "local_run_command": "💻 **準備執行本機終端機指令...**",
+                                "local_write_file": "📝 **準備寫入本機檔案...**",
+                                "local_docker_run_command": "🐳 **準備啟動 Docker 隔離沙盒...**"
+                            };
+                            toolResult = {
+                                isTerminal: true,
+                                reply: actionLabels[fnName] || `🔍 **正在存取本機磁碟...**`,
+                                local_agent_request: {
+                                    tool: fnName,
+                                    args: args
+                                }
+                            };
+                            break;
                             
                         case "design_document":
                             try {
@@ -2184,7 +2448,8 @@ function runAutonomousAgentLoop(config) {
                         mime: finalMime, 
                         html_presentation: toolResult.html_presentation_data || null, 
                         html_artifact: toolResult.html_artifact_data || null,
-                        python_browser_request: toolResult.python_browser_request || null
+                        python_browser_request: toolResult.python_browser_request || null,
+                        local_agent_request: toolResult.local_agent_request || null
                     }; 
                 }
                 toolResponses.push({ functionResponse: { name: fnName, response: toolResult, id: part.functionCall.id } });
@@ -2342,13 +2607,7 @@ function fetchGoogleAPIWithRotation(urlTemplate, payload, apiKey, method = "post
         }
     }
     
-    let friendlyError = "所有配給的 Google API 金鑰均不可用。最後錯誤：" + lastError;
-    if (lastError.includes("API key not valid") || lastError.includes("not valid") || lastError.includes("400")) {
-        friendlyError = "⚠️ 【Gemini 金鑰無效】您目前設定的 GEMINI_API_KEY 無效或已過期（錯誤代碼 400）。\n👉 請至 Google AI Studio (https://aistudio.google.com/) 建立新的 API Key，並進入 Google Apps Script 的「專案設定」->「指令碼屬性」將新金鑰更新至 GEMINI_API_KEY 欄位中。";
-    } else if (lastError.includes("Quota exceeded") || lastError.includes("quota") || lastError.includes("429") || lastError.includes("limit: 0")) {
-        friendlyError = "⚠️ 【Gemini 金鑰超出配額/免費額度歸零】您目前設定的 GEMINI_API_KEY 已超出使用配額，或該免費專案帳號的免費額度已歸零（錯誤代碼 429 / limit: 0）。\n👉 請檢查您的 Google AI Studio 帳單狀態，或至 Google AI Studio 建立一個全新的專案並產生新的 API Key，再更新至 Apps Script 的「指令碼屬性」中。";
-    }
-    throw new Error(friendlyError);
+    throw new Error(`所有配給的 Google API 金鑰均不可用。最後錯誤：${lastError}`);
 }
 
 function callGeminiAPI_Raw({ prompt, model, apiKey, systemInstruction, history = [], tools = [], imageData = null, isFunctionResponse = false }) {
@@ -2406,7 +2665,7 @@ function fetchAIImage(prompt, key, model, aspectRatio = "16:9") {
 
 function loadSettings(ss) {
     const s = { CUSTOM_RULES: "" };
-    const sh = ss.getSheetByName(BASE_CONFIG.SETTING_SHEET_NAME);
+    const sh = ss.getSheetByName(BASE_CONFIG.SETTING_SHEET_NAME) || ss.getSheetByName("setting") || ss.getSheetByName("設定");
     if(sh) {
         let rules = [];
         const data = sh.getDataRange().getValues();
@@ -2550,7 +2809,7 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
     const routeHandlers = {
         'get_workspaces': () => {
             const excluded = [BASE_CONFIG.SETTING_SHEET_NAME, "Gems", "Models"];
-            const workspaces = ss.getSheets().map(sh => sh.getName()).filter(name => !excluded.includes(name));
+            const workspaces = ss.getSheets().map(sh => sh.getName()).filter(name => !excluded.includes(name) && !name.startsWith("_db_"));
             return response({ workspaces: workspaces });
         },
         'move_session': () => {
@@ -2592,15 +2851,32 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
             return response({status: "success"});
         },
         'get_gems': () => {
-            const gemSheet = ss.getSheetByName("Gems"); if(!gemSheet) return response({gems: []});
+            const gemSheet = ss ? ss.getSheetByName("Gems") : null; if(!gemSheet) return response({gems: []});
             const data = gemSheet.getDataRange().getValues(); let gems = []; let currentGem = null;
             for(let i = 0; i < data.length; i++) {
                 let name = String(data[i][0] || "").trim(); let promptText = String(data[i][1] || "").trim(); let model = data[i].length > 2 ? String(data[i][2] || "").trim() : "";
                 if (name) { if (currentGem) gems.push(currentGem); currentGem = { name: name, prompt: promptText, model: model }; } else if (currentGem && promptText) { currentGem.prompt += "\n" + promptText; }
             } if (currentGem) gems.push(currentGem); return response({gems: gems});
         },
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         'get_models': () => {
-            const modelSheet = ss.getSheetByName("Models"); let models = [];
+            const modelSheet = ss ? ss.getSheetByName("Models") : null; let models = [];
             if(modelSheet) { 
                 const data = modelSheet.getDataRange().getValues(); 
                 for(let i = 1; i < data.length; i++) { 
@@ -2609,7 +2885,22 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
                     if (name && id) models.push({ name: name, id: id }); 
                 } 
             }
-            if(models.length === 0) { models = [{name: "⚡ 閃電 (2.5 Flash)", id: "gemini-2.0-flash"}, {name: "🧠 專家 (2.5 Pro)", id: "gemini-2.5-pro"}]; }
+            if(models.length === 0) { models = [
+                {name: "⚡ 閃電 (2.5 Flash)", id: "gemini-2.5-flash"}, 
+                {name: "🧠 專家 (2.5 Pro)", id: "gemini-2.5-pro"},
+                {name: "⚡ Gemini 3.1 Flash", id: "gemini-3.1-flash"},
+                {name: "⚡ Gemini 3.5 Flash", id: "gemini-3.5-flash"},
+                {name: "🎨 Gemini生圖模型", id: "gemini-3.1-flash-image"},
+                {name: "🆓 Llama 3.3 70B (免費)", id: "meta-llama/llama-3.3-70b-instruct:free"},
+                {name: "🆓 Qwen 3 Coder (免費)", id: "qwen/qwen3-coder:free"},
+                {name: "🆓 Nemotron 3 Ultra 550B (免費)", id: "nvidia/nemotron-3-ultra-550b-a55b:free"},
+                {name: "🆓 Google Gemma 4 (免費)", id: "google/gemma-4-31b-it:free"},
+                {name: "🆓 Hermes 3 405B (免費)", id: "nousresearch/hermes-3-llama-3.1-405b:free"}
+            ]; } else {
+                models.push({name: "🆓 Llama 3.3 70B (免費)", id: "meta-llama/llama-3.3-70b-instruct:free"});
+                models.push({name: "🆓 Qwen 3 Coder (免費)", id: "qwen/qwen3-coder:free"});
+                models.push({name: "🆓 Nemotron 3 Ultra 550B (免費)", id: "nvidia/nemotron-3-ultra-550b-a55b:free"});
+            }
             return response({models: models});
         },
         'get_session_list': () => {
@@ -2763,6 +3054,66 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
                 }
                 return response({ status: "error", message: "Session not found" });
             } catch(e) { return response({ status: "error", message: e.toString() }); }
+        },
+        'deploy_frontend': () => {
+            try {
+                const props = PropertiesService.getScriptProperties().getProperties();
+                const githubPat = props['GITHUB_PAT'];
+                if (!githubPat) return response({ status: "error", message: "後端未配置 GITHUB_PAT 變數" });
+                
+                const owner = "kiteyoung0520";
+                const repo = "agent";
+                const path = "index.html";
+                
+                // A. 獲取現有檔案的 SHA
+                const getUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+                const getRes = UrlFetchApp.fetch(getUrl, {
+                    method: "get",
+                    headers: {
+                        "Authorization": "token " + githubPat,
+                        "Accept": "application/vnd.github.v3+json",
+                        "User-Agent": "Google-Apps-Script"
+                    },
+                    muteHttpExceptions: true
+                });
+                
+                let sha = null;
+                if (getRes.getResponseCode() === 200) {
+                    const getData = JSON.parse(getRes.getContentText());
+                    sha = getData.sha;
+                }
+                
+                // B. 讀取 GAS 專案中的 index.html
+                const htmlContent = HtmlService.createHtmlOutputFromFile('index').getContent();
+                const base64Content = Utilities.base64Encode(Utilities.newBlob(htmlContent).getBytes());
+                
+                // C. 提交並推播至 GitHub
+                const payload = {
+                    message: "Deploy index.html from Google Apps Script",
+                    content: base64Content
+                };
+                if (sha) payload.sha = sha;
+                
+                const putRes = UrlFetchApp.fetch(getUrl, {
+                    method: "put",
+                    headers: {
+                        "Authorization": "token " + githubPat,
+                        "Accept": "application/vnd.github.v3+json",
+                        "User-Agent": "Google-Apps-Script"
+                    },
+                    contentType: "application/json",
+                    payload: JSON.stringify(payload),
+                    muteHttpExceptions: true
+                });
+                
+                if (putRes.getResponseCode() === 200 || putRes.getResponseCode() === 201) {
+                    return response({ status: "success", message: "網頁已成功推播至 GitHub Pages 部署！" });
+                } else {
+                    return response({ status: "error", message: "GitHub API 回傳錯誤: " + putRes.getContentText() });
+                }
+            } catch(e) {
+                return response({ status: "error", message: e.toString() });
+            }
         },
         'get_artifact_code': () => {
             const fileId = payload.file_id;
@@ -3275,7 +3626,7 @@ function addMaterialIcon(slide, keyword, x, y, size, color) {
     style.setFontSize(size);
     style.setForegroundColor(color);
     style.setFontFamily("Material Icons"); 
-    box.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER);
+    txt.getParagraphStyle().setParagraphAlignment(SlidesApp.ParagraphAlignment.CENTER);
     box.setContentAlignment(SlidesApp.ContentAlignment.MIDDLE);
     return box;
     return box;
@@ -3320,4 +3671,213 @@ function forceAuthSetup() {
     GmailApp.getInboxThreads(0, 1);
     CalendarApp.getDefaultCalendar();
     console.log("✅ 所有權限已成功開通。您可以把剛剛在雲端硬碟產生的 Temp_Auth 檔案刪除。");
+}
+// Dummy
+ 
+// =========================================================================
+// 🚀 NVIDIA NIM (OpenAI 相容) 轉接器實作
+// =========================================================================
+
+function isOpenAICompatibleModel(modelName) {
+    const lower = String(modelName).toLowerCase();
+    return lower.includes('/') || lower.startsWith('llama') || lower.startsWith('mixtral') || lower.startsWith('nemotron') || lower.startsWith('deepseek');
+}
+
+function convertGoogleToolsToOpenAI(googleTools) {
+    if (!Array.isArray(googleTools)) return [];
+    const openAiTools = [];
+    
+    function lowercaseTypes(schema) {
+        if (!schema) return schema;
+        const newSchema = { ...schema };
+        if (typeof newSchema.type === 'string') {
+            newSchema.type = newSchema.type.toLowerCase();
+        }
+        if (newSchema.properties) {
+            const newProps = {};
+            for (const [k, v] of Object.entries(newSchema.properties)) {
+                newProps[k] = lowercaseTypes(v);
+            }
+            newSchema.properties = newProps;
+        }
+        if (newSchema.items) {
+            newSchema.items = lowercaseTypes(newSchema.items);
+        }
+        return newSchema;
+    }
+
+    googleTools.forEach(toolBag => {
+        if (toolBag.functionDeclarations && Array.isArray(toolBag.functionDeclarations)) {
+            toolBag.functionDeclarations.forEach(decl => {
+                openAiTools.push({
+                    type: "function",
+                    function: {
+                        name: decl.name,
+                        description: decl.description,
+                        parameters: lowercaseTypes(decl.parameters)
+                    }
+                });
+            });
+        }
+    });
+    return openAiTools;
+}
+
+function convertHistoryToOpenAI(history, systemInstruction, prompt, isFunctionResponse) {
+    const messages = [];
+    
+    if (systemInstruction) {
+        messages.push({ role: "system", content: systemInstruction });
+    }
+    
+    function getTextFromParts(parts) {
+        if (!parts) return "";
+        return parts.filter(p => p.text).map(p => p.text).join("\n").trim();
+    }
+    
+    history.forEach(turn => {
+        const role = (turn.role === 'model' || turn.role === 'assistant') ? 'assistant' : 'user';
+        
+        if (turn.parts && Array.isArray(turn.parts)) {
+            const functionCalls = turn.parts.filter(p => p.functionCall);
+            const functionResponses = turn.parts.filter(p => p.functionResponse);
+            
+            if (functionCalls.length > 0) {
+                const textContent = getTextFromParts(turn.parts);
+                messages.push({
+                    role: "assistant",
+                    content: textContent || null,
+                    tool_calls: functionCalls.map(fc => ({
+                        id: fc.functionCall.id || ("call_" + Math.random().toString(36).substring(2, 10)),
+                        type: "function",
+                        function: {
+                            name: fc.functionCall.name,
+                            arguments: JSON.stringify(fc.functionCall.args || {})
+                        }
+                    }))
+                });
+            } else if (functionResponses.length > 0) {
+                functionResponses.forEach(fr => {
+                    messages.push({
+                        role: "tool",
+                        tool_call_id: fr.functionResponse.id || "call_unknown",
+                        name: fr.functionResponse.name,
+                        content: JSON.stringify(fr.functionResponse.response || {})
+                    });
+                });
+            } else {
+                const content = getTextFromParts(turn.parts) || turn.content || "";
+                if (content) messages.push({ role: role, content: content });
+            }
+        } else {
+            const content = turn.content || turn.text || "";
+            if (content) messages.push({ role: role, content: content });
+        }
+    });
+    
+    if (!isFunctionResponse && prompt) {
+        const lastMsg = messages[messages.length - 1];
+        if (lastMsg && lastMsg.role === 'user') {
+            lastMsg.content = (lastMsg.content ? lastMsg.content + "\n" : "") + prompt;
+        } else {
+            messages.push({ role: "user", content: prompt });
+        }
+    }
+    
+    return messages;
+}
+
+function translateOpenAiResponseToGemini(openAiRes) {
+    const choice = openAiRes.choices && openAiRes.choices[0];
+    if (!choice) {
+        throw new Error("NVIDIA API returned no choices: " + JSON.stringify(openAiRes));
+    }
+    
+    const message = choice.message;
+    const parts = [];
+    
+    if (message.content) {
+        parts.push({ text: message.content });
+    }
+    
+    if (message.tool_calls && Array.isArray(message.tool_calls)) {
+        message.tool_calls.forEach(tc => {
+            let parsedArgs = {};
+            try {
+                parsedArgs = typeof tc.function.arguments === 'string' ? JSON.parse(tc.function.arguments) : tc.function.arguments;
+            } catch(e) {
+                console.warn("Failed to parse tool arguments from OpenAI response", e);
+            }
+            parts.push({
+                functionCall: {
+                    name: tc.function.name,
+                    args: parsedArgs,
+                    id: tc.id
+                }
+            });
+        });
+    }
+    
+    return {
+        candidates: [
+            {
+                content: {
+                    parts: parts
+                },
+                finishReason: choice.finish_reason === 'stop' ? 'STOP' : (choice.finish_reason === 'tool_calls' ? 'STOP' : choice.finish_reason)
+            }
+        ]
+    };
+}
+
+function callOpenAICompatibleAPI_Raw({ prompt, model, apiKey, systemInstruction, history = [], tools = [], imageData = null, isFunctionResponse = false }, configData) {
+    let targetUrl = "https://integrate.api.nvidia.com/v1/chat/completions";
+    let targetKey = configData ? configData.NVIDIA_API_KEY : PropertiesService.getScriptProperties().getProperty('NVIDIA_API_KEY');
+    
+    const hasOpenRouterKey = configData ? configData.OPENROUTER_API_KEY : PropertiesService.getScriptProperties().getProperty('OPENROUTER_API_KEY');
+    if (hasOpenRouterKey && model.includes('/')) {
+        targetUrl = "https://openrouter.ai/api/v1/chat/completions";
+        targetKey = hasOpenRouterKey;
+    }
+
+    if (!targetKey) {
+        throw new Error("找不到對應的 API KEY。請在 setting 工作表新增 NVIDIA_API_KEY 或 OPENROUTER_API_KEY。");
+    }
+    
+    const messages = convertHistoryToOpenAI(history, systemInstruction, prompt, isFunctionResponse);
+    const openAiTools = convertGoogleToolsToOpenAI(tools);
+    
+    const payload = {
+        model: model,
+        messages: messages,
+        temperature: 0.2,
+        top_p: 0.7,
+        max_tokens: 4096
+    };
+    
+    if (openAiTools.length > 0) {
+        payload.tools = openAiTools;
+    }
+    
+    const options = {
+        method: "post",
+        contentType: "application/json",
+        headers: {
+            "Authorization": "Bearer " + targetKey
+        },
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+    };
+    
+    const response = UrlFetchApp.fetch(targetUrl, options);
+    const statusCode = response.getResponseCode();
+    const responseText = response.getContentText();
+    
+    if (statusCode !== 200) {
+        const providerName = targetUrl.includes("openrouter") ? "OpenRouter" : "NVIDIA NIM";
+        throw new Error(`${providerName} API 錯誤 (${statusCode}): ${responseText}`);
+    }
+    
+    const openAiRes = JSON.parse(responseText);
+    return translateOpenAiResponseToGemini(openAiRes);
 }
