@@ -2196,10 +2196,16 @@
                 
                 const ReactModule = await import('https://esm.sh/react@18');
                 const ReactDOMModule = await import('https://esm.sh/react-dom@18/client');
-                const TldrawModule = await import('https://esm.sh/@tldraw/tldraw@3');
                 
-                const React = ReactModule.default || ReactModule;
-                const ReactDOM = ReactDOMModule.default || ReactDOMModule;
+                // 將 React 掛載到全域，以防 Tldraw bundle 找不到
+                window.React = ReactModule.default || ReactModule;
+                window.ReactDOM = ReactDOMModule.default || ReactDOMModule;
+
+                // 使用 ?bundle 強制打包，避免 esm.sh 載入數百個小檔案導致瀏覽器卡住或超時
+                const TldrawModule = await import('https://esm.sh/@tldraw/tldraw@3?bundle&external=react,react-dom');
+                
+                const React = window.React;
+                const ReactDOM = window.ReactDOM;
                 const { Tldraw, exportToBlob } = TldrawModule;
                 
                 const root = ReactDOM.createRoot(document.getElementById('tldraw-root'));
