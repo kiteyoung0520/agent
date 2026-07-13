@@ -255,7 +255,7 @@
         <div class="absolute top-2 left-2 z-50 flex gap-2">
             <button onclick="toggleCowart()" class="p-2 bg-[#131314] text-gray-400 hover:text-white rounded-lg shadow-lg border border-[#333]"><span class="material-symbols-rounded text-sm">close</span></button>
         </div>
-        <div id="tldraw-root" class="w-full h-full"></div>
+        <iframe id="cowart-iframe" class="w-full h-full border-none bg-white"></iframe>
         <button id="cowart-send-btn" class="absolute bottom-6 right-6 z-50 px-4 py-2 bg-pink-600 hover:bg-pink-500 text-white font-bold rounded-xl shadow-xl flex items-center gap-2 transition-all">
             <span class="material-symbols-rounded">send</span> 傳送給 AI
         </button>
@@ -2167,7 +2167,6 @@
         // ==========================================
         // COWART (Tldraw Infinite Canvas) Logic
         // ==========================================
-        let tldrawEditor = null;
         let isCowartOpen = false;
 
         function toggleCowart() {
@@ -2175,70 +2174,47 @@
             isCowartOpen = !isCowartOpen;
             if (isCowartOpen) {
                 panel.classList.remove('hidden');
-                if (!window.tldrawLoaded) {
-                    window.tldrawLoaded = true;
-                    loadTldraw();
+                const iframe = document.getElementById('cowart-iframe');
+                if (!iframe.src) {
+                    iframe.src = 'cowart.html';
                 }
             } else {
                 panel.classList.add('hidden');
             }
         }
 
-        async function loadTldraw() {
-            try {
-                const link = document.createElement('link');
-                link.rel = 'stylesheet';
-                link.href = 'https://unpkg.com/@tldraw/tldraw@3/tldraw.css';
-                document.head.appendChild(link);
-
-                const btn = document.getElementById('cowart-send-btn');
-                btn.innerHTML = `<span class="material-symbols-rounded animate-spin">sync</span> 載入中...`;
-                
-                const ReactModule = await import('https://esm.sh/react@18');
-                const ReactDOMModule = await import('https://esm.sh/react-dom@18/client');
-                
-                // 將 React 掛載到全域，以防 Tldraw bundle 找不到
-                window.React = ReactModule.default || ReactModule;
-                window.ReactDOM = ReactDOMModule.default || ReactDOMModule;
-
-                // 使用 ?bundle 強制打包，避免 esm.sh 載入數百個小檔案導致瀏覽器卡住或超時
-                const TldrawModule = await import('https://esm.sh/@tldraw/tldraw@3?bundle&external=react,react-dom');
-                
-                const React = window.React;
-                const ReactDOM = window.ReactDOM;
-                const { Tldraw, exportToBlob } = TldrawModule;
-                
-                const root = ReactDOM.createRoot(document.getElementById('tldraw-root'));
-                root.render(React.createElement(Tldraw, {
-                    onMount: (editor) => {
-                        tldrawEditor = editor;
-                        btn.innerHTML = `<span class="material-symbols-rounded">send</span> 傳送給 AI`;
-                    }
-                }));
-
-                btn.addEventListener('click', async () => {
-                    if (!tldrawEditor) return;
-                    const shapeIds = Array.from(tldrawEditor.getCurrentPageShapeIds());
-                    if (shapeIds.length === 0) return alert("畫布目前沒有任何內容喔！");
-                    
-                    const blob = await exportToBlob({
-                        editor: tldrawEditor,
-                        ids: shapeIds,
-                        format: 'png',
-                        opts: { background: true, padding: 32 }
-                    });
-
-                    const file = new File([blob], "cowart_export.png", { type: "image/png" });
-                    handleFiles([file]); // Insert into chat input
-                    
-                    // Focus on chat input
-                    document.getElementById('user-input').focus();
-                });
-            } catch (err) {
-                console.error("Tldraw load error:", err);
-                alert("載入畫布失敗: " + err.message);
+        const cowartBtn = document.getElementById('cowart-send-btn');
+        cowartBtn.addEventListener('click', () => {
+            const iframe = document.getElementById('cowart-iframe');
+            if (iframe && iframe.contentWindow) {
+                cowartBtn.innerHTML = `<span class="material-symbols-rounded animate-spin">sync</span> 處理中...`;
+                iframe.contentWindow.postMessage({ type: 'cowart_export' }, '*');
             }
-        }
+        });
+
+        window.addEventListener('message', (e) => {
+            if (e.data.type === 'cowart_export_empty') {
+                alert("畫布目前沒有任何內容喔！");
+                cowartBtn.innerHTML = `<span class="material-symbols-rounded">send</span> 傳送給 AI`;
+            } else if (e.data.type === 'cowart_export_error') {
+                alert("匯出失敗: " + e.data.message);
+                cowartBtn.innerHTML = `<span class="material-symbols-rounded">send</span> 傳送給 AI`;
+            } else if (e.data.type === 'cowart_export_result') {
+                const dataUrl = e.data.dataUrl;
+                fetch(dataUrl)
+                    .then(res => res.blob())
+                    .then(blob => {
+                        const file = new File([blob], "cowart_export.png", { type: "image/png" });
+                        handleFiles([file]);
+                        document.getElementById('user-input').focus();
+                    })
+                    .finally(() => {
+                        cowartBtn.innerHTML = `<span class="material-symbols-rounded">send</span> 傳送給 AI`;
+                    });
+            } else if (e.data.type === 'cowart_ready') {
+                cowartBtn.innerHTML = `<span class="material-symbols-rounded">send</span> 傳送給 AI`;
+            }
+        });
 
         // Setup Resizer for Cowart Panel
         const cowartResizer = document.getElementById('cowart-resizer');
