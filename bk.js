@@ -2891,16 +2891,11 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
                 {name: "⚡ Gemini 3.1 Flash", id: "gemini-3.1-flash"},
                 {name: "⚡ Gemini 3.5 Flash", id: "gemini-3.5-flash"},
                 {name: "🎨 Gemini生圖模型", id: "gemini-3.1-flash-image"},
-                {name: "🆓 Llama 3.3 70B (免費)", id: "meta-llama/llama-3.3-70b-instruct:free"},
-                {name: "🆓 Qwen 3 Coder (免費)", id: "qwen/qwen3-coder:free"},
-                {name: "🆓 Nemotron 3 Ultra 550B (免費)", id: "nvidia/nemotron-3-ultra-550b-a55b:free"},
                 {name: "🆓 Google Gemma 4 (免費)", id: "google/gemma-4-31b-it:free"},
-                {name: "🆓 Hermes 3 405B (免費)", id: "nousresearch/hermes-3-llama-3.1-405b:free"}
-            ]; } else {
-                models.push({name: "🆓 Llama 3.3 70B (免費)", id: "meta-llama/llama-3.3-70b-instruct:free"});
-                models.push({name: "🆓 Qwen 3 Coder (免費)", id: "qwen/qwen3-coder:free"});
-                models.push({name: "🆓 Nemotron 3 Ultra 550B (免費)", id: "nvidia/nemotron-3-ultra-550b-a55b:free"});
-            }
+                {name: "🆓 OR自動調度 (免費穩)", id: "openrouter/free"},
+                {name: "🐳 DeepSeek V3", id: "deepseek-chat"},
+                {name: "🐳 DeepSeek R1 (深度思考)", id: "deepseek-reasoner"}
+            ]; }
             return response({models: models});
         },
         'get_session_list': () => {
@@ -3835,13 +3830,22 @@ function callOpenAICompatibleAPI_Raw({ prompt, model, apiKey, systemInstruction,
     let targetKey = configData ? configData.NVIDIA_API_KEY : PropertiesService.getScriptProperties().getProperty('NVIDIA_API_KEY');
     
     const hasOpenRouterKey = configData ? configData.OPENROUTER_API_KEY : PropertiesService.getScriptProperties().getProperty('OPENROUTER_API_KEY');
-    if (hasOpenRouterKey && model.includes('/')) {
+    const hasDeepSeekKey = configData ? configData.DEEPSEEK_API_KEY : PropertiesService.getScriptProperties().getProperty('DEEPSEEK_API_KEY');
+    const hasGroqKey = configData ? configData.GROQ_API_KEY : PropertiesService.getScriptProperties().getProperty('GROQ_API_KEY');
+    
+    if (hasDeepSeekKey && model.startsWith('deepseek')) {
+        targetUrl = "https://api.deepseek.com/chat/completions";
+        targetKey = hasDeepSeekKey;
+    } else if (hasOpenRouterKey && model.includes('/')) {
         targetUrl = "https://openrouter.ai/api/v1/chat/completions";
         targetKey = hasOpenRouterKey;
+    } else if (hasGroqKey && (model.startsWith('llama') || model.startsWith('mixtral') || model.startsWith('gemma'))) {
+        targetUrl = "https://api.groq.com/openai/v1/chat/completions";
+        targetKey = hasGroqKey;
     }
 
     if (!targetKey) {
-        throw new Error("找不到對應的 API KEY。請在 setting 工作表新增 NVIDIA_API_KEY 或 OPENROUTER_API_KEY。");
+        throw new Error("找不到對應的 API KEY。請在 setting 工作表新增 NVIDIA_API_KEY, OPENROUTER_API_KEY, DEEPSEEK_API_KEY, 或 GROQ_API_KEY。");
     }
     
     const messages = convertHistoryToOpenAI(history, systemInstruction, prompt, isFunctionResponse);
@@ -3874,7 +3878,7 @@ function callOpenAICompatibleAPI_Raw({ prompt, model, apiKey, systemInstruction,
     const responseText = response.getContentText();
     
     if (statusCode !== 200) {
-        const providerName = targetUrl.includes("openrouter") ? "OpenRouter" : "NVIDIA NIM";
+        const providerName = targetUrl.includes("deepseek") ? "DeepSeek" : targetUrl.includes("groq") ? "Groq" : targetUrl.includes("openrouter") ? "OpenRouter" : "NVIDIA NIM";
         throw new Error(`${providerName} API 錯誤 (${statusCode}): ${responseText}`);
     }
     
