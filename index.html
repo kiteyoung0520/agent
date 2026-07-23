@@ -13,6 +13,7 @@
     <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
     <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
     
     <style>
         body { 
@@ -448,9 +449,9 @@
                 getAgents: async () => { const a = localStorage.getItem('agents'); return a ? JSON.parse(a) : {}; },
                 saveAgents: async (a) => { localStorage.setItem('agents', JSON.stringify(a)); },
                 getEnv: async () => ({ gasUrl: GAS_URL }),
-                googleLogin: async () => { return { success: false, error: 'Google Drive 登入功能僅支援桌面版 (Electron)，網頁版請直接使用檔案上傳功能' }; },
-                googleDriveList: async () => { return { success: false, files: [], error: 'Google Drive 僅支援桌面版' }; },
-                googleDriveRead: async () => { return { success: false, error: 'Google Drive 僅支援桌面版' }; },
+                googleLogin: async () => { return loginGoogleDriveWeb(); },
+                googleDriveList: async () => { return listGoogleDriveFiles(); },
+                googleDriveRead: async (fileId) => { return readGoogleDriveFile(fileId); },
                 googleLogout: async () => {}
             };
         }
@@ -502,7 +503,12 @@
         const CANVAS_HOST_PAGE = `<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><script src="https://unpkg.com/react@18/umd/react.production.min.js">\x3C/script><script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js">\x3C/script><script src="https://unpkg.com/@babel/standalone/babel.min.js">\x3C/script><script src="https://cdn.tailwindcss.com">\x3C/script><script src="https://unpkg.com/lucide@latest">\x3C/script><style>body { margin: 0; background: #f9fafb; font-family: sans-serif; } #root { min-height: 100vh; }</style></head><body><div id="root"></div><script>window.addEventListener('message', (e) => { if (e.data.type === 'render_artifact') { try { const { code } = e.data; let cleanCode = code.replace(/import\\s+.*?from\\s+['"].*?['"];?/g, '').replace(/export\\s+default\\s+function/g, 'function'); let m = code.match(/export\\s+default\\s+function\\s+([A-Za-z0-9_]+)/); const compName = m ? m[1] : 'App'; const transformed = Babel.transform(cleanCode, { presets: ['react'] }).code; const run = new Function('React', 'ReactDOM', 'lucide', transformed + \`\\n const rootEl = document.getElementById('root'); if (window.lastRoot) window.lastRoot.unmount(); window.lastRoot = ReactDOM.createRoot(rootEl); window.lastRoot.render(React.createElement(\${compName})); setTimeout(() => lucide.createIcons(), 100); \`); run(React, ReactDOM, lucide); } catch (err) { document.getElementById('root').innerHTML = '<div class="p-4 text-red-700 font-mono text-xs">Render Error: ' + err.message + '</div>'; } } }); window.parent.postMessage({ type: 'canvas_ready' }, '*'); \x3C/script></body></html>`;
 
         // ⚙️ 全域設定狀態 (Persistent Settings)
-        const settings = { continuousMode: false, voiceOutput: false, autoImage: true, webSearch: false, drawMode: false, localDirectMode: true, globalProfile: '', apiKeys: { gemini: '', openai: '', nvidia: '', openrouter: '' } };
+const settings = { continuousMode: false, voiceOutput: false, autoImage: true, webSearch: false, drawMode: false, localDirectMode: true, globalProfile: '', apiKeys: { gemini: '', openai: '', nvidia: '', openrouter: '' }, googleClientId: '', googleUser: null };
+    
+    // Load web-stored settings
+    try { const savedKeys = localStorage.getItem('apiKeys'); if (savedKeys) settings.apiKeys = JSON.parse(savedKeys); } catch(e) {}
+    try { const savedGoogleUser = localStorage.getItem('googleUser'); if (savedGoogleUser) settings.googleUser = JSON.parse(savedGoogleUser); } catch(e) {}
+    try { const savedClientId = localStorage.getItem('googleClientId'); if (savedClientId) settings.googleClientId = savedClientId; } catch(e) {}
     
     // Override with Electron settings
     if(window.electronAPI) {
@@ -2096,9 +2102,11 @@
                 document.getElementById('gcp-client-id-input').value = settings.googleClientId || '';
                 document.getElementById('gcp-client-secret-input').value = settings.googleClientSecret || '';
                 
-                document.getElementById('save-gcp-btn').onclick = () => {
+document.getElementById('save-gcp-btn').onclick = () => {
                     settings.googleClientId = document.getElementById('gcp-client-id-input').value;
                     settings.googleClientSecret = document.getElementById('gcp-client-secret-input').value;
+                    localStorage.setItem('googleClientId', settings.googleClientId);
+                    localStorage.setItem('googleClientSecret', settings.googleClientSecret);
                     saveElectronSettings();
                     alert('Google 憑證已儲存！');
                 };
@@ -2139,27 +2147,104 @@
         }
 
         
-        async function loginGoogleDrive() {
+async function loginGoogleDrive() {
             if (!settings.googleClientId) {
-                alert("請先至設定面板填寫 Google Client ID 與 Secret");
+                alert("請先至設定面板填寫 Google Client ID");
                 switchRightPanel('settings');
                 return;
             }
             const btnText = document.getElementById('gdrive-status-text');
             btnText.innerText = "登入中...";
             try {
-                const res = await window.electronAPI.googleLogin();
-                if (res.success) {
-                    settings.googleUser = res.user;
-                    saveElectronSettings();
-                    updateGDriveUI();
+                if (window.electronAPI) {
+                    const res = await window.electronAPI.googleLogin();
+                    if (res.success) {
+                        settings.googleUser = res.user;
+                        saveElectronSettings();
+                        updateGDriveUI();
+                    } else {
+                        alert("登入失敗: " + res.error);
+                        btnText.innerText = "登入 Google 帳號";
+                    }
                 } else {
-                    alert("登入失敗: " + res.error);
-                    btnText.innerText = "登入 Google 帳號";
+                    const res = await loginGoogleDriveWeb();
+                    if (res.success) {
+                        settings.googleUser = res.user;
+                        localStorage.setItem('googleUser', JSON.stringify(res.user));
+                        localStorage.setItem('gdriveToken', res.token);
+                        updateGDriveUI();
+                    } else {
+                        alert("登入失敗: " + res.error);
+                        btnText.innerText = "登入 Google 帳號";
+                    }
                 }
             } catch(e) {
                 alert("錯誤: " + e.message);
                 btnText.innerText = "登入 Google 帳號";
+            }
+        }
+
+        let gDriveToken = localStorage.getItem('gdriveToken') || null;
+
+        async function loginGoogleDriveWeb() {
+            return new Promise((resolve) => {
+                if (typeof google === 'undefined' || !google.accounts) {
+                    resolve({ success: false, error: 'Google Identity Services 尚未載入，請重新整理頁面' });
+                    return;
+                }
+                const clientId = settings.googleClientId;
+                if (!clientId) {
+                    resolve({ success: false, error: '請先在設定面板填寫 Google Client ID' });
+                    return;
+                }
+                const client = google.accounts.oauth2.initTokenClient({
+                    client_id: clientId,
+                    scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.email',
+                    callback: (response) => {
+                        if (response.error) {
+                            resolve({ success: false, error: response.error });
+                            return;
+                        }
+                        gDriveToken = response.access_token;
+                        localStorage.setItem('gdriveToken', gDriveToken);
+                        // 用 token 取使用者 Email
+                        fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=' + gDriveToken)
+                            .then(r => r.json())
+                            .then(info => {
+                                resolve({ success: true, user: { email: info.email, name: info.name, picture: info.picture }, token: gDriveToken });
+                            })
+                            .catch(() => {
+                                resolve({ success: true, user: { email: '已驗證', name: '' }, token: gDriveToken });
+                            });
+                    },
+                });
+                client.requestAccessToken();
+            });
+        }
+
+        async function listGoogleDriveFiles() {
+            if (!gDriveToken) return { success: false, files: [] };
+            try {
+                const r = await fetch('https://www.googleapis.com/drive/v3/files?pageSize=20&orderBy=modifiedTime desc&fields=files(id,name,mimeType,iconLink,modifiedTime)', {
+                    headers: { Authorization: 'Bearer ' + gDriveToken }
+                });
+                const data = await r.json();
+                return { success: true, files: (data.files || []).map(f => ({ ...f, id: f.id, name: f.name })) };
+            } catch(e) {
+                return { success: false, files: [], error: e.message };
+            }
+        }
+
+        async function readGoogleDriveFile(fileId) {
+            if (!gDriveToken) return { success: false, error: '未登入' };
+            try {
+                const r = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+                    headers: { Authorization: 'Bearer ' + gDriveToken }
+                });
+                const text = await r.text();
+                return { success: true, text: text };
+            } catch(e) {
+                return { success: false, error: e.message };
             }
         }
 
@@ -2175,8 +2260,8 @@
                 </div>`;
                 filesList.classList.remove('hidden');
                 
-                // Fetch files
-                const res = await window.electronAPI.googleDriveList();
+// Fetch files
+                const res = window.electronAPI ? await window.electronAPI.googleDriveList() : await listGoogleDriveFiles();
                 if (res.success) {
                     filesList.innerHTML = '';
                     if (res.files.length === 0) {
@@ -2202,23 +2287,31 @@
             }
         }
 
-        async function logoutGoogleDrive() {
+async function logoutGoogleDrive() {
             if (confirm("確定要登出 Google Drive 嗎？")) {
-                const res = await window.electronAPI.googleLogout();
-                if (res.success) {
-                    settings.googleUser = null;
-                    saveElectronSettings();
-                    updateGDriveUI();
+                if (window.electronAPI) {
+                    const res = await window.electronAPI.googleLogout();
+                    if (res.success) {
+                        settings.googleUser = null;
+                        saveElectronSettings();
+                        updateGDriveUI();
+                    } else {
+                        alert("登出失敗: " + res.error);
+                    }
                 } else {
-                    alert("登出失敗: " + res.error);
+                    gDriveToken = null;
+                    localStorage.removeItem('gdriveToken');
+                    localStorage.removeItem('googleUser');
+                    settings.googleUser = null;
+                    updateGDriveUI();
                 }
             }
         }
 
-        async function loadGDriveFile(fileId, fileName) {
+async function loadGDriveFile(fileId, fileName) {
             const lid = appendLoading('正在從雲端讀取檔案...');
             try {
-                const res = await window.electronAPI.googleDriveRead(fileId);
+                const res = window.electronAPI ? await window.electronAPI.googleDriveRead(fileId) : await readGoogleDriveFile(fileId);
                 if (res.success) {
                     currentDocumentName = fileName;
                     currentDocumentText = res.text;

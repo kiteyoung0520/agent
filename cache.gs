@@ -1,12 +1,9 @@
 class FirebaseClient {
     constructor() {
         const props = PropertiesService.getScriptProperties();
-        this.projectId = props.getProperty('FB_PROJECT_ID');
-        this.apiKey = props.getProperty('FB_API_KEY');
+        this.projectId = props.getProperty('FB_PROJECT_ID') || 'anygem-r1';
+        this.apiKey = props.getProperty('FB_API_KEY') || 'AIzaSyBc2UgxhcagZtH06HVpJHTZ4XRUMn8kIEo';
         
-        if (!this.projectId || !this.apiKey) {
-            console.error("Missing Firebase Credentials. 請先設定腳本屬性 FB_PROJECT_ID 與 FB_API_KEY。");
-        }
         this.baseUrl = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents`;
     }
 
@@ -56,6 +53,16 @@ class FirebaseClient {
         const encodedId = encodeURIComponent(docId);
         const url = `${this.baseUrl}/${collection}/${encodedId}?key=${this.apiKey}`;
         this.fetchWithRetry(url, { method: "delete", muteHttpExceptions: true });
+    }
+
+    queryAllSessions() {
+        if (!this.apiKey) return [];
+        const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents:runQuery?key=${this.apiKey}`;
+        const payload = { structuredQuery: { from: [{ collectionId: "sessions" }], limit: 500 } };
+        const res = this.fetchWithRetry(url, { method: "post", contentType: "application/json", payload: JSON.stringify(payload), muteHttpExceptions: true });
+        if (!res) return []; const json = JSON.parse(res.getContentText()); const results = [];
+        if (Array.isArray(json)) json.forEach(item => { if (item.document && item.document.fields) results.push(this._parseData(item.document.fields)); });
+        return results;
     }
 
     querySessions(workspace) {

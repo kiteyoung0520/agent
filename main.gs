@@ -317,9 +317,20 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
 
     const routeHandlers = {
         'get_workspaces': () => {
-            const excluded = [BASE_CONFIG.SETTING_SHEET_NAME, "Gems", "Models"];
-            const workspaces = ss.getSheets().map(sh => sh.getName()).filter(name => !excluded.includes(name) && !name.startsWith("_db_"));
-            return response({ workspaces: workspaces });
+            try {
+                const excluded = [BASE_CONFIG.SETTING_SHEET_NAME, "Gems", "Models"];
+                const workspaces = ss ? ss.getSheets().map(sh => sh.getName()).filter(name => !excluded.includes(name) && !name.startsWith("_db_")) : [];
+                if (workspaces.length > 0) return response({ workspaces: workspaces });
+            } catch(e) { console.warn("Sheets workspace list failed:", e); }
+            // 備援：從 Firebase sessions 提取 workspace 列表
+            try {
+                const allSessions = db.queryAllSessions();
+                const wsSet = new Set();
+                allSessions.forEach(s => { if (s.workspace) wsSet.add(s.workspace); });
+                const fbWorkspaces = Array.from(wsSet);
+                if (fbWorkspaces.length > 0) return response({ workspaces: fbWorkspaces });
+            } catch(e) { console.warn("Firebase workspace list failed:", e); }
+            return response({ workspaces: ["預設工作區"] });
         },
         'move_session': () => {
             const targetWsName = String(payload.target_workspace || "").trim();
