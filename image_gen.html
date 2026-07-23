@@ -157,7 +157,7 @@
         import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 
         // Your web app's Firebase configuration
-        const firebaseConfig = {
+        const firebaseConfig = (window.env && window.env.firebaseConfig) ? window.env.firebaseConfig : {
             apiKey: "AIzaSyBc2UgxhcagZtH06HVpJHTZ4XRUMn8kIEo",
             authDomain: "anygem-r1.firebaseapp.com",
             projectId: "anygem-r1",

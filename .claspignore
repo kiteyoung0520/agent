@@ -1,5 +1,3 @@
 **
 !appsscript.json
-!bk.js
-
-!index.html
+!*.gs

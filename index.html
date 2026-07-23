@@ -348,6 +348,7 @@
                             </select>
                             <span class="absolute right-1.5 text-gray-400 material-symbols-rounded text-[16px] pointer-events-none">arrow_drop_down</span>
                         </div>
+                        <button onclick="createNewAgent()" class="ml-0.5 px-1.5 py-1 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 rounded-lg border border-blue-500/30 transition-all flex items-center justify-center shadow" title="新增自訂 Agent (Gem)"><span class="material-symbols-rounded text-[16px]">add</span></button>
 
                         <div class="relative flex items-center mr-auto shrink-0">
                             <span class="absolute left-2 text-purple-400 material-symbols-rounded text-[14px] pointer-events-none">memory</span>
@@ -426,7 +427,33 @@
 
     <script>
         // ⚠️ 部署前，請務必將下方的網址替換為您的 Google Apps Script Web App URL ⚠️
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbyOs6Rd6Cr9otHDd0W42na_R7Y2uHxxv-UyNSu8ytfjC_qYp4_ZeDz7Xe21488pVKoH/exec"; 
+        let GAS_URL = ''; 
+        (async () => {
+            try {
+                if (window.electronAPI) {
+                    const env = await window.electronAPI.getEnv();
+                    if (env && env.gasUrl) GAS_URL = env.gasUrl;
+                }
+                if (!GAS_URL) GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbyOs6Rd6Cr9otHDd0W42na_R7Y2uHxxv-UyNSu8ytfjC_qYp4_ZeDz7Xe21488pVKoH/exec';
+            } catch(e) {}
+        })(); 
+
+        // 🌐 Web Polyfill: 讓沒有 Electron 的環境（GitHub Pages）也能使用 window.electronAPI
+        if (!window.electronAPI) {
+            window.electronAPI = {
+                apiRequest: async (payload) => { const r = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) }); return r.ok ? r.json() : { error: r.statusText }; },
+                getModels: async () => { try { const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_models', workspace: '' }) })).json(); return d?.models || []; } catch(e) { return []; } },
+                getSettings: async () => { const s = localStorage.getItem('settings'); return s ? JSON.parse(s) : {}; },
+                saveSettings: async (s) => { localStorage.setItem('settings', JSON.stringify(s)); },
+                getAgents: async () => { const a = localStorage.getItem('agents'); return a ? JSON.parse(a) : {}; },
+                saveAgents: async (a) => { localStorage.setItem('agents', JSON.stringify(a)); },
+                getEnv: async () => ({ gasUrl: GAS_URL }),
+                googleLogin: async () => { throw new Error('Google Login 僅支援 Electron 版本'); },
+                googleDriveList: async () => [],
+                googleDriveRead: async () => { throw new Error('Google Drive 僅支援 Electron 版本'); },
+                googleLogout: async () => {}
+            };
+        }
 
         marked.use({
             renderer: {
@@ -451,7 +478,7 @@
         async function checkLocalAgent() {
             try {
                 const r = await fetch(LOCAL_AGENT_URL + '/ping', { method: 'GET', headers: { 'Bypass-Tunnel-Reminder': 'true' }, signal: AbortSignal.timeout(1500) });
-                const d = await r.json();
+                const d = r;
                 localAgentOnline = d.status === 'ok';
             } catch (e) {
                 localAgentOnline = false;
@@ -475,15 +502,22 @@
         const CANVAS_HOST_PAGE = `<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><script src="https://unpkg.com/react@18/umd/react.production.min.js">\x3C/script><script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js">\x3C/script><script src="https://unpkg.com/@babel/standalone/babel.min.js">\x3C/script><script src="https://cdn.tailwindcss.com">\x3C/script><script src="https://unpkg.com/lucide@latest">\x3C/script><style>body { margin: 0; background: #f9fafb; font-family: sans-serif; } #root { min-height: 100vh; }</style></head><body><div id="root"></div><script>window.addEventListener('message', (e) => { if (e.data.type === 'render_artifact') { try { const { code } = e.data; let cleanCode = code.replace(/import\\s+.*?from\\s+['"].*?['"];?/g, '').replace(/export\\s+default\\s+function/g, 'function'); let m = code.match(/export\\s+default\\s+function\\s+([A-Za-z0-9_]+)/); const compName = m ? m[1] : 'App'; const transformed = Babel.transform(cleanCode, { presets: ['react'] }).code; const run = new Function('React', 'ReactDOM', 'lucide', transformed + \`\\n const rootEl = document.getElementById('root'); if (window.lastRoot) window.lastRoot.unmount(); window.lastRoot = ReactDOM.createRoot(rootEl); window.lastRoot.render(React.createElement(\${compName})); setTimeout(() => lucide.createIcons(), 100); \`); run(React, ReactDOM, lucide); } catch (err) { document.getElementById('root').innerHTML = '<div class="p-4 text-red-700 font-mono text-xs">Render Error: ' + err.message + '</div>'; } } }); window.parent.postMessage({ type: 'canvas_ready' }, '*'); \x3C/script></body></html>`;
 
         // ⚙️ 全域設定狀態 (Persistent Settings)
-        const settings = {
-            localDirectMode: localStorage.getItem('localDirectMode') === 'true',
-            drawMode: localStorage.getItem('drawMode') === 'true',
-            webSearch: localStorage.getItem('webSearch') === 'true',
-            autoImage: localStorage.getItem('autoImage') === 'true',
-            voiceOutput: localStorage.getItem('voiceOutput') === 'true',
-            continuousMode: localStorage.getItem('continuousMode') === 'true',
-            globalProfile: localStorage.getItem('globalProfile') || ""
-        };
+        const settings = { continuousMode: false, voiceOutput: false, autoImage: true, webSearch: false, drawMode: false, localDirectMode: true, globalProfile: '', apiKeys: { gemini: '', openai: '', nvidia: '', openrouter: '' } };
+    
+    // Override with Electron settings
+    if(window.electronAPI) {
+        window.electronAPI.getSettings().then(s => {
+            if(s.apiKeys) settings.apiKeys = s.apiKeys;
+            if(s.preferences) Object.assign(settings, s.preferences);
+        });
+    }
+    
+    function saveElectronSettings() {
+        if(window.electronAPI) {
+            window.electronAPI.saveSettings({ apiKeys: settings.apiKeys, preferences: { continuousMode: settings.continuousMode, voiceOutput: settings.voiceOutput, autoImage: settings.autoImage, webSearch: settings.webSearch, drawMode: settings.drawMode, localDirectMode: settings.localDirectMode, globalProfile: settings.globalProfile } });
+        }
+    }
+    
 
         const chatContainer = document.getElementById('chat-container'), 
               userInput = document.getElementById('user-input'), 
@@ -651,9 +685,9 @@
             toggleSendButton(true); const lid = appendLoading(); abortController = new AbortController(); 
 
             try {
-                if(GAS_URL.includes("請在此填入")) throw new Error("請先在 HTML 檔案第 117 行更換 GAS_URL！");
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload), signal: abortController.signal });
-                const data = await res.json(); removeLoading(lid);
+                
+                const res = await window.electronAPI.apiRequest(payload);
+                const data = res; removeLoading(lid);
                 if (data.status === "error") throw new Error(data.error || "伺服器錯誤");
                 
                 if (data.python_browser_request) {
@@ -710,9 +744,9 @@
             clearUpload(); toggleSendButton(true); const lid = appendLoading(); abortController = new AbortController(); 
 
             try {
-                if(GAS_URL.includes("請在此填入")) throw new Error("請先在 HTML 檔案第 117 行更換 GAS_URL！");
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload), signal: abortController.signal });
-                const data = await res.json(); removeLoading(lid);
+                
+                const res = await window.electronAPI.apiRequest(payload);
+                const data = res; removeLoading(lid);
                 if (data.status === "error") throw new Error(data.error || "伺服器錯誤");
                 
                 if (data.python_browser_request) {
@@ -768,8 +802,8 @@
             toggleSendButton(true); const lid = appendLoading("授權執行中..."); abortController = new AbortController(); 
 
             try {
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload), signal: abortController.signal });
-                const data = await res.json(); 
+                const res = await window.electronAPI.apiRequest(payload);
+                const data = res; 
                 removeLoading(lid);
                 
                 if (data.status === "error") throw new Error(data.error || "伺服器錯誤");
@@ -802,8 +836,8 @@
                         r.onload = async (ev) => {
                             try {
                                 const base64Data = ev.target.result.split(',')[1];
-                                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'parse_pptx', file_name: f.name, file_data: base64Data }) });
-                                const data = await res.json();
+                                const res = await window.electronAPI.apiRequest({ mode: 'system', action: 'parse_pptx', file_name: f.name, file_data: base64Data });
+                                const data = res;
                                 if (data.status === 'success') { setDocPayload(f.name, data.text); } else { throw new Error(data.message || "雲端轉檔失敗"); }
                             } catch (err) { console.warn("雲端 PPTX 解析失敗，啟動備用引擎...", err); fallbackJSZipParse(f, ev.target.result.split(',')[1], true, lid); } 
                         }; r.readAsDataURL(f);
@@ -832,6 +866,93 @@
             } catch (err) { alert("PPTX 本機備用解析失敗"); } finally { removeLoading(loaderId); }
         }
 
+        
+        function appendMessage(sender, text, image = null, modelInfo = null, htmlPresentation = null, htmlArtifact = null, needsConfirmation = false, pendingToolCall = null) {
+            const chatBox = document.getElementById('chat-box');
+            const isAI = sender === 'ai';
+            const w = document.createElement('div');
+            w.className = `message-bubble flex gap-4 ${isAI ? 'mr-12' : 'flex-row-reverse ml-12'} opacity-0 translate-y-4 transition-all duration-500`;
+            
+            let b = ``;
+            if (isAI) {
+                b += `<div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-tr from-indigo-500 to-purple-500 shadow-lg text-white font-bold shadow-indigo-500/20"><span class="material-symbols-rounded text-[20px]">smart_toy</span></div>`;
+            } else {
+                b += `<div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-tr from-emerald-500 to-teal-500 shadow-lg text-white font-bold shadow-emerald-500/20"><span class="material-symbols-rounded text-[20px]">person</span></div>`;
+            }
+
+            b += `<div class="flex flex-col gap-1 max-w-full min-w-0 ${isAI ? '' : 'items-end'}">`;
+            
+            if (isAI && modelInfo) {
+                b += `<div class="text-[10px] text-gray-500 font-medium px-1 flex items-center gap-1"><span class="material-symbols-rounded text-[12px]">model_training</span> ${modelInfo}</div>`;
+            }
+
+            let contentClass = isAI 
+                ? "bg-[#2a2b2f] text-gray-200 border border-[#333] shadow-lg shadow-black/20" 
+                : "bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-900/20";
+                
+            let renderedText = text;
+            if (isAI && typeof marked !== 'undefined') {
+                renderedText = marked.parse(text);
+            } else {
+                renderedText = text.replace(/\n/g, '<br>');
+            }
+
+            b += `<div class="p-4 rounded-2xl ${contentClass} ${isAI ? 'rounded-tl-sm' : 'rounded-tr-sm'} markdown-content overflow-hidden">`;
+            
+            if (image) {
+                b += `<img src="${image}" class="max-w-full rounded-lg mb-3 object-cover max-h-[300px] border border-white/10 shadow-md cursor-pointer hover:opacity-90 transition-opacity" onclick="window.open(this.src)" />`;
+            }
+
+            b += `${renderedText}`;
+
+            if (pendingToolCall) {
+                b += `
+                    <div class="mt-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl animate-pulse">
+                        <div class="text-amber-400 font-bold mb-2 flex items-center gap-2 text-sm">
+                            <span class="material-symbols-rounded">security</span>
+                            工具呼叫授權請求：${pendingToolCall.name}
+                        </div>
+                        <div class="text-xs text-amber-200/70 mb-3 font-mono bg-black/30 p-2 rounded border border-amber-500/20">
+                            ${JSON.stringify(pendingToolCall.args, null, 2)}
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="confirmAction(this, true)" class="confirm-yes-btn flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-sm font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center gap-1">
+                                <span class="material-symbols-rounded text-[18px]">check_circle</span> 允許執行
+                            </button>
+                            <button onclick="confirmAction(this, false)" class="confirm-no-btn flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-1">
+                                <span class="material-symbols-rounded text-[18px]">cancel</span> 拒絕
+                            </button>
+                        </div>
+                    </div>
+                `;
+                w.dataset.pendingToolCall = JSON.stringify(pendingToolCall);
+            }
+
+            if (htmlPresentation && isAI) {
+                b += `<div class="mt-3"><button class="open-ppt-btn flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-3 rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 font-bold text-sm sm:text-base"><span class="material-symbols-rounded">presentation_play</span> 🎨 開啟互動簡報</button></div>`;
+            }
+            if (htmlArtifact && isAI) {
+                b += `<div class="mt-3"><button class="open-artifact-btn flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-5 py-3 rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 font-bold text-sm sm:text-base"><span class="material-symbols-rounded">deployed_code</span> 🛠️ 啟動動態工具</button></div>`;
+            }
+
+            b += `</div></div>`;
+            
+            w.innerHTML = b;
+            chatBox.appendChild(w);
+
+            if (htmlPresentation && isAI) {
+                const btn = w.querySelector('.open-ppt-btn');
+                if(btn) btn.onclick = () => { document.getElementById('ppt-iframe').srcdoc = htmlPresentation; document.getElementById('ppt-modal').classList.remove('hidden'); };
+            }
+            if (htmlArtifact && isAI) {
+                const btn = w.querySelector('.open-artifact-btn');
+                if(btn) btn.onclick = () => { document.getElementById('artifact-iframe').srcdoc = htmlArtifact; document.getElementById('artifact-modal').classList.remove('hidden'); };
+            }
+
+            setTimeout(() => { w.classList.remove('opacity-0', 'translate-y-4'); }, 50);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
         function setDocPayload(n, t) { currentDocumentName = n; currentDocumentText = t; document.getElementById('doc-filename').innerText = n; document.getElementById('doc-preview').classList.remove('hidden'); document.getElementById('image-preview').classList.add('hidden'); document.getElementById('youtube-preview').classList.add('hidden'); document.getElementById('upload-preview-container').classList.remove('hidden'); }
         function clearUpload() { currentImageData = currentDocumentText = currentDocumentName = currentYouTubeId = null; document.getElementById('upload-preview-container').classList.add('hidden'); document.getElementById('file-upload').value = ''; }
 
@@ -849,30 +970,26 @@
             container.innerHTML = '<div class="flex flex-col items-center justify-center py-20"><span class="material-symbols-rounded animate-spin text-amber-500 text-3xl">sync</span><p class="mt-4 text-gray-400 text-sm">正在掃描雲端硬碟...</p></div>';
             
             try {
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'search_drive_files', keyword: kw }) });
-                const data = await res.json();
+                const res = await window.electronAPI.apiRequest({ mode: 'system', action: 'search_drive_files', keyword: kw });
+                const data = res;
                 if(data.status === 'success' && Array.isArray(data.data)) {
                     container.innerHTML = '';
                     data.data.forEach(file => {
                         const div = document.createElement('div');
                         div.className = "flex items-center gap-3 p-3 rounded-xl hover:bg-[#2a2b2f] cursor-pointer group transition-all border border-transparent hover:border-[#444]";
                         div.onclick = () => selectDriveFile(file.url, file.name);
-                        div.innerHTML = `
+                                                div.innerHTML = `
                             <div class="p-2 bg-amber-500/10 rounded-lg group-hover:bg-amber-500/20 transition-colors"><span class="material-symbols-rounded text-amber-400 text-[20px]">description</span></div>
                             <div class="flex-1 min-w-0">
-                                <div class="text-sm font-medium text-gray-200 truncate">${file.name}</div>
-                                <div class="text-[10px] text-gray-500 truncate">${file.type || 'Google 雲端檔案'}</div>
+                                <div class="text-sm font-medium text-gray-200 truncate group-hover:text-amber-400 transition-colors">${file.name}</div>
                             </div>
-                            <span class="material-symbols-rounded text-gray-600 group-hover:text-amber-500 text-sm">arrow_forward_ios</span>
                         `;
                         container.appendChild(div);
                     });
-                } else if (data.status === 'error') {
-                    container.innerHTML = `<div class="text-center py-20 text-red-400 text-sm"><p>⚠️ 伺服器錯誤：<br>${data.error_message || data.message || "未知錯誤"}</p></div>`;
                 } else {
-                    container.innerHTML = `<div class="text-center py-20 text-gray-500"><p>${data.data || "找不到相關檔案"}</p></div>`;
+                    container.innerHTML = `<div class="text-center py-20 text-gray-400 text-sm"><p>找不到符合的檔案</p></div>`;
                 }
-            } catch(e) {
+            } catch (e) {
                 container.innerHTML = `<div class="text-center py-20 text-red-400 text-sm"><p>搜尋失敗：${e.message}</p></div>`;
             }
         }
@@ -881,8 +998,8 @@
             const lid = appendLoading(`正在從雲端讀取：${name}...`);
             closeDrivePicker();
             try {
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'read_drive_file', fileUrl: url }) });
-                const data = await res.json();
+                const res = await window.electronAPI.apiRequest({ mode: 'system', action: 'read_drive_file', fileUrl: url });
+                const data = res;
                 if(data.status === 'success') {
                     setDocPayload(name, data.data);
                 } else {
@@ -893,126 +1010,6 @@
             } finally {
                 removeLoading(lid);
             }
-        }
-
-        function appendMessage(role, text, imageSrc = null, model = null, htmlPresentation = null, htmlArtifact = null, needsConfirmation = false, pendingToolCall = null) {
-            const isAI = role === 'ai', w = document.createElement('div'); w.className = `flex gap-3 sm:gap-4 max-w-4xl mx-auto w-full group ${!isAI ? 'flex-row-reverse' : ''}`;
-            let b = `<div class="flex-1 ${!isAI ? 'text-right' : ''} space-y-2 max-w-[90%] sm:max-w-[85%] relative min-w-0">`;
-            
-            if (model && isAI) b += `<div class="text-[10px] text-gray-500 mb-1 ml-1 select-none font-mono">Powered by ${model}</div>`;
-            if (imageSrc) b += `<img src="${imageSrc}" class="rounded-xl border border-[#333] mb-2 max-w-full">`;
-            if (text) {
-                const isShared = window.sharedKnowledgeSet && window.sharedKnowledgeSet.has(text.trim());
-                let cleanText = text;
-                if (isAI) {
-                    const nl = String.fromCharCode(10);
-                    cleanText = cleanText.split('<think>').join('<details class="text-xs text-gray-500 mb-2 border-l-2 border-gray-600 pl-2"><summary class="cursor-pointer font-bold">查看思考過程</summary>' + nl + nl)
-                                 .split('</think>').join(nl + nl + '</details>' + nl)
-                                 .split('<thought>').join('<details class="text-xs text-gray-500 mb-2 border-l-2 border-gray-600 pl-2"><summary class="cursor-pointer font-bold">查看思考過程</summary>' + nl + nl)
-                                 .split('</thought>').join(nl + nl + '</details>' + nl);
-                }
-                let parsedText = isAI ? marked.parse(cleanText) : cleanText.split('\\n').join('<br>');
-                if (isAI) {
-                    parsedText = parsedText.replace(/\[來源\s*(\d+)\]/g, '<span class="citation" onclick="highlightSource($1)">[來源 $1]</span>');
-                }
-                b += `<div class="prose prose-invert text-gray-200 bg-[#1e1f22] p-4 sm:p-5 rounded-2xl rounded-tl-none shadow-sm text-base sm:text-lg leading-relaxed text-left ${isShared ? 'shared-message' : ''}">${parsedText}${isShared ? '<span class="shared-badge">專案共用</span>' : ''}</div>`;
-                
-                if (needsConfirmation && isAI) {
-                    b += `
-                        <div class="mt-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl animate-pulse">
-                            <div class="flex items-center gap-2 text-amber-400 font-bold mb-3 text-sm">
-                                <span class="material-symbols-rounded">security</span>
-                                敏感操作授權請求
-                            </div>
-                            <div class="flex flex-wrap gap-2">
-                                <button onclick="confirmAction(this, true)" class="confirm-yes-btn flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-sm font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center gap-1">
-                                    <span class="material-symbols-rounded text-[18px]">check_circle</span> 授權執行
-                                </button>
-                                <button onclick="confirmAction(this, false)" class="confirm-no-btn flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-1">
-                                    <span class="material-symbols-rounded text-[18px]">cancel</span> 取消
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                    // 儲存待處理的 Tool Call 資訊以便確認後使用
-                    w.dataset.pendingToolCall = JSON.stringify(pendingToolCall);
-                    w.dataset.originalMessage = userInput.value || ""; // 記錄當前訊息
-                }
-
-                if (htmlPresentation && isAI) {
-                    b += `<div class="mt-3"><button class="open-ppt-btn flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-3 rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 font-bold text-sm sm:text-base"><span class="material-symbols-rounded">presentation_play</span> 🎨 開啟互動簡報</button></div>`;
-                }
-                if (htmlArtifact && isAI) {
-                    b += `<div class="mt-3"><button class="open-artifact-btn flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-5 py-3 rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 font-bold text-sm sm:text-base"><span class="material-symbols-rounded">deployed_code</span> 🛠️ 啟動動態工具</button></div>`;
-                }
-            }
-            
-            b += `<div class="flex items-center gap-2 mt-2 opacity-100 sm:opacity-50 sm:group-hover:opacity-100 transition-opacity ${!isAI ? 'justify-end' : ''}">`;
-            if (isAI && text) {
-                b += `<button class="share-btn p-1.5 text-gray-400 hover:text-yellow-400 hover:bg-[#333] rounded-md" title="同步至專案共用資料"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">verified</span></button>`;
-                b += `<button class="copy-btn p-1.5 text-gray-400 hover:text-white hover:bg-[#333] rounded-md" title="複製"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">content_copy</span></button>`;
-                b += `<button class="speak-btn p-1.5 text-gray-400 hover:text-green-400 hover:bg-[#333] rounded-md" title="朗讀此訊息"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">volume_up</span></button>`;
-            } 
-            if (!isAI && text) {
-                b += `<button class="share-btn p-1.5 text-gray-400 hover:text-yellow-400 hover:bg-[#333] rounded-md" title="同步至專案共用資料"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">verified</span></button>`;
-                b += `<button class="edit-btn p-1.5 text-gray-400 hover:text-blue-400 hover:bg-[#333] rounded-md transition-colors" title="編輯並重新生成"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">edit</span></button>`;
-            }
-            if (text || imageSrc) {
-                b += `<button class="delete-btn p-1.5 text-gray-400 hover:text-red-400 hover:bg-[#333] rounded-md transition-colors" title="刪除此訊息"><span class="material-symbols-rounded text-[16px] sm:text-[18px]">delete</span></button>`;
-            }
-            b += `</div></div>`; 
-            
-            w.innerHTML = `<div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 shadow-lg ${isAI ? 'bg-blue-600' : 'bg-gray-700'}"><span class="material-symbols-rounded text-white text-[18px] sm:text-xl">${isAI ? 'smart_toy' : 'person'}</span></div>` + b;
-            w.classList.add('message-bubble');
-            chatContainer.appendChild(w);
-
-            if (isAI) { 
-                w.querySelectorAll('pre code').forEach(c => { if (c.className.includes('language-html') || c.className.includes('language-jsx') || c.className.includes('language-javascript')) { let btn = document.createElement('button'); btn.className = "absolute top-2 sm:top-3 right-2 sm:right-3 bg-blue-600 hover:bg-blue-500 text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg flex items-center gap-1 shadow-lg"; btn.innerHTML = '<span class="material-symbols-rounded text-[12px] sm:text-sm">play_circle</span> 預覽'; btn.onclick = () => openPreview(c.innerText); c.parentElement.appendChild(btn); } }); 
-                const pptBtn = w.querySelector('.open-ppt-btn');
-                if (pptBtn && htmlPresentation) {
-                    pptBtn.onclick = () => openHtmlPresentation(htmlPresentation);
-                    if (window.autoOpenPPT) { openHtmlPresentation(htmlPresentation); window.autoOpenPPT = false; }
-                }
-                const artifactBtn = w.querySelector('.open-artifact-btn');
-                if (artifactBtn && htmlArtifact) {
-                    artifactBtn.onclick = () => openHtmlArtifact(htmlArtifact);
-                    openHtmlArtifact(htmlArtifact); 
-                }
-            }
-            
-            if (isAI && text) { 
-                const sBtn = w.querySelector('.share-btn');
-                if (sBtn) sBtn.onclick = () => toggleMessageSharing(text, w);
-                w.querySelector('.copy-btn').onclick = () => navigator.clipboard.writeText(text).then(() => { let ic = w.querySelector('.copy-btn .material-symbols-rounded'); ic.innerText = 'check'; ic.classList.add('text-green-400'); setTimeout(() => { ic.innerText = 'content_copy'; ic.classList.remove('text-green-400'); }, 2000); }); 
-                w.querySelector('.speak-btn').onclick = () => speakText(text, false); 
-            } 
-            
-            if (!isAI && text) {
-                const sBtn = w.querySelector('.share-btn');
-                if (sBtn) sBtn.onclick = () => toggleMessageSharing(text, w);
-                w.querySelector('.edit-btn').onclick = () => {
-                    const contentDiv = w.querySelector('.prose'); const actionsDiv = w.querySelector('.flex.items-center.gap-2.mt-2'); contentDiv.classList.add('hidden'); actionsDiv.classList.add('hidden');
-                    const editContainer = document.createElement('div'); editContainer.className = "w-full mt-2 flex flex-col gap-2 text-left";
-                    let cleanEditText = text.replace(new RegExp('^【使用角色：.*?】\\n'), '').replace(new RegExp('^📎 \\[(?:文件|檔案): .*?\\]\\n'), '').replace(new RegExp('^📺 \\[YouTube 影片\\]\\n'), '');
-                    editContainer.innerHTML = `<textarea class="w-full bg-[#2a2b2f] text-white p-3 rounded-xl border border-blue-500 outline-none resize-y min-h-[100px] text-base leading-relaxed">${cleanEditText}</textarea><div class="flex justify-end gap-2"><button class="cancel-edit-btn px-3 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-[#333] transition-colors">取消</button><button class="save-edit-btn px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1 transition-colors shadow-md"><span class="material-symbols-rounded text-[16px]">send</span> 重新發送</button></div>`;
-                    w.querySelector('.flex-1').appendChild(editContainer);
-                    editContainer.querySelector('.cancel-edit-btn').onclick = () => { editContainer.remove(); contentDiv.classList.remove('hidden'); actionsDiv.classList.remove('hidden'); };
-                    editContainer.querySelector('.save-edit-btn').onclick = () => {
-                        const newText = editContainer.querySelector('textarea').value.trim(); if (!newText) return;
-                        let curr = w; while(curr) { let next = curr.nextElementSibling; curr.remove(); curr = next; }
-                        sendEditAndRegenerate(text, newText); 
-                    };
-                };
-            }
-
-            if (w.querySelector('.delete-btn')) {
-                w.querySelector('.delete-btn').onclick = () => {
-                    if (confirm("確定要刪除這則訊息嗎？\n(刪除後系統將徹底忘記這段對話)")) {
-                        w.remove(); fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'delete_message', session_id: currentSessionId, workspace: currentWorkspace, target_text: text, target_role: role }) });
-                    }
-                };
-            }
-            scrollToBottom();
         }
 
         function appendLoading(customMsg) { 
@@ -1034,18 +1031,19 @@
                 document.body.style.overflow = isOpen ? 'hidden' : '';
             }
         }
-        
+
         function startNewSession() { 
             currentSessionId = generateUUID(); 
             chatContainer.innerHTML = ''; 
             appendMessage('ai', `您已進入 **${currentWorkspace || "主"}** 專案空間。\n我會自動隔離記憶，確保任務上下文精準不發散！\n(下方的麥克風與進階功能選單皆已就緒)`); 
             if (window.innerWidth < 768) toggleSidebar(); 
-            loadSessions(); loadWorkspaceContext(); loadSources();
+            loadWorkspaceContext();
+                if (settings.googleUser) updateGDriveUI(); loadSources();
         }
         
         async function loadWorkspaces() { 
             try { 
-                const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_workspaces' }) })).json(); 
+                const d = await window.electronAPI.apiRequest({ mode: 'system', action: 'get_workspaces' }); 
                 if (d && d.workspaces) {
                     const sel = document.getElementById('workspace-selector'); let html = '';
                     d.workspaces.forEach(ws => { html += `<option value="${ws}">${ws}</option>`; });
@@ -1079,7 +1077,7 @@
             const lid = appendLoading("正在載入歷史對話..."); 
             if (window.innerWidth < 768) toggleSidebar(); 
             try { 
-                const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'load_session', session_id: id, workspace: currentWorkspace }) })).json(); 
+                const d = await window.electronAPI.apiRequest({ mode: 'system', action: 'load_session', session_id: id, workspace: currentWorkspace }); 
                 removeLoading(lid); 
                 
                 // 重設並重新載入該對話的動態工具歷史
@@ -1128,20 +1126,84 @@
             } 
         }
         
-        async function loadGems() { try { const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_gems', workspace: currentWorkspace }) })).json(); if (d && d.gems) { currentGemsList = d.gems; const s = document.getElementById('gem-selector'); s.innerHTML = '<option value="">🤖 全能助理</option>'; currentGemsList.forEach((g, i) => s.innerHTML += `<option value="${i}">💎 ${g.name}</option>`); } } catch (e) {} }
+        
+        async function createNewAgent() {
+            const name = prompt("請輸入自訂角色名稱：");
+            if (!name) return;
+            const promptText = prompt("請輸入該角色的 System Prompt (扮演設定)：");
+            if (!promptText) return;
+            
+            const agent = { name, prompt: promptText, model: '' };
+            try {
+                // Get current agents
+                const res = await window.electronAPI.getAgents();
+                let agents = res.agents || [];
+                agents.push(agent);
+                await window.electronAPI.saveAgents({ agents });
+                alert("新增成功！");
+                loadGems(); // Reload
+            } catch (e) {
+                alert("儲存失敗: " + e.message);
+            }
+        }
+
+        async function loadGems() { try { const d = await window.electronAPI.getAgents(); if (d && d.gems) { currentGemsList = d.gems; const s = document.getElementById('gem-selector'); s.innerHTML = '<option value="">🤖 全能助理</option>'; currentGemsList.forEach((g, i) => s.innerHTML += `<option value="${i}">💎 ${g.name}</option>`); } } catch (e) {} }
         
         async function loadModels() { 
-            try { 
-                const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_models', workspace: currentWorkspace }) })).json(); 
-                const s = document.getElementById('model-selector'); s.innerHTML = '<option value="">🧠 預設模型 (自動)</option>'; 
-                if (d && d.models && d.models.length > 0) { d.models.forEach(m => s.innerHTML += `<option value="${m.id}">${m.name}</option>`); } 
-                else { s.innerHTML += `<option value="gemini-2.5-flash">⚡ 閃電 (2.5 Flash)</option><option value="gemini-2.5-pro">🧠 專家 (2.5 Pro)</option><option value="gemini-3.1-flash-lite-preview">🔍 審查員 (3.1 Lite)</option>`; }
+            try {
+                let models = [];
+                if (window.electronAPI) {
+                    try {
+                        const localModels = await window.electronAPI.getModels();
+                        if (localModels && localModels.length > 0) models = localModels;
+                    } catch(e) {}
+                }
+                if (models.length === 0 && GAS_URL) {
+                    try {
+                        const d = await window.electronAPI.apiRequest({ mode: 'system', action: 'get_models', workspace: currentWorkspace });
+                        if (d && d.models) models = d.models;
+                    } catch(e) {}
+                }
+                if (models.length === 0) {
+                    models = [
+                        { id: 'gemini:gemini-2.5-flash', name: '⚡ 閃電 (2.5 Flash)' },
+                        { id: 'gemini:gemini-2.5-pro', name: '🧠 專家 (2.5 Pro)' },
+                        { id: 'openai:gpt-4o', name: '🤖 GPT-4o' },
+                        { id: 'openrouter:openrouter/free', name: '🆓 OpenRouter 免費' }
+                    ];
+                }
+                const s = document.getElementById('model-selector');
+                s.innerHTML = '<option value="">🧠 預設模型 (自動)</option>';
+                models.forEach(m => {
+                    const val = typeof m === 'string' ? m : (m.id || m);
+                    const name = typeof m === 'string' ? m : (m.name || m.id);
+                    s.innerHTML += `<option value="${val}">${name}</option>`;
+                });
             } catch (e) {} 
+        }
+
+        function saveApiKeys() {
+            const keys = {
+                gemini: document.getElementById('gemini-key-input').value,
+                openai: document.getElementById('openai-key-input').value,
+                nvidia: document.getElementById('nvidia-key-input').value,
+                openrouter: document.getElementById('openrouter-key-input').value
+            };
+            settings.apiKeys = keys;
+            const gasUrlInput = document.getElementById('setting-gas-url');
+            if (gasUrlInput && gasUrlInput.value) {
+                GAS_URL = gasUrlInput.value;
+                localStorage.setItem('gas_url', GAS_URL);
+            }
+            localStorage.setItem('apiKeys', JSON.stringify(keys));
+            saveElectronSettings();
+            loadModels();
+            alert('金鑰已儲存並更新模型列表！');
         }
 
         async function loadSessions() { 
             try { 
-                const d = await (await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_session_list', workspace: currentWorkspace }) })).json(); 
+                const d = await window.electronAPI.apiRequest({ mode: 'system', action: 'get_session_list', workspace: currentWorkspace }); 
                 const l = document.getElementById('session-list'); l.innerHTML = ''; 
                 if (Array.isArray(d.sessions)) d.sessions.forEach(s => { 
                     const act = s.id === currentSessionId, pin = s.pinned, i = document.createElement('div'); 
@@ -1149,18 +1211,16 @@
                     i.innerHTML = `<div class="flex items-center gap-3 truncate flex-1 min-w-0"><span class="material-symbols-rounded text-lg shrink-0 ${pin ? 'pinned-icon' : ''}">${pin ? 'push_pin' : (act ? 'chat_bubble' : 'chat')}</span><span class="truncate text-sm font-medium tracking-wide">${s.title}</span></div><div class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 shrink-0 ml-2 transition-opacity"><button class="p-1 pin-btn ${pin ? 'text-blue-500' : ''} hover:bg-[#333] rounded-md transition-colors" title="釘選"><span class="material-symbols-rounded text-[16px]">push_pin</span></button><button class="p-1 move-btn hover:text-green-400 hover:bg-[#333] rounded-md transition-colors" title="歸檔至其他專案"><span class="material-symbols-rounded text-[16px]">drive_file_move</span></button><button class="p-1 edit-btn hover:text-blue-400 hover:bg-[#333] rounded-md transition-colors" title="重新命名"><span class="material-symbols-rounded text-[16px]">edit</span></button><button class="p-1 del-btn hover:text-red-400 hover:bg-[#333] rounded-md transition-colors" title="刪除對話"><span class="material-symbols-rounded text-[16px]">delete</span></button></div>`; 
                     i.onclick = () => switchSession(s.id, s.title); 
                     
-                    i.querySelector('.pin-btn').onclick = (e) => { e.stopPropagation(); fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'pin_session', session_id: s.id, is_pinned: !pin, workspace: currentWorkspace }) }).then(loadSessions); }; 
-                    i.querySelector('.edit-btn').onclick = (e) => { e.stopPropagation(); const n = prompt("重命名：", s.title); if (n && n.trim()) fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'rename_session', session_id: s.id, new_title: n, workspace: currentWorkspace }) }).then(loadSessions); }; 
-                    i.querySelector('.del-btn').onclick = (e) => { e.stopPropagation(); if (confirm("確定要刪除嗎？")) fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'delete_session', session_id: s.id, workspace: currentWorkspace }) }).then(() => s.id === currentSessionId ? startNewSession() : loadSessions()); }; 
+                    i.querySelector('.pin-btn').onclick = (e) => { e.stopPropagation(); window.electronAPI.apiRequest({ mode: 'system', action: 'pin_session', session_id: s.id, is_pinned: !pin, workspace: currentWorkspace }).then(loadSessions); }; 
+                    i.querySelector('.edit-btn').onclick = (e) => { e.stopPropagation(); const n = prompt("重命名：", s.title); if (n && n.trim()) window.electronAPI.apiRequest({ mode: 'system', action: 'rename_session', session_id: s.id, new_title: n, workspace: currentWorkspace }).then(loadSessions); }; 
+                    i.querySelector('.del-btn').onclick = (e) => { e.stopPropagation(); if (confirm("確定要刪除嗎？")) window.electronAPI.apiRequest({ mode: 'system', action: 'delete_session', session_id: s.id, workspace: currentWorkspace }).then(() => s.id === currentSessionId ? startNewSession() : loadSessions()); }; 
                     
                     i.querySelector('.move-btn').onclick = (e) => { 
                         e.stopPropagation(); 
                         const targetWs = prompt(`將對話「${s.title}」歸檔\n請輸入目標專案空間名稱 (若不存在將自動建立)：`, "歸檔專案"); 
                         if (targetWs && targetWs.trim() && targetWs.trim() !== currentWorkspace) {
                             const lid = appendLoading("正在轉移對話紀錄...");
-                            fetch(GAS_URL, { 
-                                method: 'POST', 
-                                body: JSON.stringify({ mode: 'system', action: 'move_session', session_id: s.id, workspace: currentWorkspace, target_workspace: targetWs.trim() }) 
+                            window.electronAPI.apiRequest({ mode: 'system', action: 'move_session', session_id: s.id, workspace: currentWorkspace, target_workspace: targetWs.trim() 
                             }).then(() => {
                                 removeLoading(lid);
                                 if (s.id === currentSessionId) startNewSession(); else loadSessions();
@@ -1205,7 +1265,7 @@
                             file_id: data.fileId 
                         }) 
                     });
-                    const resJson = await res.json();
+                    const resJson = res;
                     removeLoading(lid);
                     if (resJson.status === "success" && resJson.code) {
                         data.code = resJson.code;
@@ -1485,7 +1545,7 @@
                             autoImage: settings.autoImage
                         }) 
                     });
-                    const result = await res.json();
+                    const result = res;
                     removeLoading(lid);
                     if (result.status === "success") {
                         appendMessage('ai', `✅ **您的客製化簡報已匯出完成！**\n🔗 [點擊開啟 Google 簡報](${result.url})`);
@@ -1817,7 +1877,7 @@
 
                 const lid2 = appendLoading('正在分析磁碟結果...');
                 const gasRes = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(resultPayload), signal: abortController?.signal });
-                const gasData = await gasRes.json();
+                const gasData = gasRes;
                 removeLoading(lid2);
 
                 if (gasData.reply) {
@@ -1918,6 +1978,24 @@
                             <div id="sources-list" class="space-y-1.5"><div class="p-4 text-[11px] text-gray-500 italic text-center bg-[#2a2b2f]/50 rounded-xl border border-dashed border-[#444]">載入中...</div></div>
                         </div>
                     </section>
+                    
+                    <section class="pt-4 border-t border-[#333]">
+                        <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 px-1 flex items-center justify-between">
+                            Google Drive 雲端硬碟
+                        </h4>
+                        <div class="space-y-3">
+                            <div id="gdrive-login-container">
+                                <button onclick="loginGoogleDrive()" class="w-full py-2 bg-[#2a2b2f] hover:bg-[#333] border border-[#444] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all">
+                                    <span class="material-symbols-rounded text-[16px]">add_to_drive</span>
+                                    <span id="gdrive-status-text">登入 Google 帳號</span>
+                                </button>
+                            </div>
+                            <div id="gdrive-files-list" class="space-y-1.5 hidden max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                                <div class="p-4 text-[11px] text-gray-500 italic text-center bg-[#2a2b2f]/50 rounded-xl border border-dashed border-[#444]">載入中...</div>
+                            </div>
+                        </div>
+                    </section>
+
                     <section class="pt-4 border-t border-[#333]">
                         <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 px-1">釘選知識片段 (FRAGMENTS)</h4>
                         <div id="shared-data-list" class="space-y-1.5"><div class="p-4 text-[11px] text-gray-500 italic text-center bg-[#2a2b2f]/50 rounded-xl border border-dashed border-[#444]">載入中...</div></div>
@@ -1932,8 +2010,30 @@
                 footer.innerHTML = '<span class="material-symbols-rounded text-[12px] align-middle mr-1">settings</span>調整 AI 的執行模式與行為。';
                 container.innerHTML = `
                     <div class="space-y-6">
-                        <section>
-                            <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 px-1">模式切換</h4>
+                        
+<section>
+    <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 px-1">API 金鑰設定</h4>
+    <div class="space-y-3">
+        <input type="password" id="gemini-key-input" placeholder="Gemini API Key" class="w-full bg-[#1e1f22] border border-[#333] rounded-xl p-2.5 text-xs text-gray-200 outline-none focus:border-purple-500/50">
+        <input type="password" id="openai-key-input" placeholder="OpenAI API Key" class="w-full bg-[#1e1f22] border border-[#333] rounded-xl p-2.5 text-xs text-gray-200 outline-none focus:border-purple-500/50">
+        <input type="password" id="nvidia-key-input" placeholder="Nvidia API Key" class="w-full bg-[#1e1f22] border border-[#333] rounded-xl p-2.5 text-xs text-gray-200 outline-none focus:border-purple-500/50">
+<input type="password" id="openrouter-key-input" placeholder="OpenRouter API Key" class="w-full bg-[#1e1f22] border border-[#333] rounded-xl p-2.5 text-xs text-gray-200 outline-none focus:border-purple-500/50">
+        <input type="text" id="setting-gas-url" placeholder="GAS 後端網址（選填）" class="w-full bg-[#1e1f22] border border-[#333] rounded-xl p-2.5 text-xs text-gray-200 outline-none focus:border-purple-500/50">
+        <button id="save-keys-btn" onclick="saveApiKeys()" class="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition-all">儲存金鑰並更新模型</button>
+    </div>
+</section>
+
+<section class="pt-4 border-t border-[#333]">
+    <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 px-1">Google Drive 授權設定</h4>
+    <div class="space-y-3">
+        <input type="text" id="gcp-client-id-input" placeholder="Google Client ID" class="w-full bg-[#1e1f22] border border-[#333] rounded-xl p-2.5 text-xs text-gray-200 outline-none focus:border-purple-500/50">
+        <input type="password" id="gcp-client-secret-input" placeholder="Google Client Secret" class="w-full bg-[#1e1f22] border border-[#333] rounded-xl p-2.5 text-xs text-gray-200 outline-none focus:border-purple-500/50">
+        <button id="save-gcp-btn" class="w-full py-2 bg-[#2a2b2f] hover:bg-[#333] border border-[#444] text-white rounded-xl text-xs font-bold transition-all">儲存 GCP 憑證</button>
+    </div>
+</section>
+
+                            <section class="pt-4 border-t border-[#333]">
+                                <h4 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 px-1">模式切換</h4>
                             <div class="space-y-4">
                                 <label class="flex items-center justify-between p-3 bg-[#2a2b2f] rounded-xl cursor-pointer group hover:bg-[#333] transition-all">
                                     <div class="flex items-center gap-3"><span class="material-symbols-rounded text-purple-400">palette</span><div class="flex flex-col"><span class="text-xs font-bold text-gray-200">單純繪圖模式</span><span class="text-[9px] text-gray-500">僅生成圖片，不產生文字</span></div></div>
@@ -1983,12 +2083,41 @@
                 document.getElementById('voice-output-toggle').checked = settings.voiceOutput;
                 document.getElementById('continuous-mode-toggle').checked = settings.continuousMode;
                 document.getElementById('local-direct-mode-toggle').checked = settings.localDirectMode;
+                
                 document.getElementById('global-profile-input').value = settings.globalProfile;
+
+                // Load keys
+                document.getElementById('gemini-key-input').value = settings.apiKeys?.gemini || '';
+                document.getElementById('openai-key-input').value = settings.apiKeys?.openai || '';
+                document.getElementById('nvidia-key-input').value = settings.apiKeys?.nvidia || '';
+                document.getElementById('openrouter-key-input').value = settings.apiKeys?.openrouter || '';
+                
+                
+                document.getElementById('gcp-client-id-input').value = settings.googleClientId || '';
+                document.getElementById('gcp-client-secret-input').value = settings.googleClientSecret || '';
+                
+                document.getElementById('save-gcp-btn').onclick = () => {
+                    settings.googleClientId = document.getElementById('gcp-client-id-input').value;
+                    settings.googleClientSecret = document.getElementById('gcp-client-secret-input').value;
+                    saveElectronSettings();
+                    alert('Google 憑證已儲存！');
+                };
+
+                document.getElementById('save-keys-btn').onclick = () => {
+                    settings.apiKeys.gemini = document.getElementById('gemini-key-input').value;
+                    settings.apiKeys.openai = document.getElementById('openai-key-input').value;
+                    settings.apiKeys.nvidia = document.getElementById('nvidia-key-input').value;
+                    settings.apiKeys.openrouter = document.getElementById('openrouter-key-input').value;
+                    saveElectronSettings();
+                    loadModels(); // Refresh models
+                    alert('金鑰已儲存並更新模型列表！');
+                };
+
 
                 // 綁定文字框自動儲存
                 document.getElementById('global-profile-input').oninput = (e) => {
                     settings.globalProfile = e.target.value;
-                    localStorage.setItem('globalProfile', e.target.value);
+                    saveElectronSettings();
                 };
 
                 // 綁定事件
@@ -2009,27 +2138,124 @@
             }
         }
 
+        
+        async function loginGoogleDrive() {
+            if (!settings.googleClientId) {
+                alert("請先至設定面板填寫 Google Client ID 與 Secret");
+                switchRightPanel('settings');
+                return;
+            }
+            const btnText = document.getElementById('gdrive-status-text');
+            btnText.innerText = "登入中...";
+            try {
+                const res = await window.electronAPI.googleLogin();
+                if (res.success) {
+                    settings.googleUser = res.user;
+                    saveElectronSettings();
+                    updateGDriveUI();
+                } else {
+                    alert("登入失敗: " + res.error);
+                    btnText.innerText = "登入 Google 帳號";
+                }
+            } catch(e) {
+                alert("錯誤: " + e.message);
+                btnText.innerText = "登入 Google 帳號";
+            }
+        }
+
+        async function updateGDriveUI() {
+            const btnText = document.getElementById('gdrive-status-text');
+            const filesList = document.getElementById('gdrive-files-list');
+            const container = document.getElementById('gdrive-login-container');
+            
+            if (settings.googleUser) {
+                container.innerHTML = `<div class="flex items-center justify-between p-2 bg-[#2a2b2f] border border-[#444] rounded-xl">
+                    <div class="flex items-center gap-2"><span class="material-symbols-rounded text-green-400 text-[16px]">account_circle</span><span class="text-xs text-gray-200">${settings.googleUser.email}</span></div>
+                    <button onclick="logoutGoogleDrive()" class="text-[10px] bg-red-600/20 text-red-400 px-2 py-1 rounded hover:bg-red-600/40 transition-colors">登出</button>
+                </div>`;
+                filesList.classList.remove('hidden');
+                
+                // Fetch files
+                const res = await window.electronAPI.googleDriveList();
+                if (res.success) {
+                    filesList.innerHTML = '';
+                    if (res.files.length === 0) {
+                        filesList.innerHTML = '<div class="p-4 text-[11px] text-gray-500 italic text-center">沒有找到檔案</div>';
+                    }
+                    res.files.forEach(f => {
+                        const div = document.createElement('div');
+                        div.className = 'flex items-center gap-2 p-2 bg-[#2a2b2f] border border-[#444] rounded-lg hover:bg-[#333] cursor-pointer transition-colors';
+                        div.innerHTML = `<img src="${f.iconLink}" class="w-4 h-4"> <span class="text-xs text-gray-200 truncate flex-1">${f.name}</span> <span class="material-symbols-rounded text-[14px] text-gray-400">download</span>`;
+                        div.onclick = () => loadGDriveFile(f.id, f.name);
+                        filesList.appendChild(div);
+                    });
+                } else {
+                    filesList.innerHTML = `<div class="p-4 text-[11px] text-red-400 italic text-center">${res.error}</div>`;
+                }
+            } else {
+                container.innerHTML = `<button onclick="loginGoogleDrive()" class="w-full py-2 bg-[#2a2b2f] hover:bg-[#333] border border-[#444] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all">
+                                    <span class="material-symbols-rounded text-[16px]">add_to_drive</span>
+                                    <span id="gdrive-status-text">登入 Google 帳號</span>
+                                </button>`;
+                filesList.classList.add('hidden');
+                filesList.innerHTML = '<div class="p-4 text-[11px] text-gray-500 italic text-center bg-[#2a2b2f]/50 rounded-xl border border-dashed border-[#444]">載入中...</div>';
+            }
+        }
+
+        async function logoutGoogleDrive() {
+            if (confirm("確定要登出 Google Drive 嗎？")) {
+                const res = await window.electronAPI.googleLogout();
+                if (res.success) {
+                    settings.googleUser = null;
+                    saveElectronSettings();
+                    updateGDriveUI();
+                } else {
+                    alert("登出失敗: " + res.error);
+                }
+            }
+        }
+
+        async function loadGDriveFile(fileId, fileName) {
+            const lid = appendLoading('正在從雲端讀取檔案...');
+            try {
+                const res = await window.electronAPI.googleDriveRead(fileId);
+                if (res.success) {
+                    currentDocumentName = fileName;
+                    currentDocumentText = res.text;
+                    const c = document.getElementById('file-chip');
+                    c.classList.remove('hidden'); c.classList.add('flex');
+                    document.getElementById('file-name').innerText = fileName;
+                    userInput.placeholder = "輸入訊息... (AI 將分析該檔案)";
+                } else {
+                    alert("讀取失敗: " + res.error);
+                }
+            } catch (e) {
+                alert("錯誤: " + e.message);
+            } finally {
+                removeLoading(lid);
+            }
+        }
         async function handleAddSource() {
             const input = document.getElementById('source-input');
             const url = input.value.trim();
             if (!url) return;
             const lid = appendLoading("正在抓取並分析來源...");
             try {
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'add_source', workspace: currentWorkspace, url: url, title: url, type: url.includes('youtube.com') ? 'youtube' : 'web' }) });
-                const d = await res.json();
+                const res = await window.electronAPI.apiRequest({ mode: 'system', action: 'add_source', workspace: currentWorkspace, url: url, title: url, type: url.includes('youtube.com') ? 'youtube' : 'web' });
+                const d = res;
                 if (d.status === 'success') { input.value = ''; loadSources(); }
             } catch (e) {} finally { removeLoading(lid); }
         }
 
         async function removeSource(id) {
             if (!confirm("確定要移除此來源嗎？")) return;
-            try { await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'remove_source', workspace: currentWorkspace, source_id: id }) }); loadSources(); } catch (e) {}
+            try { await window.electronAPI.apiRequest({ mode: 'system', action: 'remove_source', workspace: currentWorkspace, source_id: id }); loadSources(); } catch (e) {}
         }
 
         async function toggleMessageSharing(text, element, isFromChat = true) {
             try {
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'toggle_message_sharing', workspace: currentWorkspace, text: text }) });
-                const d = await res.json();
+                const res = await window.electronAPI.apiRequest({ mode: 'system', action: 'toggle_message_sharing', workspace: currentWorkspace, text: text });
+                const d = res;
                 if (d.status === 'success') {
                     if (isFromChat && element) {
                         const prose = element.querySelector('.prose');
@@ -2067,8 +2293,8 @@
         let cachedSources = [];
         async function loadSources() {
             try {
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_sources', workspace: currentWorkspace }) });
-                const d = await res.json();
+                const res = await window.electronAPI.apiRequest({ mode: 'system', action: 'get_sources', workspace: currentWorkspace });
+                const d = res;
                 const l = document.getElementById('sources-list');
                 const countEl = document.getElementById('source-count');
                 if (!l) return;
@@ -2092,8 +2318,8 @@
         
         async function loadWorkspaceContext() {
             try {
-                const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_workspace_context', workspace: currentWorkspace }) });
-                const d = await res.json();
+                const res = await window.electronAPI.apiRequest({ mode: 'system', action: 'get_workspace_context', workspace: currentWorkspace });
+                const d = res;
                 const l = document.getElementById('shared-data-list');
                 if (!l) return;
                 l.innerHTML = '';
@@ -2262,8 +2488,8 @@
                 });
             
             // 載入用戶資訊 (確認雲端帳號)
-            fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ mode: 'system', action: 'get_user_info' }) })
-                .then(res => res.json())
+            window.electronAPI.apiRequest({ mode: 'system', action: 'get_user_info' })
+                .then(res => res)
                 .then(data => {
                     document.getElementById('user-email').innerText = data.email || "未授權帳號";
                     document.getElementById('user-email').classList.remove('italic', 'opacity-60', 'text-[10px]');
