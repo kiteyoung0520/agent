@@ -2111,16 +2111,6 @@ document.getElementById('save-gcp-btn').onclick = () => {
                     alert('Google 憑證已儲存！');
                 };
 
-                document.getElementById('save-keys-btn').onclick = () => {
-                    settings.apiKeys.gemini = document.getElementById('gemini-key-input').value;
-                    settings.apiKeys.openai = document.getElementById('openai-key-input').value;
-                    settings.apiKeys.nvidia = document.getElementById('nvidia-key-input').value;
-                    settings.apiKeys.openrouter = document.getElementById('openrouter-key-input').value;
-                    saveElectronSettings();
-                    loadModels(); // Refresh models
-                    alert('金鑰已儲存並更新模型列表！');
-                };
-
 
                 // 綁定文字框自動儲存
                 document.getElementById('global-profile-input').oninput = (e) => {
