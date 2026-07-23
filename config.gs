@@ -3,7 +3,7 @@ function getBaseConfig() {
     const props = PropertiesService.getScriptProperties();
     return {
         TIMEOUT_LIMIT: 240000,
-        SHEET_ID: props.getProperty('SHEET_ID') || "1pIYPf8v1paZz6OE2qnc5ht5aub8Rm7IA-TfD5kInct8",
+        SHEET_ID: props.getProperty('SHEET_ID') || "1b9Ge4uVe21kgPGVIqt0BTmd_8yPIfxWqazDIxnaSvKw",
         SETTING_SHEET_NAME: "Setting"
     };
 }
@@ -12,7 +12,7 @@ const BASE_CONFIG = new Proxy({}, {
     get(_, key) { 
         const val = getBaseConfig()[key];
         if (val) return val;
-        if (key === 'SHEET_ID') return "1pIYPf8v1paZz6OE2qnc5ht5aub8Rm7IA-TfD5kInct8";
+        if (key === 'SHEET_ID') return "1b9Ge4uVe21kgPGVIqt0BTmd_8yPIfxWqazDIxnaSvKw";
         if (key === 'SETTING_SHEET_NAME') return "Setting";
         return null;
     }

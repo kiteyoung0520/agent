@@ -2162,7 +2162,7 @@ function createGeometricSlides(topic, slidesData, theme, style, enableAutoImage,
     let templateId = null;
     try {
         const props = PropertiesService.getScriptProperties();
-        const sheetId = props.getProperty('SHEET_ID') || "1pIYPf8v1paZz6OE2qnc5ht5aub8Rm7IA-TfD5kInct8";
+        const sheetId = props.getProperty('SHEET_ID') || "1b9Ge4uVe21kgPGVIqt0BTmd_8yPIfxWqazDIxnaSvKw";
         const ss = SpreadsheetApp.openById(sheetId);
         const settings = loadSettings(ss);
         const styleKey = `PPT_TEMPLATE_${String(style).toUpperCase()}_ID`;

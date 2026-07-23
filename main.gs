@@ -85,7 +85,7 @@ function doGet(e) {
             }
             const tempConfig = { ...BASE_CONFIG };
             try {
-                const sheetId = props['SHEET_ID'] || "1pIYPf8v1paZz6OE2qnc5ht5aub8Rm7IA-TfD5kInct8";
+                const sheetId = props['SHEET_ID'] || BASE_CONFIG.SHEET_ID;
                 const ss = SpreadsheetApp.openById(sheetId);
                 Object.assign(tempConfig, loadSettings(ss));
             } catch(e) {}
@@ -97,7 +97,7 @@ function doGet(e) {
         } catch(err) { diag.scriptProperties.error = err.toString(); }
         
         try {
-            const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID') || "1pIYPf8v1paZz6OE2qnc5ht5aub8Rm7IA-TfD5kInct8";
+            const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID') || BASE_CONFIG.SHEET_ID;
             diag.spreadsheet.target_id = sheetId;
             const ss = SpreadsheetApp.openById(sheetId);
             diag.spreadsheet.name = ss.getName();
