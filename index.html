@@ -444,27 +444,100 @@
         window.sharedKnowledgeSet = new Set();
         let isCanvasReady = false, isModalCanvasReady = false;
         let pyodideInstance = null;
-        let LOCAL_AGENT_URL = localStorage.getItem('localDirectMode') === 'true' ? 'http://127.0.0.1:5000' : 'https://ai-agent-kitey-2026.loca.lt';
+        let LOCAL_AGENT_URL = 'http://127.0.0.1:3456';
         let localAgentOnline = false;
+        let LOCAL_AGENT_DISCOVERED_PORT = null;
 
-        // 定期檢查本機代理狀態
-        async function checkLocalAgent() {
-            try {
-                const r = await fetch(LOCAL_AGENT_URL + '/ping', { method: 'GET', headers: { 'Bypass-Tunnel-Reminder': 'true' }, signal: AbortSignal.timeout(1500) });
-                const d = await r.json();
-                localAgentOnline = d.status === 'ok';
-            } catch (e) {
-                localAgentOnline = false;
+        /**
+         * 自動偵測本機代理 — 掃描 Port 3456～3465
+         * 支援 setup.js 動態分配 Port 的情境
+         */
+        async function discoverLocalAgent() {
+            if (localStorage.getItem('localDirectMode') === 'false') {
+                LOCAL_AGENT_URL = 'https://ai-agent-kitey-2026.loca.lt';
+                return false;
             }
+
+            // 掃描 Port 範圍
+            const startPort = 3456;
+            const endPort = 3465;
+            
+            for (let port = startPort; port <= endPort; port++) {
+                try {
+                    const r = await fetch(`http://127.0.0.1:${port}/ping`, {
+                        method: 'GET',
+                        signal: AbortSignal.timeout(800)
+                    });
+                    const d = await r.json();
+                    if (d.status === 'ok') {
+                        LOCAL_AGENT_URL = `http://127.0.0.1:${port}`;
+                        LOCAL_AGENT_DISCOVERED_PORT = port;
+                        console.log(`🔍 anyGem 本機代理發現於 Port ${port}`);
+                        return true;
+                    }
+                } catch (e) {
+                    // Port 無回應，繼續掃描下一個
+                }
+            }
+            
+            // 沒找到本機代理，嘗試 localtunnel
+            if (localStorage.getItem('localDirectMode') !== 'true') {
+                LOCAL_AGENT_URL = 'https://ai-agent-kitey-2026.loca.lt';
+            }
+            return false;
+        }
+
+        // 更新狀態指示燈
+        function updateLocalAgentIndicator(online) {
+            localAgentOnline = online;
             const dot = document.getElementById('local-agent-dot');
             const tip = document.getElementById('local-agent-tip');
             if (dot) {
-                dot.className = `w-2 h-2 rounded-full ${localAgentOnline ? 'bg-green-400 animate-pulse' : 'bg-gray-600'}`;
-                if (tip) tip.title = localAgentOnline ? '本機代理：已連線' : '本機代理：未連線（需啟動 local_agent\\agent.js）';
+                dot.className = `w-2 h-2 rounded-full ${online ? 'bg-green-400 animate-pulse' : 'bg-gray-600'}`;
+                if (tip) {
+                    tip.title = online
+                        ? `本機代理：已連線 (Port ${LOCAL_AGENT_DISCOVERED_PORT || '?'})`
+                        : '本機代理：未連線（執行 D:\\ai 助理\\local_agent\\setup.js 一鍵安裝）';
+                }
             }
         }
-        setInterval(checkLocalAgent, 8000);
-        setTimeout(checkLocalAgent, 1500);
+
+        // 檢查本機代理狀態
+        async function checkLocalAgent() {
+            try {
+                const r = await fetch(LOCAL_AGENT_URL + '/ping', {
+                    method: 'GET',
+                    headers: { 'Bypass-Tunnel-Reminder': 'true' },
+                    signal: AbortSignal.timeout(1500)
+                });
+                const d = await r.json();
+                updateLocalAgentIndicator(d.status === 'ok');
+            } catch (e) {
+                // 連線失敗時，重新掃描一次（可能是 Port 變更）
+                if (localStorage.getItem('localDirectMode') !== 'false') {
+                    const found = await discoverLocalAgent();
+                    if (found) {
+                        // 重新用新的 URL 檢查
+                        try {
+                            const r2 = await fetch(LOCAL_AGENT_URL + '/ping', {
+                                method: 'GET', signal: AbortSignal.timeout(1500)
+                            });
+                            const d2 = await r2.json();
+                            updateLocalAgentIndicator(d2.status === 'ok');
+                            return;
+                        } catch (e2) {}
+                    }
+                }
+                updateLocalAgentIndicator(false);
+            }
+        }
+
+        // 初次啟動：先掃描再開始定期檢查
+        setTimeout(async () => {
+            await discoverLocalAgent();
+            checkLocalAgent();
+        }, 500);
+        setInterval(checkLocalAgent, 12000);
 
         async function getPyodide() {
             if (pyodideInstance) return pyodideInstance;
@@ -2000,8 +2073,13 @@
                             settings[key] = e.target.checked;
                             localStorage.setItem(key, e.target.checked);
                             if (key === 'localDirectMode') {
-                                LOCAL_AGENT_URL = settings.localDirectMode ? 'http://127.0.0.1:5000' : 'https://ai-agent-kitey-2026.loca.lt';
-                                checkLocalAgent();
+                                if (settings.localDirectMode) {
+                                    // 切回本機模式：重新掃描 Port
+                                    discoverLocalAgent().then(() => checkLocalAgent());
+                                } else {
+                                    LOCAL_AGENT_URL = 'https://ai-agent-kitey-2026.loca.lt';
+                                    checkLocalAgent();
+                                }
                             }
                         };
                     }

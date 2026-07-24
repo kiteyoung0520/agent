@@ -1,7 +1,48 @@
 {
-  "allowed_roots": ["D:\\"],
-  "port": 3456,
+  "allowed_roots": [
+    "D:\\",
+    "G:\\"
+  ],
+  "port": 3458,
   "max_file_size_kb": 512,
-  "allowed_extensions": [".txt", ".md", ".csv", ".json", ".js", ".ts", ".py", ".html", ".css", ".xml", ".yaml", ".yml", ".ini", ".cfg", ".log", ".bat", ".ps1", ".docx", ".xlsx", ".pdf"],
-  "deny_patterns": ["node_modules", ".git", "System Volume Information", "$RECYCLE.BIN", "Windows", "Program Files"]
+  "allowed_extensions": [
+    ".txt",
+    ".md",
+    ".csv",
+    ".json",
+    ".js",
+    ".ts",
+    ".gs",
+    ".py",
+    ".html",
+    ".css",
+    ".xml",
+    ".yaml",
+    ".yml",
+    ".ini",
+    ".cfg",
+    ".log",
+    ".bat",
+    ".ps1",
+    ".docx",
+    ".xlsx",
+    ".pdf"
+  ],
+  "deny_patterns": [
+    "node_modules",
+    ".git",
+    "System Volume Information",
+    "$RECYCLE.BIN",
+    "Windows",
+    "Program Files",
+    "Program Files (x86)"
+  ],
+  "install_info": {
+    "installed_at": "2026-07-24T01:58:17.027Z",
+    "installed_by": "kitey",
+    "hostname": "young",
+    "node_version": "v24.13.1",
+    "platform": "win32",
+    "agent_dir": "D:\\ai 助理\\local_agent"
+  }
 }
