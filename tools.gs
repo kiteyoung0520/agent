@@ -468,7 +468,7 @@ function performInnerQALoop(text, apiKey, isToolArg = false) {
                 responseSchema: { type: "OBJECT", properties: { pass: { type: "BOOLEAN" }, auto_fixed_text: { type: "STRING" } } }
             }
         };
-        const urlTemplate = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key={KEY}`;
+        const urlTemplate = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={KEY}`;
         const json = fetchGoogleAPIWithRotation(urlTemplate, payload, apiKey, "post");
         if (json.candidates && json.candidates[0].content) {
             const result = JSON.parse(json.candidates[0].content.parts[0].text);

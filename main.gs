@@ -286,7 +286,7 @@ function doPost(e) {
             wsName: wsName, sessionId: session_id || "default",
             systemInstruction: finalSystemInstruction, history: history, tools: finalTools,
             imageData: file_data ? { mimeType: mime_type, data: file_data } : null,
-            artistModel: CONFIG.MODEL_ARTIST || "gemini-3.1-flash-image-preview",
+            artistModel: CONFIG.MODEL_ARTIST || "gemini-2.5-flash",
             configData: { ...CONFIG, autoImageEnabled: auto_image },
             confirmed: confirmed
         });
@@ -391,9 +391,6 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
             if(models.length === 0) { models = [
                 {name: "⚡ 閃電 (2.5 Flash)", id: "gemini-2.5-flash"}, 
                 {name: "🧠 專家 (2.5 Pro)", id: "gemini-2.5-pro"},
-                {name: "⚡ Gemini 3.1 Flash", id: "gemini-3.1-flash"},
-                {name: "⚡ Gemini 3.5 Flash", id: "gemini-3.5-flash"},
-                {name: "🎨 Gemini生圖模型", id: "gemini-3.1-flash-image"},
                 {name: "🆓 Google Gemma 4 (免費)", id: "google/gemma-4-31b-it:free"},
                 {name: "🆓 OR自動調度 (免費穩)", id: "openrouter/free"},
                 {name: "🐳 DeepSeek V3", id: "deepseek-chat"},
@@ -528,7 +525,7 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
                 let sData = payload.slidesData;
                 if (typeof sData === 'string') sData = JSON.parse(sData);
                 const isAutoImage = (payload.autoImage !== undefined) ? payload.autoImage : (payload.auto_image !== undefined ? payload.auto_image : true);
-                const pid = createGeometricSlides(payload.topic, sData, payload.theme || PPT_THEMES['modern_blue'], payload.style || 'minimalist', isAutoImage, apiKey, "gemini-3.1-flash-image-preview");
+                const pid = createGeometricSlides(payload.topic, sData, payload.theme || PPT_THEMES['modern_blue'], payload.style || 'minimalist', isAutoImage, apiKey, "gemini-2.5-flash");
                 return response({status: "success", url: `https://docs.google.com/presentation/d/${pid}/edit`});
             } catch(e) {
                 return response({ status: "error", message: e.toString() });
