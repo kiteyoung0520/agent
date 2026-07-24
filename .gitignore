@@ -1,0 +1,31 @@
+# ── 依賴 & 產出 ──
+node_modules/
+dist/
+.anygem/
+
+# ── 記錄檔 ──
+debug_*.txt
+*.log
+
+# ── 一次性修復/重構腳本 ──
+analyze_*.js
+final_repair*.js
+fix_*.js
+import_*.js
+refactor*.js
+refactor2.js
+remove_*.js
+repair_*.js
+super_repair.js
+syntax_*.js
+ultimate_*.js
+undo_*.js
+
+# ── 測試／暫存 ──
+temp*.js
+temp_*/
+test*.js
+
+# ── OS artifacts ──
+.DS_Store
+Thumbs.db
