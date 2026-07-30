@@ -2273,7 +2273,9 @@ function forceAuthSetup() {
 
 function isOpenAICompatibleModel(modelName) {
     const lower = String(modelName).toLowerCase();
-    return lower.includes('/') || lower.startsWith('llama') || lower.startsWith('mixtral') || lower.startsWith('nemotron') || lower.startsWith('deepseek');
+    // 非 Gemini/Imagen 家族的都算 OpenAI 相容（走 OpenCode Zen / OpenRouter / DeepSeek 等）
+    if (lower.startsWith('gemini-') || lower.startsWith('imagen')) return false;
+    return true;
 }
 
 function convertGoogleToolsToOpenAI(googleTools) {
@@ -2429,21 +2431,22 @@ function callOpenAICompatibleAPI_Raw({ prompt, model, apiKey, systemInstruction,
     
     const hasOpenRouterKey = configData ? configData.OPENROUTER_API_KEY : PropertiesService.getScriptProperties().getProperty('OPENROUTER_API_KEY');
     const hasDeepSeekKey = configData ? configData.DEEPSEEK_API_KEY : PropertiesService.getScriptProperties().getProperty('DEEPSEEK_API_KEY');
-    const hasGroqKey = configData ? configData.GROQ_API_KEY : PropertiesService.getScriptProperties().getProperty('GROQ_API_KEY');
+    const hasOpenCodeKey = configData ? configData.OPENCODE_API_KEY : PropertiesService.getScriptProperties().getProperty('OPENCODE_API_KEY');
     
-    if (hasDeepSeekKey && model.startsWith('deepseek')) {
+    if (hasDeepSeekKey && model.startsWith('deepseek') && !model.startsWith('deepseek-v')) {
         targetUrl = "https://api.deepseek.com/chat/completions";
         targetKey = hasDeepSeekKey;
     } else if (hasOpenRouterKey && model.includes('/')) {
         targetUrl = "https://openrouter.ai/api/v1/chat/completions";
         targetKey = hasOpenRouterKey;
-    } else if (hasGroqKey && (model.startsWith('llama') || model.startsWith('mixtral') || model.startsWith('gemma'))) {
-        targetUrl = "https://api.groq.com/openai/v1/chat/completions";
-        targetKey = hasGroqKey;
+    } else if (hasOpenCodeKey && !model.includes('/')) {
+        // OpenCode Zen: 支援 DeepSeek V4、GLM 5、Kimi K3、Grok 4.5、MiniMax M3 等大量模型
+        targetUrl = "https://opencode.ai/zen/v1/chat/completions";
+        targetKey = hasOpenCodeKey;
     }
 
     if (!targetKey) {
-        throw new Error("找不到對應的 API KEY。請在 setting 工作表新增 NVIDIA_API_KEY, OPENROUTER_API_KEY, DEEPSEEK_API_KEY, 或 GROQ_API_KEY。");
+        throw new Error("找不到對應的 API KEY。請在 setting 工作表新增 OPENCODE_API_KEY, NVIDIA_API_KEY, OPENROUTER_API_KEY, 或 DEEPSEEK_API_KEY。");
     }
     
     const messages = convertHistoryToOpenAI(history, systemInstruction, prompt, isFunctionResponse);
@@ -2476,7 +2479,7 @@ function callOpenAICompatibleAPI_Raw({ prompt, model, apiKey, systemInstruction,
     const responseText = response.getContentText();
     
     if (statusCode !== 200) {
-        const providerName = targetUrl.includes("deepseek") ? "DeepSeek" : targetUrl.includes("groq") ? "Groq" : targetUrl.includes("openrouter") ? "OpenRouter" : "NVIDIA NIM";
+        const providerName = targetUrl.includes("deepseek") ? "DeepSeek" : targetUrl.includes("openrouter") ? "OpenRouter" : targetUrl.includes("opencode") ? "OpenCode Zen" : "NVIDIA NIM";
         throw new Error(`${providerName} API 錯誤 (${statusCode}): ${responseText}`);
     }
     
