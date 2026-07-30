@@ -476,7 +476,6 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
                     if (name && id) models.push({ name: name, id: id }); 
                 } 
             }
-            if(models.length === 0) { models = ModelResolver.getModelListForUI(); }
             return response({models: models});
         },
         'get_session_list': () => {

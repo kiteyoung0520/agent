@@ -46,14 +46,7 @@ function handleLineWebhook(payload, ss, apiKey, lineToken, CONFIG, db) {
                 targetSheet.getRange("A1:B1").setFontColor("red").setFontWeight("bold");
             }
 
-            let fallbackModel = "gemini-2.5-flash";
-            try {
-                const modelSheet = ss ? ss.getSheetByName("Models") : null;
-                if (modelSheet && modelSheet.getLastRow() > 1) {
-                    fallbackModel = String(modelSheet.getRange(2, 2).getValue()).trim() || fallbackModel;
-                }
-            } catch(e) {}
-
+            // LINE 強制固定使用 gemini-2.5-flash
             const history = getOptimizedHistoryFB(db, wsName, session_id);
             
             let draw_mode = false;
@@ -84,7 +77,7 @@ function handleLineWebhook(payload, ss, apiKey, lineToken, CONFIG, db) {
             try {
                 const agentResult = runAutonomousAgentLoop({
                     ss: ss, apiKey: apiKey, prompt: actualMessage, 
-                    model: CONFIG.MODEL_LINE || fallbackModel,
+                    model: "gemini-2.5-flash",
                     wsName: wsName, sessionId: session_id || "default",
                     systemInstruction: finalSystemInstruction, history: history, tools: finalTools,
                     imageData: fileData, 
