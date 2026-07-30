@@ -88,7 +88,7 @@ function handleLineWebhook(payload, ss, apiKey, lineToken, CONFIG, db) {
                     wsName: wsName, sessionId: session_id || "default",
                     systemInstruction: finalSystemInstruction, history: history, tools: finalTools,
                     imageData: fileData, 
-                    artistModel: CONFIG.MODEL_ARTIST || "gemini-3.1-flash-image-preview",
+                    artistModel: CONFIG.MODEL_ARTIST || ModelResolver.getModel('image'),
                     configData: { ...CONFIG, autoImageEnabled: true }
                 });
 

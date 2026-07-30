@@ -1,3 +1,91 @@
+// === Model Auto-Detection System ===
+// 自動偵測 API Key 可用的 Gemini 模型，避免使用已停用/不存在的模型名稱
+const ModelResolver = (function() {
+  let cache = {};
+  let lastFetch = 0;
+  const CACHE_TTL = 3600000;
+
+  function getApiKey() {
+    try {
+      return CONFIG?.GEMINI_API_KEY ||
+             PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+    } catch(e) { return null; }
+  }
+
+  function fetchModels() {
+    const apiKey = getApiKey();
+    if (!apiKey) return {};
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+      const resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true, timeout: 10 });
+      const data = JSON.parse(resp.getContentText());
+      if (!data.models) return {};
+      const names = data.models.map(m => m.name.replace('models/', ''));
+      // 依能力分級：找最新穩定版，降級備援
+      const findBest = (patterns) => {
+        for (const p of patterns) {
+          const found = names.find(m => p.test(m));
+          if (found) return found;
+        }
+        return 'gemini-2.0-flash';
+      };
+      return {
+        all: names,
+        flash: findBest([/gemini-2\.5-flash/i, /gemini-2\.0-flash/i, /gemini-1\.5-flash/i]),
+        pro:   findBest([/gemini-2\.5-pro/i, /gemini-2\.0-flash/i]),
+        lite:  findBest([/flash-lite/i, /gemini-2\.0-flash/i]),
+        image: findBest([/imagen/i, /gemini-2\.5-flash/i, /gemini-2\.0-flash/i]),
+        supported: names.filter(m => /^gemini-/i.test(m) || /^imagen/i.test(m)).sort()
+      };
+    } catch(e) {
+      console.error('ModelResolver fetchModels 失敗:', e.message);
+      return {};
+    }
+  }
+
+  function ensureCache() {
+    if (!lastFetch || Date.now() - lastFetch > CACHE_TTL) {
+      cache = fetchModels();
+      lastFetch = Date.now();
+    }
+    return cache;
+  }
+
+  return {
+    getModel(type = 'flash') {
+      const c = ensureCache();
+      return c[type] || 'gemini-2.0-flash';
+    },
+    getAllSupported() {
+      return ensureCache().supported || ['gemini-2.0-flash'];
+    },
+    getModelListForUI() {
+      const c = ensureCache();
+      const supported = c.supported || ['gemini-2.0-flash', 'gemini-2.5-flash'];
+      // 按家族分組
+      const result = [];
+      const seen = new Set();
+      supported.forEach(m => {
+        if (seen.has(m)) return;
+        seen.add(m);
+        const label = m.replace(/^gemini-/i, '').replace(/-/g, ' ').replace(/(^\w|\s\w)/g, s => s.toUpperCase());
+        result.push({ name: `✨ ${label}`, id: m });
+      });
+      if (result.length === 0) {
+        return [
+          {name: '⚡ Flash 2.0', id: 'gemini-2.0-flash'},
+          {name: '🚀 Flash 2.5', id: 'gemini-2.5-flash'}
+        ];
+      }
+      return result;
+    },
+    forceRefresh() {
+      lastFetch = 0;
+      return this.getModel('flash');
+    }
+  };
+})();
+
 function doGet(e) {
     if (e.parameter && e.parameter.action === 'search_sheet_models') {
         try {
@@ -286,7 +374,7 @@ function doPost(e) {
             wsName: wsName, sessionId: session_id || "default",
             systemInstruction: finalSystemInstruction, history: history, tools: finalTools,
             imageData: file_data ? { mimeType: mime_type, data: file_data } : null,
-            artistModel: CONFIG.MODEL_ARTIST || "gemini-2.5-flash",
+            artistModel: CONFIG.MODEL_ARTIST || ModelResolver.getModel('image'),
             configData: { ...CONFIG, autoImageEnabled: auto_image },
             confirmed: confirmed
         });
@@ -388,14 +476,7 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
                     if (name && id) models.push({ name: name, id: id }); 
                 } 
             }
-            if(models.length === 0) { models = [
-                {name: "⚡ 閃電 (2.5 Flash)", id: "gemini-2.5-flash"}, 
-                {name: "🧠 專家 (2.5 Pro)", id: "gemini-2.5-pro"},
-                {name: "🆓 Google Gemma 4 (免費)", id: "google/gemma-4-31b-it:free"},
-                {name: "🆓 OR自動調度 (免費穩)", id: "openrouter/free"},
-                {name: "🐳 DeepSeek V3", id: "deepseek-chat"},
-                {name: "🐳 DeepSeek R1 (深度思考)", id: "deepseek-reasoner"}
-            ]; }
+            if(models.length === 0) { models = ModelResolver.getModelListForUI(); }
             return response({models: models});
         },
         'get_session_list': () => {
@@ -525,7 +606,7 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
                 let sData = payload.slidesData;
                 if (typeof sData === 'string') sData = JSON.parse(sData);
                 const isAutoImage = (payload.autoImage !== undefined) ? payload.autoImage : (payload.auto_image !== undefined ? payload.auto_image : true);
-                const pid = createGeometricSlides(payload.topic, sData, payload.theme || PPT_THEMES['modern_blue'], payload.style || 'minimalist', isAutoImage, apiKey, "gemini-2.5-flash");
+                const pid = createGeometricSlides(payload.topic, sData, payload.theme || PPT_THEMES['modern_blue'], payload.style || 'minimalist', isAutoImage, apiKey, ModelResolver.getModel('flash'));
                 return response({status: "success", url: `https://docs.google.com/presentation/d/${pid}/edit`});
             } catch(e) {
                 return response({ status: "error", message: e.toString() });

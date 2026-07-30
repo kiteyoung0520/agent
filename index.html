@@ -794,7 +794,13 @@
                 }
 
                 if (data.local_agent_request) {
-                    await handleLocalAgentRequest(data.local_agent_request, payload);
+                    // 先顯示 GAS 的回覆（如 "🔍 正在存取本機磁碟..."）
+                    if (data.reply) {
+                        appendMessage('ai', data.reply, null, data.model, null, null, false, null);
+                        if (speakText(data.reply, true)) { /* 已朗讀 */ }
+                    }
+                    // 處理本機 agent 請求（不 await，讓 UI 繼續）
+                    handleLocalAgentRequest(data.local_agent_request, payload);
                     return;
                 }
 
@@ -1830,9 +1836,7 @@
         // 處理本機代理請求（磁碟搜尋/讀取/整理）
         async function handleLocalAgentRequest(req, originalPayload) {
             if (!localAgentOnline) {
-                removeLoading();
                 appendMessage('ai', `⚠️ **本機磁碟代理未連線**\n\n請先啟動本機代理程式：\n\`\`\`\nnode "D:\\ai 助理\\local_agent\\agent.js"\n\`\`\`\n或執行安裝程式：\`D:\\ai 助理\\local_agent\\setup_autostart.bat\`（需以系統管理員身分執行）`);
-                toggleSendButton(false);
                 return;
             }
 
@@ -1851,58 +1855,100 @@
             } else if (tool === 'local_run_command') {
                 const proceed = window.confirm(`⚠️ AI 請求在您的本機執行以下終端機指令：\n\n指令：${args.command}\n目錄：${args.cwd || '預設'}\n\n您是否同意執行？\n(注意：請確認指令安全後再放行)`);
                 if (!proceed) {
-                    removeLoading();
                     appendMessage('ai', `❌ 您已拒絕執行指令：\`${args.command}\``);
-                    toggleSendButton(false);
                     return;
                 }
                 apiPayload = { action: 'run_command', command: args.command, cwd: args.cwd };
             } else if (tool === 'local_write_file') {
                 const proceed = window.confirm(`⚠️ AI 請求寫入或覆寫您的本機檔案：\n\n路徑：${args.path}\n\n您是否同意寫入？`);
                 if (!proceed) {
-                    removeLoading();
                     appendMessage('ai', `❌ 您已拒絕寫入檔案：\`${args.path}\``);
-                    toggleSendButton(false);
                     return;
                 }
                 apiPayload = { action: 'write_file', path: args.path, content: args.content };
             } else if (tool === 'local_docker_run_command') {
                 const proceed = window.confirm(`🐳 AI 請求在「Docker 隔離沙盒」中執行以下指令：\n\n指令：${args.command}\n目錄：${args.cwd || '預設 (/workspace)'}\n\n您是否同意啟動沙盒執行？\n(此為安全環境，執行完畢會自動銷毀)`);
                 if (!proceed) {
-                    removeLoading();
                     appendMessage('ai', `❌ 您已取消啟動 Docker 沙盒：\`${args.command}\``);
-                    toggleSendButton(false);
                     return;
                 }
                 apiPayload = { action: 'docker_run_command', command: args.command, cwd: args.cwd };
             }
 
+            // 加入 loading 讓使用者知道正在處理
+            const localLid = appendLoading(`正在存取本機磁碟...`);
+            toggleSendButton(true);
+
             try {
-                const agentRes = await fetch(LOCAL_AGENT_URL + '/api', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Bypass-Tunnel-Reminder': 'true' }, body: JSON.stringify(apiPayload) });
+                // 加入 30 秒 timeout
+                const ac = new AbortController();
+                const timeout = setTimeout(() => ac.abort(), 30000);
+                const agentRes = await fetch(LOCAL_AGENT_URL + '/api', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Bypass-Tunnel-Reminder': 'true' },
+                    body: JSON.stringify(apiPayload),
+                    signal: ac.signal
+                });
+                clearTimeout(timeout);
                 const agentData = await agentRes.json();
+                removeLoading(localLid);
 
-                // 將結果送回 GAS，讓 AI 產生回覆
-                const resultPayload = {
-                    ...originalPayload,
-                    message: originalPayload.message + `\n\n【本機磁碟工具執行結果 (${tool})】\n\`\`\`json\n${JSON.stringify(agentData, null, 2).substring(0, 8000)}\n\`\`\`\n請根據以上結果給出回覆。`,
-                    local_tool_result: true
-                };
-
-                const lid2 = appendLoading('正在分析磁碟結果...');
-                const gasRes = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(resultPayload), signal: abortController?.signal });
-                const gasData = await gasRes.json();
-                removeLoading(lid2);
-
-                if (gasData.reply) {
-                    appendMessage('ai', gasData.reply, null, gasData.model, gasData.html_presentation || null, gasData.html_artifact || null);
-                    if (!speakText(gasData.reply, true) && settings.continuousMode) setTimeout(startRecording, 500);
-                }
+                // 將結果直接顯示在前端，不送回 GAS（避免循環觸發工具）
+                const resultText = formatLocalAgentResult(tool, agentData);
+                appendMessage('ai', resultText);
             } catch (e) {
-                removeLoading();
-                appendMessage('ai', `❌ 本機代理執行失敗：${e.message}`);
+                removeLoading(localLid);
+                if (e.name === 'AbortError') {
+                    appendMessage('ai', `⏱️ **本機磁碟代理回應逾時**\n\n請確認本機代理程式正在執行（Port ${LOCAL_AGENT_DISCOVERED_PORT || '3458'}）且可正常回應。`);
+                } else {
+                    appendMessage('ai', `❌ **本機代理執行失敗**\n\n\`\`\`\n${e.message || e}\n\`\`\`\n\n💡 請確認本機代理已在執行中：\n\`node "D:\\ai 助理\\local_agent\\agent.js"\``);
+                }
             }
             toggleSendButton(false);
-            loadSessions();
+        }
+
+        // 格式化本機代理結果為可讀訊息
+        function formatLocalAgentResult(tool, data) {
+            if (data.status === 'error') {
+                return `❌ **本機磁碟工具錯誤**\n\n\`\`\`\n${data.error || JSON.stringify(data)}\n\`\`\``;
+            }
+            
+            if (tool === 'local_disk_search') {
+                const results = data.results || data.files || [];
+                if (results.length === 0) return `🔍 **搜尋完成**\n\n未找到符合條件的檔案。`;
+                let text = `🔍 **搜尋完成** — 找到 ${data.count || results.length} 個結果\n\n`;
+                results.slice(0, 20).forEach((f, i) => {
+                    const icon = f.type === 'dir' ? '📁' : '📄';
+                    text += `${icon} \`${f.path}\` (${f.size_readable || f.size || '?'})\n`;
+                });
+                if (results.length > 20) text += `\n...及其他 ${results.length - 20} 個結果`;
+                return text;
+            }
+            
+            if (tool === 'local_disk_browse') {
+                if (data.action === 'disk_info') {
+                    return `💾 **磁碟資訊**\n\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``;
+                }
+                const entries = data.entries || data.files || [];
+                if (!entries.length) return `📂 **資料夾為空**\n\n\`${data.path || ''}\``;
+                let text = `📂 **資料夾內容** — \`${data.path || ''}\`\n\n`;
+                text += `| 類型 | 名稱 | 大小 |\n|------|------|------|\n`;
+                entries.slice(0, 50).forEach(e => {
+                    const icon = e.type === 'dir' ? '📁' : '📄';
+                    text += `| ${icon} | \`${e.name}\` | ${e.size_readable || '-'} |\n`;
+                });
+                if (entries.length > 50) text += `| ... | 及其他 ${entries.length - 50} 個項目 | |\n`;
+                return text;
+            }
+            
+            if (tool === 'local_disk_read') {
+                const content = data.content || data.text || '';
+                if (!content) return `📖 **檔案讀取完成**\n\n\`${data.path || ''}\`\n\n（空白檔案或無法讀取）`;
+                return `📖 **檔案內容** — \`${data.path || ''}\`\n\n\`\`\`\n${content.substring(0, 5000)}\n\`\`\`\n${content.length > 5000 ? `\n*...僅顯示前 5000 字元，完整長度 ${content.length} 字元*` : ''}`;
+            }
+
+            // 通用格式
+            return `**本機工具 \`${tool}\` 執行結果**\n\n\`\`\`json\n${JSON.stringify(data, null, 2).substring(0, 6000)}\n\`\`\``;
         }
         
         let currentRightTab = 'library';

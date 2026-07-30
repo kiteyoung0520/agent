@@ -998,7 +998,7 @@ function doPost(e) {
             wsName: wsName, sessionId: session_id || "default",
             systemInstruction: finalSystemInstruction, history: history, tools: finalTools,
             imageData: file_data ? { mimeType: mime_type, data: file_data } : null,
-            artistModel: CONFIG.MODEL_ARTIST || "gemini-2.5-flash",
+            artistModel: CONFIG.MODEL_ARTIST || "gemini-3.1-flash-image-preview",
             configData: { ...CONFIG, autoImageEnabled: auto_image },
             confirmed: confirmed
         });
@@ -1120,7 +1120,7 @@ function handleLineWebhook(payload, ss, apiKey, lineToken, CONFIG, db) {
                     wsName: wsName, sessionId: session_id || "default",
                     systemInstruction: finalSystemInstruction, history: history, tools: finalTools,
                     imageData: fileData, 
-artistModel: CONFIG.MODEL_ARTIST || "gemini-2.5-flash",
+            artistModel: CONFIG.MODEL_ARTIST || (typeof ModelResolver !== 'undefined' ? ModelResolver.getModel('image') : "gemini-2.0-flash"),
                     configData: { ...CONFIG, autoImageEnabled: true }
                 });
 
@@ -1172,7 +1172,8 @@ function performInnerQALoop(text, apiKey, isToolArg = false) {
                 responseSchema: { type: "OBJECT", properties: { pass: { type: "BOOLEAN" }, auto_fixed_text: { type: "STRING" } } }
             }
         };
-        const urlTemplate = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={KEY}`;
+        const liteModel = typeof ModelResolver !== 'undefined' ? ModelResolver.getModel('lite') : "gemini-2.0-flash";
+        const urlTemplate = `https://generativelanguage.googleapis.com/v1beta/models/${liteModel}:generateContent?key={KEY}`;
         const json = fetchGoogleAPIWithRotation(urlTemplate, payload, apiKey, "post");
         if (json.candidates && json.candidates[0].content) {
             const result = JSON.parse(json.candidates[0].content.parts[0].text);
@@ -2888,11 +2889,18 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
             if(models.length === 0) { models = [
                 {name: "⚡ 閃電 (2.5 Flash)", id: "gemini-2.5-flash"}, 
                 {name: "🧠 專家 (2.5 Pro)", id: "gemini-2.5-pro"},
+                {name: "⚡ Gemini 3.1 Flash", id: "gemini-3.1-flash"},
+                {name: "⚡ Gemini 3.5 Flash", id: "gemini-3.5-flash"},
+                {name: "🎨 Gemini生圖模型", id: "gemini-3.1-flash-image"},
                 {name: "🆓 Google Gemma 4 (免費)", id: "google/gemma-4-31b-it:free"},
                 {name: "🆓 OR自動調度 (免費穩)", id: "openrouter/free"},
                 {name: "🐳 DeepSeek V3", id: "deepseek-chat"},
                 {name: "🐳 DeepSeek R1 (深度思考)", id: "deepseek-reasoner"}
-            ]; }
+            ]; } else {
+                models.push({name: "🆓 OR自動調度 (免費穩)", id: "openrouter/free"});
+                models.push({name: "🐳 DeepSeek V3", id: "deepseek-chat"});
+                models.push({name: "🐳 DeepSeek R1 (深度思考)", id: "deepseek-reasoner"});
+            }
             return response({models: models});
         },
         'get_session_list': () => {
@@ -3022,7 +3030,8 @@ function handleSystemMode(payload, ss, wsName, db, apiKey) {
                 let sData = payload.slidesData;
                 if (typeof sData === 'string') sData = JSON.parse(sData);
                 const isAutoImage = (payload.autoImage !== undefined) ? payload.autoImage : (payload.auto_image !== undefined ? payload.auto_image : true);
-                const pid = createGeometricSlides(payload.topic, sData, payload.theme || PPT_THEMES['modern_blue'], payload.style || 'minimalist', isAutoImage, apiKey, "gemini-2.5-flash");
+                const slideModel = typeof ModelResolver !== 'undefined' ? ModelResolver.getModel('image') : "gemini-2.0-flash";
+                const pid = createGeometricSlides(payload.topic, sData, payload.theme || PPT_THEMES['modern_blue'], payload.style || 'minimalist', isAutoImage, apiKey, slideModel);
                 return response({status: "success", url: `https://docs.google.com/presentation/d/${pid}/edit`});
             } catch(e) {
                 return response({ status: "error", message: e.toString() });
@@ -3828,7 +3837,6 @@ function callOpenAICompatibleAPI_Raw({ prompt, model, apiKey, systemInstruction,
     
     const hasOpenRouterKey = configData ? configData.OPENROUTER_API_KEY : PropertiesService.getScriptProperties().getProperty('OPENROUTER_API_KEY');
     const hasDeepSeekKey = configData ? configData.DEEPSEEK_API_KEY : PropertiesService.getScriptProperties().getProperty('DEEPSEEK_API_KEY');
-    const hasGroqKey = configData ? configData.GROQ_API_KEY : PropertiesService.getScriptProperties().getProperty('GROQ_API_KEY');
     
     if (hasDeepSeekKey && model.startsWith('deepseek')) {
         targetUrl = "https://api.deepseek.com/chat/completions";
@@ -3836,13 +3844,10 @@ function callOpenAICompatibleAPI_Raw({ prompt, model, apiKey, systemInstruction,
     } else if (hasOpenRouterKey && model.includes('/')) {
         targetUrl = "https://openrouter.ai/api/v1/chat/completions";
         targetKey = hasOpenRouterKey;
-    } else if (hasGroqKey && (model.startsWith('llama') || model.startsWith('mixtral') || model.startsWith('gemma'))) {
-        targetUrl = "https://api.groq.com/openai/v1/chat/completions";
-        targetKey = hasGroqKey;
     }
 
     if (!targetKey) {
-        throw new Error("找不到對應的 API KEY。請在 setting 工作表新增 NVIDIA_API_KEY, OPENROUTER_API_KEY, DEEPSEEK_API_KEY, 或 GROQ_API_KEY。");
+        throw new Error("找不到對應的 API KEY。請在 setting 工作表新增 NVIDIA_API_KEY, OPENROUTER_API_KEY, 或 DEEPSEEK_API_KEY。");
     }
     
     const messages = convertHistoryToOpenAI(history, systemInstruction, prompt, isFunctionResponse);
@@ -3875,7 +3880,7 @@ function callOpenAICompatibleAPI_Raw({ prompt, model, apiKey, systemInstruction,
     const responseText = response.getContentText();
     
     if (statusCode !== 200) {
-        const providerName = targetUrl.includes("deepseek") ? "DeepSeek" : targetUrl.includes("groq") ? "Groq" : targetUrl.includes("openrouter") ? "OpenRouter" : "NVIDIA NIM";
+        const providerName = targetUrl.includes("deepseek") ? "DeepSeek" : targetUrl.includes("openrouter") ? "OpenRouter" : "NVIDIA NIM";
         throw new Error(`${providerName} API 錯誤 (${statusCode}): ${responseText}`);
     }
     
